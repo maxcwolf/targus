@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import type { Snapshot } from '@targus/core';
 import type { ReactElement } from 'react';
 
+import { Kbd } from '../../components/Kbd.js';
 import type { SnapshotFilter } from '../build/filters.js';
 
 export interface SnapshotNavProps {
@@ -20,16 +21,23 @@ function NavLink(props: {
   readonly shortcut: string;
 }): ReactElement {
   const { buildId, filter, target, label, shortcut } = props;
-  if (!target) return <span className="muted nav-link">{label}</span>;
+  if (!target) {
+    return (
+      <span className="button small nav-link disabled" aria-disabled="true">
+        {label} <Kbd>{shortcut}</Kbd>
+      </span>
+    );
+  }
   return (
     <Link
-      className="nav-link"
+      className="button small nav-link"
       to="/builds/$buildId/snapshots/$snapshotId"
       params={{ buildId, snapshotId: target.id }}
       search={{ filter }}
+      aria-label={label}
       aria-keyshortcuts={shortcut}
     >
-      {label}
+      {label} <Kbd>{shortcut}</Kbd>
     </Link>
   );
 }
@@ -45,7 +53,7 @@ export function SnapshotNav({
   return (
     <nav className="snapshot-nav" aria-label="Snapshots">
       <NavLink buildId={buildId} filter={filter} target={previous} label="Previous" shortcut="k" />
-      <span className="muted">{position}</span>
+      <span className="position">{position}</span>
       <NavLink buildId={buildId} filter={filter} target={next} label="Next" shortcut="j" />
     </nav>
   );

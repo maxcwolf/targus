@@ -1,6 +1,8 @@
 import type { ReviewDecision, ReviewState } from '@targus/core';
 import type { ReactElement } from 'react';
 
+import { Kbd } from '../../components/Kbd.js';
+
 export interface ReviewActionsProps {
   readonly review: ReviewState;
   readonly disabled: boolean;
@@ -20,6 +22,7 @@ export function ReviewActions({
       <button
         type="button"
         className="button approve"
+        aria-label="Approve"
         aria-pressed={review === 'approved'}
         aria-keyshortcuts="a"
         disabled={disabled || busy}
@@ -27,11 +30,12 @@ export function ReviewActions({
           onDecide('approve');
         }}
       >
-        Approve
+        Approve <Kbd>a</Kbd>
       </button>
       <button
         type="button"
         className="button deny"
+        aria-label="Deny"
         aria-pressed={review === 'denied'}
         aria-keyshortcuts="d"
         disabled={disabled || busy}
@@ -39,7 +43,7 @@ export function ReviewActions({
           onDecide('deny');
         }}
       >
-        Deny
+        Deny <Kbd>d</Kbd>
       </button>
     </div>
   );

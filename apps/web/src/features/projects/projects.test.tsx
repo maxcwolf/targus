@@ -30,7 +30,7 @@ describe('BuildsPage', () => {
   it('shows each build with status chip, branch, PR and commit links, and counts', async () => {
     renderApp(`/projects/${project.id}`);
 
-    const buildLink = await screen.findByRole('link', { name: '#12' });
+    const buildLink = await screen.findByRole('link', { name: 'Build #12' });
     expect(buildLink).toHaveAttribute('href', '/builds/build-12');
     const row = buildLink.closest('tr');
     if (!row) throw new Error('build row missing');
@@ -48,7 +48,8 @@ describe('BuildsPage', () => {
     expect(row).toHaveTextContent('2 changed');
     expect(row).toHaveTextContent('1 new');
     expect(row).toHaveTextContent('1 removed');
-    expect(row).toHaveTextContent('0 unstable');
+    expect(row).toHaveTextContent('1 unchanged');
+    expect(row).not.toHaveTextContent('unstable');
     expect(row).not.toHaveTextContent('error');
     expect(row).toHaveTextContent('2026');
   });
@@ -56,11 +57,13 @@ describe('BuildsPage', () => {
   it('shows the failed main build with its error count and no PR', async () => {
     renderApp(`/projects/${project.id}`);
 
-    const row = (await screen.findByRole('link', { name: '#11' })).closest('tr');
+    const row = (await screen.findByRole('link', { name: 'Build #11' })).closest('tr');
     if (!row) throw new Error('build row missing');
     expect(within(row).getByRole('status', { name: 'Build status' })).toHaveTextContent('Failed');
     expect(row).toHaveTextContent('1 error');
     expect(row).toHaveTextContent('1 unstable');
+    expect(row).toHaveTextContent('0 unchanged');
+    expect(row.querySelector('.state-changed')).toBeNull();
     expect(row).toHaveTextContent('—');
   });
 });

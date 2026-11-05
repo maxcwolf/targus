@@ -1,13 +1,14 @@
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
+import { Skeleton } from '../../components/Skeleton.js';
 import { ErrorView } from '../errors/ErrorView.js';
 import { useProjects } from './useProjects.js';
 
 /** `/`: every project the reviewer can see. Never auto-redirects, even with one project. */
 export function ProjectsPage(): ReactElement | null {
   const projects = useProjects();
-  if (projects.isPending) return <p className="muted">Loading projects…</p>;
+  if (projects.isPending) return <Skeleton label="Loading projects…" rows={3} />;
   if (projects.isError) return <ErrorView error={projects.error} />;
 
   const list = projects.data.projects;
@@ -27,7 +28,7 @@ export function ProjectsPage(): ReactElement | null {
           </thead>
           <tbody>
             {list.map((project) => (
-              <tr key={project.id}>
+              <tr key={project.id} className="row-hover">
                 <td>
                   <Link to="/projects/$projectId" params={{ projectId: project.id }}>
                     {project.name}

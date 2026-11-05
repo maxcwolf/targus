@@ -1,14 +1,15 @@
-import { Link, useNavigate } from '@tanstack/react-router';
-import type { BuildWithSummary, ReviewDecision, Snapshot } from '@targus/core';
+import { Link } from '@tanstack/react-router';
+import type { BuildWithSummary, ProjectSummary, Snapshot } from '@targus/core';
 import type { ReactElement } from 'react';
 
 import { ReviewBadge, StateBadge } from '../../components/Badges.js';
 import { formatDateTime } from '../../components/format.js';
+import { Skeleton } from '../../components/Skeleton.js';
+import { Toast } from '../../components/Toast.js';
 import {
   componentTitle,
   effectiveFilter,
   isReviewable,
-  navigationList,
   type SnapshotFilter,
   storyName,
 } from '../build/filters.js';
@@ -16,10 +17,11 @@ import { useBuildData } from '../build/useBuildData.js';
 import { ErrorView, NotFound } from '../errors/ErrorView.js';
 import { ReviewActions } from './ReviewActions.js';
 import { SnapshotNav } from './SnapshotNav.js';
+import { SnapshotSidebar } from './SnapshotSidebar.js';
 import { SnapshotViewer } from './SnapshotViewer.js';
 import { StateNotice } from './StateNotice.js';
-import { useReview } from './useReview.js';
-import { useReviewKeys } from './useReviewKeys.js';
+import { useSnapshotReview } from './useSnapshotReview.js';
+import { useToast } from './useToast.js';
 
 export interface SnapshotPageProps {
   readonly buildId: string;
@@ -29,96 +31,29 @@ export interface SnapshotPageProps {
 
 interface DetailProps {
   readonly item: BuildWithSummary;
+  readonly project: ProjectSummary | undefined;
   readonly snapshots: readonly Snapshot[];
   readonly snapshot: Snapshot;
   readonly filter: SnapshotFilter;
 }
 
-/** Review mutation, prev/next within the filter, and the j/k/a/d shortcuts for one snapshot. */
-function useSnapshotReview(
-  item: BuildWithSummary,
-  snapshots: readonly Snapshot[],
-  snapshot: Snapshot,
-  filter: SnapshotFilter,
-) {
-  const buildId = item.build.id;
-  const navigate = useNavigate();
-  const review = useReview(buildId, snapshot.id);
-  const list = navigationList(snapshots, filter, snapshot.id);
-  const index = list.findIndex((candidate) => candidate.id === snapshot.id);
-  const previous = list[index - 1];
-  const next = list[index + 1];
-  const canReview = isReviewable(snapshot) && item.build.status !== 'in_progress';
-
-  const go = (target: Snapshot | undefined) => () => {
-    if (!target) return;
-    void navigate({
-      to: '/builds/$buildId/snapshots/$snapshotId',
-      params: { buildId, snapshotId: target.id },
-      search: { filter },
-    });
-  };
-  const decide = (decision: ReviewDecision) => () => {
-    if (canReview && !review.isPending) review.mutate(decision);
-  };
-  useReviewKeys({
-    next: go(next),
-    previous: go(previous),
-    approve: decide('approve'),
-    deny: decide('deny'),
-  });
-  return { review, list, index, previous, next, canReview };
-}
-
-function SnapshotDetail({ item, snapshots, snapshot, filter }: DetailProps): ReactElement {
-  const buildId = item.build.id;
-  const { review, list, index, previous, next, canReview } = useSnapshotReview(
-    item,
-    snapshots,
-    snapshot,
-    filter,
-  );
-
+function SnapshotHeading({ item, project, snapshot, filter }: DetailProps): ReactElement {
+  const { build } = item;
   return (
-    <section className="snapshot-page">
+    <div className="snapshot-heading">
       <p className="breadcrumb">
-        <Link to="/builds/$buildId" params={{ buildId }} search={{ filter }}>
-          Build #{item.build.number}
-        </Link>{' '}
-        / {componentTitle(snapshot)}
+        {project ? (
+          <>
+            <Link to="/projects/$projectId" params={{ projectId: project.id }}>
+              {project.name}
+            </Link>
+            <span className="crumb-sep">›</span>
+          </>
+        ) : null}
+        <Link to="/builds/$buildId" params={{ buildId: build.id }} search={{ filter }}>
+          Build #{build.number}
+        </Link>
       </p>
-      <SnapshotHeading snapshot={snapshot} />
-      <div className="review-bar">
-        <ReviewActions
-          review={snapshot.review}
-          disabled={!canReview}
-          busy={review.isPending}
-          onDecide={(decision) => {
-            review.mutate(decision);
-          }}
-        />
-        <SnapshotNav
-          buildId={buildId}
-          filter={filter}
-          previous={previous}
-          next={next}
-          position={`${index + 1} of ${list.length}`}
-        />
-      </div>
-      {review.isError ? (
-        <p role="alert" className="error-text">
-          {review.error.message}
-        </p>
-      ) : null}
-      <StateNotice state={snapshot.state} />
-      <SnapshotViewer snapshot={snapshot} />
-    </section>
-  );
-}
-
-function SnapshotHeading({ snapshot }: { readonly snapshot: Snapshot }): ReactElement {
-  return (
-    <>
       <h1>
         {componentTitle(snapshot)} <span className="muted">/</span> {storyName(snapshot)}
       </h1>
@@ -131,20 +66,68 @@ function SnapshotHeading({ snapshot }: { readonly snapshot: Snapshot }): ReactEl
           </span>
         ) : null}
       </p>
+    </div>
+  );
+}
+
+function SnapshotDetail(props: DetailProps): ReactElement {
+  const { item, snapshot, filter } = props;
+  const toast = useToast();
+  const { review, list, index, previous, next, canReview, decide } = useSnapshotReview({
+    ...props,
+    notify: toast.show,
+  });
+  const actions = (
+    <>
+      <ReviewActions
+        review={snapshot.review}
+        disabled={!canReview}
+        busy={review.isPending}
+        onDecide={decide}
+      />
+      <SnapshotNav
+        buildId={item.build.id}
+        filter={filter}
+        previous={previous}
+        next={next}
+        position={`${index + 1} of ${list.length}`}
+      />
     </>
+  );
+  return (
+    <div className="snapshot-layout">
+      <SnapshotSidebar
+        buildId={item.build.id}
+        snapshots={list}
+        currentId={snapshot.id}
+        filter={filter}
+      />
+      <section className="snapshot-main">
+        <SnapshotHeading {...props} />
+        {review.isError ? (
+          <p role="alert" className="error-text">
+            {review.error.message}
+          </p>
+        ) : null}
+        <StateNotice state={snapshot.state} />
+        <SnapshotViewer snapshot={snapshot} actions={actions} />
+      </section>
+      <Toast message={toast.message} id={toast.id} />
+    </div>
   );
 }
 
 /** `/builds/$buildId/snapshots/$snapshotId`: one story's comparison and its review. */
 export function SnapshotPage({ buildId, snapshotId, filter }: SnapshotPageProps): ReactElement {
   const data = useBuildData(buildId);
-  if (data.status === 'pending') return <p className="muted">Loading snapshot…</p>;
+  if (data.status === 'pending') return <Skeleton label="Loading snapshot…" variant="viewer" />;
   if (data.status === 'error') return <ErrorView error={data.error} />;
   const snapshot = data.snapshots.find((candidate) => candidate.id === snapshotId);
   if (!snapshot) return <NotFound message="This build has no such snapshot." />;
   return (
     <SnapshotDetail
       item={data.build}
+      project={data.project}
       snapshots={data.snapshots}
       snapshot={snapshot}
       filter={effectiveFilter(filter, data.snapshots)}

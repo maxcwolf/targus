@@ -56,12 +56,12 @@ describe('SnapshotPage zoom and missing images', () => {
   it('toggles zoom between fit and 100%', async () => {
     const { container } = await openSnapshot('/builds/build-12/snapshots/snap-changed');
 
-    expect(container.querySelector('.viewer-body')).toHaveAttribute('data-zoom', 'fit');
+    expect(container.querySelector('.viewer-pane')).toHaveAttribute('data-zoom', 'fit');
     fireEvent.click(screen.getByRole('button', { name: '100%' }));
-    expect(container.querySelector('.viewer-body')).toHaveAttribute('data-zoom', 'actual');
+    expect(container.querySelector('.viewer-pane')).toHaveAttribute('data-zoom', 'actual');
     expect(screen.getByRole('button', { name: '100%' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Fit' }));
-    expect(container.querySelector('.viewer-body')).toHaveAttribute('data-zoom', 'fit');
+    expect(container.querySelector('.viewer-pane')).toHaveAttribute('data-zoom', 'fit');
   });
 
   it('shows "No baseline" for a new story and falls back where modes need both images', async () => {
@@ -142,7 +142,7 @@ describe('SnapshotPage review', () => {
   });
 
   it('approves and denies with the a and d keys', async () => {
-    await openSnapshot('/builds/build-12/snapshots/snap-new');
+    await openSnapshot('/builds/build-12/snapshots/snap-new?filter=all');
 
     fireEvent.keyDown(window, { key: 'a' });
     await waitFor(() => {

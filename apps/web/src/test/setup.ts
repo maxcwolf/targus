@@ -7,6 +7,7 @@ import { resetApiState, server } from './msw.js';
 
 // jsdom has no layout; the router restores scroll positions on navigation.
 window.scrollTo = (): void => undefined;
+Element.prototype.scrollIntoView = (): void => undefined;
 
 // No network in tests: any request without an MSW handler fails the test. MSW 3 renamed
 // `onUnhandledRequest` to `onUnhandledFrame` (it also covers WebSocket frames).

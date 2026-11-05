@@ -4,7 +4,11 @@ import type { ListSnapshotsResponse, ReviewDecision, ReviewSnapshotResponse } fr
 import { queryKeys, reviewSnapshot } from '../../api-client/index.js';
 import { applyBuildUpdate } from '../build/cache.js';
 
-/** Approve or deny one snapshot, then fold the API's answer into the cached build and list. */
+/**
+ * Approve or deny one snapshot, then fold the API's answer into the cached build and list. The
+ * cache is written before the mutation resolves; the follow-up refetch is not awaited, so a
+ * caller that navigates on success does so straight after the cache update.
+ */
 export function useReview(
   buildId: string,
   snapshotId: string,
@@ -22,7 +26,7 @@ export function useReview(
             }
           : list,
       );
-      return applyBuildUpdate(queryClient, response);
+      void applyBuildUpdate(queryClient, response);
     },
   });
 }

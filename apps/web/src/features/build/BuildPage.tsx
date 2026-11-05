@@ -1,10 +1,12 @@
 import { useNavigate } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
+import { Skeleton } from '../../components/Skeleton.js';
 import { Tabs } from '../../components/Tabs.js';
 import { ErrorView } from '../errors/ErrorView.js';
 import { ApproveAll } from './ApproveAll.js';
 import { BuildHeader } from './BuildHeader.js';
+import { ReviewProgress } from './ReviewProgress.js';
 import {
   effectiveFilter,
   filterTabs,
@@ -24,7 +26,7 @@ export interface BuildPageProps {
 export function BuildPage({ buildId, filter }: BuildPageProps): ReactElement {
   const navigate = useNavigate();
   const data = useBuildData(buildId);
-  if (data.status === 'pending') return <p className="muted">Loading build…</p>;
+  if (data.status === 'pending') return <Skeleton label="Loading build…" rows={8} />;
   if (data.status === 'error') return <ErrorView error={data.error} />;
 
   const { build, snapshots, project } = data;
@@ -33,6 +35,7 @@ export function BuildPage({ buildId, filter }: BuildPageProps): ReactElement {
   return (
     <section>
       <BuildHeader item={build} project={project} />
+      <ReviewProgress snapshots={snapshots} />
       <div className="toolbar">
         <Tabs
           label="Filter snapshots"

@@ -5,6 +5,7 @@ import type { ReactElement } from 'react';
 
 import { listBuilds, queryKeys } from '../../api-client/index.js';
 import { commitUrl, formatDateTime, pullRequestUrl, shortSha } from '../../components/format.js';
+import { Skeleton } from '../../components/Skeleton.js';
 import { StatusChip } from '../../components/StatusChip.js';
 import { ErrorView, NotFound } from '../errors/ErrorView.js';
 import { BuildCounts } from './BuildCounts.js';
@@ -19,10 +20,10 @@ function BuildRow({
 }): ReactElement {
   const { build } = item;
   return (
-    <tr>
+    <tr className="row-hover">
       <td>
-        <Link to="/builds/$buildId" params={{ buildId: build.id }}>
-          #{build.number}
+        <Link className="build-link" to="/builds/$buildId" params={{ buildId: build.id }}>
+          Build #{build.number}
         </Link>
       </td>
       <td>
@@ -54,7 +55,7 @@ function BuildsTable({ project }: { readonly project: ProjectSummary }): ReactEl
     queryKey: queryKeys.builds(project.id),
     queryFn: () => listBuilds(project.id),
   });
-  if (builds.isPending) return <p className="muted">Loading builds…</p>;
+  if (builds.isPending) return <Skeleton label="Loading builds…" rows={6} />;
   if (builds.isError) return <ErrorView error={builds.error} />;
   if (builds.data.builds.length === 0) return <p className="muted">No builds yet.</p>;
   return (
@@ -82,7 +83,7 @@ function BuildsTable({ project }: { readonly project: ProjectSummary }): ReactEl
 /** `/projects/$projectId`: the project's builds, newest first. */
 export function BuildsPage({ projectId }: { readonly projectId: string }): ReactElement {
   const projects = useProjects();
-  if (projects.isPending) return <p className="muted">Loading…</p>;
+  if (projects.isPending) return <Skeleton label="Loading…" rows={6} />;
   if (projects.isError) return <ErrorView error={projects.error} />;
   const project = projects.data.projects.find((candidate) => candidate.id === projectId);
   if (!project) return <NotFound message="No project with this id, or you cannot see it." />;

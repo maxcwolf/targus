@@ -65,14 +65,15 @@ describe('BuildPage filters', () => {
     await pick(/Removed/);
     // A removed story has no name or title: it falls back to the story id and its prefix.
     expect(rowNames()).toEqual(['legacy--old']);
-    expect(screen.getByRole('heading', { name: 'legacy' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'legacy · 1' })).toBeInTheDocument();
     await pick(/New/);
     expect(rowNames()).toEqual(['Large']);
     await pick(/Changed/);
     expect(rowNames()).toEqual(['Primary', 'Default']);
     await pick(/Denied/);
-    expect(screen.getByText('No snapshots match this filter.')).toBeInTheDocument();
-    await pick(/All/);
+    expect(screen.getByText('Nothing to review')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: 'Show all snapshots' }));
+    await screen.findByRole('tab', { name: /All/, selected: true });
     expect(rowNames()).toHaveLength(5);
   });
 

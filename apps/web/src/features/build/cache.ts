@@ -4,10 +4,11 @@ import type { BuildWithSummary } from '@targus/core';
 import { queryKeys } from '../../api-client/index.js';
 
 /**
- * After a review decision: store the build the API answered with, and refetch the lists that
- * show it (its snapshots and the project's builds).
+ * After a review decision: store the build the API answered with (synchronously, so the page
+ * shows it at once), and start refetching the lists that show it (its snapshots and the
+ * project's builds). The returned promise settles when those refetches do.
  */
-export async function applyBuildUpdate(
+export function applyBuildUpdate(
   queryClient: QueryClient,
   update: BuildWithSummary,
 ): Promise<void> {
@@ -17,8 +18,8 @@ export async function applyBuildUpdate(
     summary: update.summary,
     counts: update.counts,
   });
-  await Promise.all([
+  return Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.snapshots(build.id), exact: true }),
     queryClient.invalidateQueries({ queryKey: queryKeys.builds(build.projectId), exact: true }),
-  ]);
+  ]).then(() => undefined);
 }

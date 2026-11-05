@@ -1,4 +1,4 @@
-import { Link, Outlet } from '@tanstack/react-router';
+import { Link, Outlet, useRouterState } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
 import { AuthGate } from '../features/auth/AuthGate.js';
@@ -19,10 +19,15 @@ function TopBar(): ReactElement {
 
 /** Header plus the auth gate around every page. */
 export function RootLayout(): ReactElement {
+  // The snapshot page uses the whole width for its sidebar and the tall captures.
+  const wide = useRouterState({
+    select: (state) =>
+      state.matches.some((match) => match.routeId === '/builds/$buildId/snapshots/$snapshotId'),
+  });
   return (
     <>
       <TopBar />
-      <main className="page">
+      <main className={wide ? 'page page-wide' : 'page'}>
         <AuthGate>
           <Outlet />
         </AuthGate>

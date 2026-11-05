@@ -1,22 +1,20 @@
 import type { SnapshotCounts } from '@targus/core';
 import type { ReactElement } from 'react';
 
-const shown = ['changed', 'new', 'removed', 'unstable'] as const;
+const shown = ['changed', 'new', 'removed', 'unstable', 'error'] as const;
 
-/** The per-state counts of one build: always the four review states, errors only when present. */
+/** Non-zero per-state counts as small coloured chips, then a muted unchanged count. */
 export function BuildCounts({ counts }: { readonly counts: SnapshotCounts }): ReactElement {
   return (
     <span className="counts">
-      {shown.map((state) => (
-        <span key={state} className={`count count-${state}`}>
-          {counts[state]} {state}
-        </span>
-      ))}
-      {counts.error > 0 ? (
-        <span className="count count-error">
-          {counts.error} {counts.error === 1 ? 'error' : 'errors'}
-        </span>
-      ) : null}
+      {shown
+        .filter((state) => counts[state] > 0)
+        .map((state) => (
+          <span key={state} className={`count-chip state-${state}`}>
+            {counts[state]} {state === 'error' && counts.error > 1 ? 'errors' : state}
+          </span>
+        ))}
+      <span className="muted">{counts.unchanged} unchanged</span>
     </span>
   );
 }

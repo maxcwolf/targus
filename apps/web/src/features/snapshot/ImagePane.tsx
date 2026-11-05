@@ -17,11 +17,14 @@ function missingText(kind: ImageKind, snapshot: Snapshot): string {
   return 'No current image';
 }
 
-export function imageHash(kind: ImageKind, snapshot: Snapshot): string | null {
+function imageHash(kind: ImageKind, snapshot: Snapshot): string | null {
   return kind === 'baseline' ? snapshot.baselineHash : snapshot.imageHash;
 }
 
-/** One captioned image, or the reason it is missing. */
+/**
+ * One capture under a caption row (kept off the image, where iOS draws the status bar), or a
+ * phone-sized placeholder saying why it is missing.
+ */
 export function ImagePane({
   kind,
   snapshot,
@@ -31,12 +34,14 @@ export function ImagePane({
 }): ReactElement {
   const hash = imageHash(kind, snapshot);
   return (
-    <figure className="pane">
-      <figcaption>{titles[kind]}</figcaption>
+    <figure className="capture">
+      <figcaption className="caption-row">
+        <span className="pill">{titles[kind]}</span>
+      </figcaption>
       {hash === null ? (
         <div className="missing">{missingText(kind, snapshot)}</div>
       ) : (
-        <div className="checkerboard">
+        <div className="frame">
           <SnapshotImage src={imageUrl(hash)} alt={titles[kind]} />
         </div>
       )}
