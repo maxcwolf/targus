@@ -15,3 +15,4 @@ Each ADR is a short Markdown file named `NNNN-title.md` that records one signifi
 | [0009](0009-every-standard-has-a-guard.md) | Every standard has a guard | accepted |
 | [0010](0010-package-builds-and-development-condition.md) | Package builds and the development condition | accepted |
 | [0011](0011-github-login-sessions-and-org-authorization.md) | GitHub login with cookie sessions and org-membership authorization | accepted |
+| [0012](0012-personal-accounts-as-single-member-orgs.md) | Personal accounts as single-member orgs | accepted |

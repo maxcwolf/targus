@@ -26,7 +26,8 @@ read builds and images.
 - **Authorization** is org membership: a reviewer may read and review a project when GitHub
   says they are a member of the project's org, asked through the App installation
   (`isOrgMember`) and cached per user and org for one hour in `org_memberships`. An org without
-  an installation cannot be checked, so nobody can review it. A non-member gets 403.
+  an installation cannot be checked, so nobody can review it. A non-member gets 403. (ADR 0012
+  adds personal accounts: the owner is the one member.)
 - **Two kinds of principal** reach the read routes: a project token (the CLI) or a session (the
   browser). `GET /api/builds/:id`, `/snapshots` and `GET /api/images/:hash` accept either;
   writes stay single-principal (project token for CLI routes, session for review routes).

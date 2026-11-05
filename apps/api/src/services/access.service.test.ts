@@ -47,6 +47,33 @@ describe('canAccessProject', () => {
   });
 });
 
+describe('canAccessProject on a personal account', () => {
+  it('treats the account owner as its one member without asking GitHub', async () => {
+    const github = createRecordingGitHub([]);
+    const deps = createTestDeps({ github });
+    const project = await deps.projects.create(
+      newProject('solo', { githubOrg: 'OctoCat', installationId: 42 }),
+    );
+
+    expect(await canAccessProject(deps, await signInReviewer(deps, 'octocat'), project)).toBe(true);
+    expect(await canAccessProject(deps, await signInReviewer(deps, 'outsider'), project)).toBe(
+      false,
+    );
+    expect(github.membershipChecks).toEqual([{ org: 'OctoCat', login: 'outsider' }]);
+  });
+
+  it('still needs an installation, as every project does', async () => {
+    const deps = createTestDeps({ github: createRecordingGitHub([]) });
+    const project = await deps.projects.create(
+      newProject('solo-bare', { githubOrg: 'octocat', installationId: null }),
+    );
+
+    expect(await canAccessProject(deps, await signInReviewer(deps, 'octocat'), project)).toBe(
+      false,
+    );
+  });
+});
+
 describe('requireProjectAccess', () => {
   it('lets the project token through and hides other projects behind not_found', async () => {
     const { deps, project } = await setup();

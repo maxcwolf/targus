@@ -11,9 +11,19 @@ const membershipTtlMs = 60 * 60 * 1000;
 type AccessDeps = Pick<ServiceDeps, 'clock' | 'github' | 'memberships'>;
 
 /**
- * Whether the reviewer belongs to the project's GitHub org. Answers come from the membership
- * cache while it is under an hour old, else from GitHub (through the org's App installation).
- * An org without an installation cannot be checked, so nobody gets in.
+ * Whether `login` is the account the project hangs off. A project's "org" can be a personal
+ * account (ADR 0012); GitHub has no members endpoint for those, and logins are unique across
+ * users and orgs and compare case-insensitively, so the owner is the one member.
+ */
+function ownsAccount(githubOrg: string, login: string): boolean {
+  return githubOrg.toLowerCase() === login.toLowerCase();
+}
+
+/**
+ * Whether the reviewer belongs to the project's GitHub org. The owner of a personal account is
+ * its member; otherwise answers come from the membership cache while it is under an hour old,
+ * else from GitHub (through the org's App installation). An org without an installation cannot
+ * be checked, so nobody gets in.
  */
 export async function canAccessProject(
   deps: AccessDeps,
@@ -23,6 +33,7 @@ export async function canAccessProject(
   const installationId = project.org.installationId;
   if (installationId === null) return false;
   const { user } = reviewer;
+  if (ownsAccount(project.org.githubOrg, user.login)) return true;
   const now = deps.clock.now();
   const cached = await deps.memberships.get(user.id, project.orgId);
   if (cached !== null && now.getTime() - cached.checkedAt.getTime() < membershipTtlMs) {
