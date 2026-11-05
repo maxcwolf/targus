@@ -157,8 +157,10 @@ describe('runBuild against a baseline', () => {
     expect(byId.get('a')).toMatchObject({ state: 'unstable', diffRatio: 0.01 });
     expect(byId.get('a')?.diffHash).toMatch(/^[0-9a-f]{64}$/);
   });
+});
 
-  it('reports an errored story with its message and no image', async () => {
+describe('runBuild with an errored story', () => {
+  it('reports it with its message and no image', async () => {
     const api = createFakeTargusApi({ baselines: { a: whitePng } });
 
     const { output, byId } = await resultsFor(api, [errored('a', 'render threw')]);
@@ -166,6 +168,8 @@ describe('runBuild against a baseline', () => {
     expect(byId.get('a')).toEqual({
       storyId: 'a',
       variant: 'default',
+      title: 'T',
+      name: 'a',
       state: 'error',
       imageHash: null,
       width: null,

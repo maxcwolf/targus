@@ -34,6 +34,9 @@ export const Snapshot = z.object({
   buildId: z.string().min(1),
   storyId: z.string().min(1),
   variant: z.string().min(1),
+  /** Storybook's component title and story name; null for a `removed` story. */
+  title: z.string().min(1).nullable(),
+  name: z.string().min(1).nullable(),
   imageHash: ImageHash.nullable(),
   width: z.number().int().positive().nullable(),
   height: z.number().int().positive().nullable(),

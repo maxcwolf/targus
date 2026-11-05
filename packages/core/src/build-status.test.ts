@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildStatus, type SnapshotOutcome } from './build-status.js';
+import {
+  buildStatus,
+  buildStatusFromTally,
+  emptyTally,
+  tallySnapshots,
+  type SnapshotOutcome,
+} from './build-status.js';
 
 const unchanged: SnapshotOutcome = { state: 'unchanged', review: 'pending' };
 const changedPending: SnapshotOutcome = { state: 'changed', review: 'pending' };
@@ -87,5 +93,49 @@ describe('buildStatus with errored stories', () => {
 
   it('fails even when every other change is approved', () => {
     expect(buildStatus([changedApproved, newApproved, unstable, errored]).status).toBe('failed');
+  });
+});
+
+describe('tallySnapshots', () => {
+  it('counts every state and the review of reviewable snapshots only', () => {
+    const tally = tallySnapshots([
+      unchanged,
+      changedPending,
+      changedApproved,
+      changedDenied,
+      newPending,
+      newApproved,
+      removed,
+      unstable,
+      errored,
+    ]);
+
+    expect(tally).toEqual({
+      counts: { unchanged: 1, changed: 3, new: 2, removed: 1, unstable: 1, error: 1 },
+      pendingCount: 2,
+      deniedCount: 1,
+    });
+  });
+
+  it('is the empty tally for no snapshots', () => {
+    expect(tallySnapshots([])).toEqual(emptyTally);
+  });
+
+  it('agrees with buildStatus for every mix', () => {
+    const all = [
+      unchanged,
+      changedPending,
+      changedApproved,
+      changedDenied,
+      newPending,
+      newApproved,
+      removed,
+      unstable,
+      errored,
+    ];
+    for (let mask = 0; mask < 2 ** all.length; mask += 1) {
+      const mix = all.filter((_, index) => (mask & (1 << index)) !== 0);
+      expect(buildStatusFromTally(tallySnapshots(mix))).toEqual(buildStatus(mix));
+    }
   });
 });

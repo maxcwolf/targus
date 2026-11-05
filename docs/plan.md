@@ -116,7 +116,8 @@ Hono on Workers. Routes (all JSON, zod-validated at the edge):
 | `POST /api/snapshots/:id/review` | session | approve or deny; recomputes build status, updates check run |
 | `POST /api/builds/:id/approve-all` | session | Bulk approve |
 | `GET /api/images/:hash` | session | Streams from R2 after an auth check |
-| `GET /auth/github`, `/auth/callback`, `/auth/logout` | – | GitHub OAuth via the GitHub App |
+| `GET /api/auth/github`, `/api/auth/github/callback`, `POST /api/auth/logout` | – | GitHub OAuth via the GitHub App (ADR 0011) |
+| `GET /api/me`, `GET /api/projects`, `GET /api/projects/:id/builds` | session | Review data for the signed-in user |
 | `POST /webhooks/github` | signature | `installation.created` creates an org row (v1.1; v1 seeds manually) |
 
 GitHub integration uses one GitHub App ("targus"):
@@ -235,7 +236,9 @@ report. Already useful without a backend.
 
 Original scope: `apps/api` with builds, images, baseline resolution, project tokens, D1 migrations, Wrangler deploy. `targus run` end to end with the check run created.
 
-**M3 — Review app.** GitHub login, build list, snapshot viewer, approve/deny, approve-all, check-run updates.
+**M3 — Review app. Built 2026-11-04, not yet deployed.** GitHub login through the App's OAuth flow with signed cookie sessions and org-membership authorization (ADR 0011); `apps/web` has the projects and builds lists, the build page with filters and approve-all, and the snapshot viewer (side-by-side, diff, slider, toggle; `j`/`k`/`a`/`d`); approve and deny withdraw or record carry-forward approvals and update the check run. `e2e/review.spec.ts` drives the whole flow in Chromium against the local Worker with a stubbed GitHub (`e2e/support/github-stub.ts`). Remaining: the GitHub App registration (callback URL, client secret) and the first deploy.
+
+Original scope: GitHub login, build list, snapshot viewer, approve/deny, approve-all, check-run updates.
 
 **M4 — the pilot app rollout.** CircleCI job, EAS profile, decorators, config. Run informational for a week, then make the check required.
 

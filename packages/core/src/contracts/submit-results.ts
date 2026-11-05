@@ -11,6 +11,9 @@ export const StoryResult = z
   .object({
     storyId: z.string().min(1),
     variant: z.string().min(1).default('default'),
+    /** Storybook's component title and story name, for grouping in the review UI. */
+    title: z.string().min(1).nullable().default(null),
+    name: z.string().min(1).nullable().default(null),
     state: SnapshotState,
     imageHash: ImageHash.nullable(),
     width: z.number().int().positive().nullable(),
@@ -53,13 +56,3 @@ export const SubmitResultsRequest = z.object({
   durationMs: z.number().int().nonnegative(),
 });
 export type SubmitResultsRequest = z.infer<typeof SubmitResultsRequest>;
-
-/** A reviewer's decision on one snapshot. */
-export const ReviewDecision = z.enum(['approve', 'deny']);
-export type ReviewDecision = z.infer<typeof ReviewDecision>;
-
-/** `POST /api/snapshots/:id/review` request body. */
-export const ReviewRequest = z.object({
-  decision: ReviewDecision,
-});
-export type ReviewRequest = z.infer<typeof ReviewRequest>;

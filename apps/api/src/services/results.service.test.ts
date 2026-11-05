@@ -11,7 +11,12 @@ import {
   storyResult,
 } from '../../test/support/fixtures.js';
 import { createGitHubStub, generatePrivateKeyPem } from '../../test/support/github-stub.js';
-import { createTestDeps, type TestDeps } from '../../test/support/in-memory.js';
+import {
+  asProject,
+  completion,
+  createTestDeps,
+  type TestDeps,
+} from '../../test/support/in-memory.js';
 import { createBuild, getBuild } from './build.service.js';
 import { submitResults } from './results.service.js';
 
@@ -88,7 +93,7 @@ describe('submitResults against a baseline', () => {
         storyResult('wobbly', { imageHash: imageHash('4') }),
       ],
     });
-    await deps.builds.updateStatus(first, 'accepted', deps.clock.now());
+    await deps.builds.complete(first, completion('accepted', deps.clock.now()));
     deps.builds.snapshots.set(
       first,
       (deps.builds.snapshots.get(first) ?? []).map((s) => ({ ...s, review: 'approved' })),
@@ -200,8 +205,8 @@ describe('submitResults check runs', () => {
     });
 
     expect(response.checkRun).toEqual({ id: 901 });
-    expect(deps.builds.checkRunIds.get(buildId)).toBe(901);
-    expect((await getBuild(deps, project, buildId)).build.checkRunId).toBe(901);
+    expect(deps.builds.builds[0]?.checkRunId).toBe(901);
+    expect((await getBuild(deps, asProject(project), buildId)).build.checkRunId).toBe(901);
     expect(stub.requests.map((request) => request.path)).toEqual([
       '/app/installations/42/access_tokens',
       '/repos/org-res/app/check-runs',

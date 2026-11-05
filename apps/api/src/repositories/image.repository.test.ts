@@ -1,8 +1,10 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { imageHash } from '../../test/support/fixtures.js';
+import { imageHash, newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.js';
+import { D1BuildRepository } from './build.repository.js';
 import { createImageRepository } from './image.repository.js';
+import { createProjectRepository } from './project.repository.js';
 
 const at = new Date('2026-01-01T00:00:00.000Z');
 
@@ -45,5 +47,37 @@ describe('createImageRepository (local D1)', () => {
 
     expect(await lastReferencedAt(hash)).toBe(at.getTime() + 1000);
     expect(await lastReferencedAt(imageHash('e'))).toBeUndefined();
+  });
+});
+
+describe('createImageRepository.projectIdsReferencing (local D1)', () => {
+  const repository = createImageRepository(env.DB);
+
+  it('finds the projects whose snapshots use a hash as image, baseline or diff', async () => {
+    const projects = createProjectRepository(env.DB);
+    const builds = new D1BuildRepository(env.DB);
+    for (const key of ['ref-a', 'ref-b', 'ref-c']) {
+      await projects.create(newProject(key));
+      await builds.create(newBuild(`build-${key}`, `project-${key}`));
+    }
+    const [current, baseline, diff] = [imageHash('7'), imageHash('8'), imageHash('9')];
+    await builds.saveSnapshots('build-ref-a', [
+      snapshotRecord('ref-1', 'build-ref-a', { imageHash: current, baselineHash: baseline }),
+      snapshotRecord('ref-2', 'build-ref-a', { imageHash: current }),
+    ]);
+    await builds.saveSnapshots('build-ref-b', [
+      snapshotRecord('ref-3', 'build-ref-b', { imageHash: imageHash('6'), diffHash: diff }),
+    ]);
+    await builds.saveSnapshots('build-ref-c', [
+      snapshotRecord('ref-4', 'build-ref-c', { imageHash: baseline }),
+    ]);
+
+    expect(await repository.projectIdsReferencing(current)).toEqual(['project-ref-a']);
+    expect((await repository.projectIdsReferencing(baseline)).sort()).toEqual([
+      'project-ref-a',
+      'project-ref-c',
+    ]);
+    expect(await repository.projectIdsReferencing(diff)).toEqual(['project-ref-b']);
+    expect(await repository.projectIdsReferencing(imageHash('5'))).toEqual([]);
   });
 });

@@ -29,4 +29,34 @@ describe('createApprovalRepository (local D1)', () => {
     expect(await repository.listForProject('project-appr-a')).toEqual([earlier, later]);
     expect(await repository.listForProject('project-none')).toEqual([]);
   });
+
+  it('tells whether a hash pair is approved and deletes exactly that pair', async () => {
+    await createProjectRepository(env.DB).create(newProject('appr-pair'));
+    const repository = createApprovalRepository(env.DB);
+    const changed = {
+      projectId: 'project-appr-pair',
+      storyId: 'card',
+      variant: 'default',
+      fromHash: imageHash('1'),
+      toHash: imageHash('2'),
+      approvedBy: 'octocat',
+      approvedAt: '2026-01-01T00:00:00.000Z',
+    };
+    const fresh = { ...changed, fromHash: null };
+    await repository.create('pair-1', changed);
+    await repository.create('pair-2', fresh);
+
+    const pair = ['project-appr-pair', 'card', 'default'] as const;
+    expect(await repository.exists(...pair, imageHash('1'), imageHash('2'))).toBe(true);
+    expect(await repository.exists(...pair, null, imageHash('2'))).toBe(true);
+    expect(await repository.exists(...pair, imageHash('3'), imageHash('2'))).toBe(false);
+    expect(await repository.exists('project-appr-pair', 'card', 'dark', null, imageHash('2'))).toBe(
+      false,
+    );
+
+    await repository.delete(...pair, null, imageHash('2'));
+
+    expect(await repository.exists(...pair, null, imageHash('2'))).toBe(false);
+    expect(await repository.listForProject('project-appr-pair')).toEqual([changed]);
+  });
 });

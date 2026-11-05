@@ -11,9 +11,14 @@ export {
 } from './baseline/resolve-baseline.js';
 export {
   buildStatus,
+  buildStatusFromTally,
+  emptyTally,
+  needsReview,
+  tallySnapshots,
   type BuildReviewStatus,
   type BuildStatusResult,
   type SnapshotOutcome,
+  type SnapshotTally,
 } from './build-status.js';
 export * from './contracts/index.js';
 export { isTargusError, TargusError, targusErrorCodes, type TargusErrorCode } from './errors.js';

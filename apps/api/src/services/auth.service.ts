@@ -2,6 +2,7 @@ import { TargusError } from '@targus/core';
 
 import type { Project } from '../repositories/project.repository.js';
 import type { ServiceDeps } from './deps.js';
+import type { Reviewer } from './principal.js';
 
 /** Admin routes: the presented bearer token must equal `ADMIN_TOKEN`, which must be set. */
 export async function authenticateAdmin(
@@ -24,4 +25,15 @@ export async function authenticateProjectToken(
   const project = await deps.projects.findByTokenHash(await deps.tokens.hash(presented));
   if (project === null) throw new TargusError('unauthorized', 'invalid project token');
   return project;
+}
+
+/** Review routes: the session cookie's id must name a session that has not expired. */
+export async function authenticateSession(
+  deps: Pick<ServiceDeps, 'clock' | 'sessions'>,
+  sessionId: string | null,
+): Promise<Reviewer> {
+  if (sessionId === null) throw new TargusError('unauthorized', 'sign in with GitHub first');
+  const session = await deps.sessions.findActive(sessionId, deps.clock.now());
+  if (session === null) throw new TargusError('unauthorized', 'session expired; sign in again');
+  return { sessionId: session.sessionId, user: session.user };
 }

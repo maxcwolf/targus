@@ -1,4 +1,12 @@
-import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 
 // D1 schema (plan.md section 6). Every table hangs off org_id through projects (ADR 0007), and
 // every foreign key and every lookup the repositories run is indexed to keep D1 row reads low
@@ -60,6 +68,16 @@ export const builds = sqliteTable(
     checkRunId: integer('check_run_id'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
     completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
+    // The persisted `SnapshotTally` of core, so the builds list and the build page derive the
+    // status and counts without reading snapshots.
+    pendingCount: integer('pending_count').notNull().default(0),
+    deniedCount: integer('denied_count').notNull().default(0),
+    unchangedCount: integer('unchanged_count').notNull().default(0),
+    changedCount: integer('changed_count').notNull().default(0),
+    newCount: integer('new_count').notNull().default(0),
+    removedCount: integer('removed_count').notNull().default(0),
+    unstableCount: integer('unstable_count').notNull().default(0),
+    errorCount: integer('error_count').notNull().default(0),
   },
   (table) => [
     // Covers the project_id foreign key and the baseline lookup by project and sha.
@@ -78,6 +96,9 @@ export const snapshots = sqliteTable(
       .references(() => builds.id),
     storyId: text('story_id').notNull(),
     variant: text('variant').notNull(),
+    /** Storybook component title and story name; null for `removed` stories. */
+    title: text('title'),
+    name: text('name'),
     imageHash: text('image_hash'),
     width: integer('width'),
     height: integer('height'),
@@ -100,6 +121,10 @@ export const snapshots = sqliteTable(
       table.storyId,
       table.variant,
     ),
+    // "Which projects reference this image", for authorizing a reviewer's image read.
+    index('snapshots_image_hash_idx').on(table.imageHash),
+    index('snapshots_baseline_hash_idx').on(table.baselineHash),
+    index('snapshots_diff_hash_idx').on(table.diffHash),
   ],
 );
 
@@ -143,4 +168,54 @@ export const images = sqliteTable(
   },
   // For the v1.1 retention job: images not referenced in the last 90 days (plan.md section 9).
   (table) => [index('images_last_referenced_at_idx').on(table.lastReferencedAt)],
+);
+
+/** GitHub users who signed in to the review UI. */
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  githubId: integer('github_id').notNull().unique(),
+  login: text('login').notNull(),
+  avatarUrl: text('avatar_url').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  lastLoginAt: integer('last_login_at', { mode: 'timestamp_ms' }).notNull(),
+});
+
+/** Review UI sessions; the id is the (signed) `targus_session` cookie value. */
+export const sessions = sqliteTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  // user_id covers the foreign key; expires_at is for a future cleanup of expired sessions.
+  (table) => [
+    index('sessions_user_id_idx').on(table.userId),
+    index('sessions_expires_at_idx').on(table.expiresAt),
+  ],
+);
+
+/**
+ * Cached answers to "is this user a member of this GitHub org", re-checked after an hour
+ * (plan.md section 5.2). The primary key covers the user_id foreign key.
+ */
+export const orgMemberships = sqliteTable(
+  'org_memberships',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    orgId: text('org_id')
+      .notNull()
+      .references(() => orgs.id),
+    member: integer('member', { mode: 'boolean' }).notNull(),
+    checkedAt: integer('checked_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.orgId] }),
+    index('org_memberships_org_id_idx').on(table.orgId),
+  ],
 );

@@ -16,6 +16,6 @@ paths = [
   '''apps/api/test/support/github-stub\.ts''',
 ]
 regexes = [
-  # Admin tokens used only by local `wrangler dev` examples and the Playwright e2e.
-  '''(dev|e2e)-admin-token''',
+  # Tokens and secrets used only by local `wrangler dev` examples and the Playwright e2e.
+  '''(dev|e2e)-(admin-token|session-secret|client-id|client-secret)''',
 ]

@@ -63,6 +63,8 @@ export function snapshotRecord(
     buildId,
     storyId: `story-${id}`,
     variant: 'default',
+    title: 'Stories/Example',
+    name: `Story ${id}`,
     imageHash: imageHash('1'),
     width: 1179,
     height: 2556,
@@ -82,6 +84,8 @@ export function storyResult(storyId: string, overrides: Partial<StoryResult> = {
   return {
     storyId,
     variant: 'default',
+    title: null,
+    name: null,
     state: 'new',
     imageHash: imageHash('1'),
     width: 1179,

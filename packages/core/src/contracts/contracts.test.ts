@@ -89,6 +89,8 @@ describe('Build and Snapshot', () => {
       buildId: build.id,
       storyId: 'button--primary',
       variant: 'default',
+      title: 'Button',
+      name: 'Primary',
       imageHash: hash,
       width: 1179,
       height: 2556,

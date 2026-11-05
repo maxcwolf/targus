@@ -1,7 +1,9 @@
 import { ImageHash, TargusError, type UploadImageResponse } from '@targus/core';
 
 import { sha256Hex } from '../lib/sha256.js';
+import { canAccessProject } from './access.service.js';
 import type { ServiceDeps } from './deps.js';
+import type { Principal, Reviewer } from './principal.js';
 import { readPngDimensions } from './png.js';
 
 type ImageDeps = Pick<ServiceDeps, 'clock' | 'images' | 'imageStore'>;
@@ -38,12 +40,38 @@ export async function uploadImage(
   return { hash: expected, stored: true };
 }
 
-/** `GET /api/images/:hash`: the PNG bytes, or `not_found`. */
+type ReadImageDeps = Pick<
+  ServiceDeps,
+  'clock' | 'github' | 'images' | 'imageStore' | 'memberships' | 'projects'
+>;
+
+/** Whether some project that references the image is one the reviewer may read. */
+async function reviewerMayRead(
+  deps: ReadImageDeps,
+  reviewer: Reviewer,
+  hash: string,
+): Promise<boolean> {
+  for (const projectId of await deps.images.projectIdsReferencing(hash)) {
+    const project = await deps.projects.findById(projectId);
+    if (project !== null && (await canAccessProject(deps, reviewer, project))) return true;
+  }
+  return false;
+}
+
+/**
+ * `GET /api/images/:hash`: the PNG bytes, or `not_found`. The CLI reads with its project token
+ * (baselines); a reviewer only images of builds in their orgs, and an image they may not read
+ * answers `not_found` exactly like a missing one, so its existence never leaks.
+ */
 export async function getImage(
-  deps: Pick<ServiceDeps, 'imageStore'>,
+  deps: ReadImageDeps,
+  principal: Principal,
   hash: string,
 ): Promise<Uint8Array> {
-  const bytes = await deps.imageStore.get(parseHash(hash));
+  const expected = parseHash(hash);
+  const allowed =
+    principal.kind === 'project' || (await reviewerMayRead(deps, principal.reviewer, expected));
+  const bytes = allowed ? await deps.imageStore.get(expected) : null;
   if (bytes === null) throw new TargusError('not_found', `no image ${hash}`);
   return bytes;
 }

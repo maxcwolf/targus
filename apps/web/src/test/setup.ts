@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 
-import { server } from './msw.js';
+import { resetApiState, server } from './msw.js';
 
 // jsdom has no layout; the router restores scroll positions on navigation.
 window.scrollTo = (): void => undefined;
@@ -16,6 +16,7 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   server.resetHandlers();
+  resetApiState();
 });
 afterAll(() => {
   server.close();

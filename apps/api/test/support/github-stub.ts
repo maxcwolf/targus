@@ -39,10 +39,10 @@ function json(body: unknown, status: number): Response {
 
 /**
  * A `fetch` that plays api.github.com for the calls `OctokitGitHubClient` makes: it mints an
- * installation token, creates check run 901, accepts updates, and treats `member` as the only
- * org member. Every request is recorded.
+ * installation token, creates check run 901, accepts updates, and treats `members` (by default
+ * only `member`) as the org's members. Every request is recorded.
  */
-export function createGitHubStub(): GitHubStub {
+export function createGitHubStub(members: readonly string[] = ['member']): GitHubStub {
   const requests: RecordedGitHubRequest[] = [];
   const stubFetch: typeof fetch = async (input, init) => {
     const request = new Request(input, init);
@@ -59,8 +59,10 @@ export function createGitHubStub(): GitHubStub {
     }
     if (path.endsWith('/check-runs')) return json({ id: 901 }, 201);
     if (path.includes('/check-runs/')) return json({ id: 901 }, 200);
-    if (path.endsWith('/members/member')) return new Response(null, { status: 204 });
-    if (path.includes('/members/')) return json({ message: 'Not Found' }, 404);
+    const member = /\/members\/([^/]+)$/.exec(path)?.[1];
+    if (member !== undefined && members.includes(member))
+      return new Response(null, { status: 204 });
+    if (member !== undefined) return json({ message: 'Not Found' }, 404);
     return json({ message: 'Server Error' }, 500);
   };
   return { fetch: stubFetch, requests };

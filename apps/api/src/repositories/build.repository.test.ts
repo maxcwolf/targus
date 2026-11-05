@@ -1,4 +1,4 @@
-import { baselineResolutionCases, baselineShaOrder } from '@targus/core';
+import { baselineResolutionCases, baselineShaOrder, emptyTally } from '@targus/core';
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
@@ -23,7 +23,7 @@ describe('D1BuildRepository (local D1)', () => {
     const other = await repository.create(newBuild('b1', projectB));
 
     expect([first.number, second.number, other.number]).toEqual([1, 2, 1]);
-    expect(first).toEqual({ ...newBuild('a1', projectA), number: 1 });
+    expect(first).toEqual({ ...newBuild('a1', projectA), number: 1, tally: emptyTally });
     expect(first.checkRunId).toBeNull();
     expect(await repository.findById(projectA, 'a2')).toEqual(second);
     expect(await repository.findById(projectB, 'a2')).toBeNull();
@@ -33,7 +33,12 @@ describe('D1BuildRepository (local D1)', () => {
     const projectId = await seedProject('status');
     await repository.create(newBuild('s1', projectId));
 
-    await repository.updateStatus('s1', 'pending', new Date('2026-01-02T00:00:00.000Z'), 55);
+    await repository.complete('s1', {
+      status: 'pending',
+      tally: emptyTally,
+      completedAt: new Date('2026-01-02T00:00:00.000Z'),
+      checkRunId: 55,
+    });
 
     expect(await repository.findById(projectId, 's1')).toMatchObject({
       status: 'pending',
@@ -47,6 +52,89 @@ describe('D1BuildRepository (local D1)', () => {
   });
 });
 
+const tally = {
+  counts: { unchanged: 1, changed: 2, new: 3, removed: 4, unstable: 5, error: 6 },
+  pendingCount: 7,
+  deniedCount: 8,
+};
+
+describe('D1BuildRepository tallies and unscoped reads (local D1)', () => {
+  it('stores the tally on complete and on review, and reads builds of any project', async () => {
+    const projectId = await seedProject('tally');
+    await repository.create(newBuild('t1', projectId));
+
+    await repository.complete('t1', {
+      status: 'denied',
+      tally,
+      completedAt: new Date('2026-01-02T00:00:00.000Z'),
+      checkRunId: null,
+    });
+    expect(await repository.findAnyById('t1')).toMatchObject({ status: 'denied', tally });
+
+    const reviewed = { ...tally, pendingCount: 0, deniedCount: 0 };
+    await repository.updateReview('t1', { status: 'accepted', tally: reviewed });
+    expect(await repository.findAnyById('t1')).toMatchObject({
+      status: 'accepted',
+      tally: reviewed,
+      completedAt: '2026-01-02T00:00:00.000Z',
+    });
+    expect(await repository.findAnyById('t-none')).toBeNull();
+  });
+
+  it('creates a build with a given tally', async () => {
+    const projectId = await seedProject('tally-create');
+
+    expect((await repository.create(newBuild('tc1', projectId), tally)).tally).toEqual(tally);
+  });
+
+  it('lists the newest builds of a project first, up to the limit', async () => {
+    const projectId = await seedProject('list');
+    const otherId = await seedProject('list-other');
+    for (const id of ['l1', 'l2', 'l3']) await repository.create(newBuild(id, projectId));
+    await repository.create(newBuild('l-other', otherId));
+
+    const listed = await repository.listForProject(projectId, 2);
+
+    expect(listed.map((build) => [build.id, build.number])).toEqual([
+      ['l3', 3],
+      ['l2', 2],
+    ]);
+    expect(await repository.listForProject('project-none', 10)).toEqual([]);
+  });
+});
+
+describe('D1BuildRepository snapshot reviews (local D1)', () => {
+  it('finds a snapshot by id and updates the review of many in chunks', async () => {
+    const projectId = await seedProject('review');
+    await repository.create(newBuild('rev-build', projectId));
+    const records = Array.from({ length: 120 }, (_, index) =>
+      snapshotRecord(`rev-${String(index).padStart(3, '0')}`, 'rev-build'),
+    );
+    await repository.saveSnapshots('rev-build', records);
+
+    expect(await repository.findSnapshotById('rev-001')).toEqual(records[1]);
+    expect(await repository.findSnapshotById('rev-none')).toBeNull();
+
+    const ids = records.slice(0, 110).map((record) => record.id);
+    const reviewedAt = new Date('2026-01-05T00:00:00.000Z');
+    await repository.updateSnapshotReview(ids, {
+      review: 'approved',
+      reviewedBy: 'octocat',
+      reviewedAt,
+    });
+    await repository.updateSnapshotReview([], { review: 'denied', reviewedBy: 'x', reviewedAt });
+
+    const stored = await repository.listSnapshots('rev-build');
+    expect(stored.filter((record) => record.review === 'approved')).toHaveLength(110);
+    expect(stored[0]).toMatchObject({
+      review: 'approved',
+      reviewedBy: 'octocat',
+      reviewedAt: reviewedAt.toISOString(),
+    });
+    expect(stored[119]).toMatchObject({ review: 'pending', reviewedBy: null });
+  });
+});
+
 describe('D1BuildRepository snapshots (local D1)', () => {
   it('saves and lists snapshots in story order, in chunks under the D1 parameter limit', async () => {
     const projectId = await seedProject('snapshots');
@@ -56,6 +144,8 @@ describe('D1BuildRepository snapshots (local D1)', () => {
         blank: index === 0,
         reviewedAt: index === 1 ? '2026-01-03T00:00:00.000Z' : null,
         reviewedBy: index === 1 ? 'octocat' : null,
+        title: index === 2 ? null : 'Stories/Button',
+        name: index === 2 ? null : `Button ${index}`,
       }),
     );
 

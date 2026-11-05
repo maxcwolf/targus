@@ -44,4 +44,15 @@ describe('createProjectRepository (local D1)', () => {
     expect(await repository.findByRepo('nope/nope')).toBeNull();
     expect(await repository.findByTokenHash('nope')).toBeNull();
   });
+
+  it('lists every project ordered by name', async () => {
+    await repository.create(newProject('list-b', { name: 'zzz last' }));
+    await repository.create(newProject('list-a', { name: 'AAA first' }));
+
+    const names = (await repository.listAll()).map((project) => project.name);
+
+    expect(names[0]).toBe('AAA first');
+    expect(names.at(-1)).toBe('zzz last');
+    expect([...names].sort()).toEqual(names);
+  });
 });

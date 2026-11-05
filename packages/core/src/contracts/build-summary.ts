@@ -17,12 +17,37 @@ export const BuildStatusSummary = z.object({
 });
 export type BuildStatusSummary = z.infer<typeof BuildStatusSummary>;
 
-/** `GET /api/builds/:id` response. */
-export const GetBuildResponse = z.object({
+const count = z.number().int().nonnegative();
+
+/** How many of a build's snapshots are in each state, for the builds list (plan.md 5.3). */
+export const SnapshotCounts = z.object({
+  unchanged: count,
+  changed: count,
+  new: count,
+  removed: count,
+  unstable: count,
+  error: count,
+});
+export type SnapshotCounts = z.infer<typeof SnapshotCounts>;
+
+/** A build with its derived status and counts: one row of the builds list. */
+export const BuildWithSummary = z.object({
   build: Build,
   summary: BuildStatusSummary,
+  counts: SnapshotCounts,
 });
+export type BuildWithSummary = z.infer<typeof BuildWithSummary>;
+
+/** `GET /api/builds/:id` response: one `BuildWithSummary` (its own schema object, so knip sees
+ * two exports rather than one value under two names). */
+export const GetBuildResponse = z.object({ ...BuildWithSummary.shape });
 export type GetBuildResponse = z.infer<typeof GetBuildResponse>;
+
+/** `GET /api/projects/:id/builds` response, newest build first. */
+export const ListBuildsResponse = z.object({
+  builds: z.array(BuildWithSummary),
+});
+export type ListBuildsResponse = z.infer<typeof ListBuildsResponse>;
 
 /** `GET /api/builds/:id/snapshots` response. */
 export const ListSnapshotsResponse = z.object({

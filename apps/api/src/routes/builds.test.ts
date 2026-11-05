@@ -1,4 +1,5 @@
 import {
+  ApproveAllResponse,
   CreateBuildResponse,
   GetBuildResponse,
   ListSnapshotsResponse,
@@ -14,6 +15,8 @@ import {
   sha,
   storyResult,
 } from '../../test/support/fixtures.js';
+import { getAsReviewer, postAsReviewer, projectWithBuild } from '../../test/support/review.js';
+import { signIn } from '../../test/support/session.js';
 
 describe('/api/builds', () => {
   it('creates a build, accepts results and reads both back, each matching its contract', async () => {
@@ -79,5 +82,44 @@ describe('/api/builds authorization', () => {
       results: [storyResult('x', { state: 'error', error: 'boom' })],
     });
     expect(errorWithImage.status).toBe(400);
+  });
+});
+
+describe('/api/builds for reviewers', () => {
+  it('lets a member read a build and its snapshots with the session cookie', async () => {
+    const { buildId } = await projectWithBuild([storyResult('button')]);
+    const { cookie } = await signIn('octocat');
+
+    const read = await getAsReviewer(`/api/builds/${buildId}`, cookie);
+    const listed = await getAsReviewer(`/api/builds/${buildId}/snapshots`, cookie);
+
+    expect(GetBuildResponse.parse(await read.json())).toMatchObject({
+      build: { id: buildId, status: 'pending' },
+      counts: { new: 1 },
+    });
+    expect(ListSnapshotsResponse.parse(await listed.json()).snapshots).toHaveLength(1);
+  });
+
+  it('forbids outsiders and requires a session or a token', async () => {
+    const { buildId } = await projectWithBuild([]);
+    const { cookie } = await signIn('outsider');
+
+    expect((await getAsReviewer(`/api/builds/${buildId}`, cookie)).status).toBe(403);
+    expect((await call(`/api/builds/${buildId}`)).status).toBe(401);
+    expect((await call(`/api/builds/${buildId}`, { headers: bearer('nope') })).status).toBe(401);
+  });
+
+  it('approves every pending change with approve-all, behind the session only', async () => {
+    const { token, buildId } = await projectWithBuild([storyResult('a'), storyResult('b')]);
+    const { cookie } = await signIn('octocat');
+
+    const approved = await postAsReviewer(`/api/builds/${buildId}/approve-all`, cookie);
+
+    expect(approved.status).toBe(200);
+    expect(ApproveAllResponse.parse(await approved.json())).toMatchObject({
+      approvedCount: 2,
+      summary: { status: 'accepted' },
+    });
+    expect((await postJson(`/api/builds/${buildId}/approve-all`, token, {})).status).toBe(401);
   });
 });

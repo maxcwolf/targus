@@ -85,6 +85,25 @@ describe('OctokitGitHubClient.isOrgMember (stubbed fetch)', () => {
   });
 });
 
+describe('OctokitGitHubClient baseUrl', () => {
+  it('sends every request, token minting included, to the configured API origin', async () => {
+    const stub = createGitHubStub();
+    const hosts: string[] = [];
+    const recording: typeof fetch = (input, init) => {
+      hosts.push(new URL(new Request(input, init).url).origin);
+      return stub.fetch(input, init);
+    };
+    const client = new OctokitGitHubClient(
+      { appId: '123', privateKey, baseUrl: 'http://github-stub.test:9000' },
+      recording,
+    );
+
+    await client.isOrgMember(42, 'example-org', 'member');
+
+    expect(hosts).toEqual(['http://github-stub.test:9000', 'http://github-stub.test:9000']);
+  });
+});
+
 describe('NoopGitHubClient', () => {
   it('does nothing and reports check run id 0', async () => {
     const client: GitHubClient = new NoopGitHubClient();

@@ -2,8 +2,10 @@ import { UploadImageResponse } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import { bearer, call, createTestProject, putImage } from '../../test/support/api.js';
-import { imageHash } from '../../test/support/fixtures.js';
+import { imageHash, storyResult } from '../../test/support/fixtures.js';
 import { pngFixture } from '../../test/support/png.js';
+import { getAsReviewer, projectWithBuild } from '../../test/support/review.js';
+import { signIn } from '../../test/support/session.js';
 import { maxImageBytes } from './images.js';
 
 describe('PUT and GET /api/images/:hash', () => {
@@ -56,5 +58,23 @@ describe('PUT and GET /api/images/:hash', () => {
     expect((await call(`/api/images/${imageHash('c')}`, { headers: bearer('nope') })).status).toBe(
       401,
     );
+  });
+});
+
+describe('GET /api/images/:hash for reviewers', () => {
+  it('serves images of builds in the reviewer org and answers 404 to everyone else', async () => {
+    const png = await pngFixture(2, 2, 77);
+    const { token } = await projectWithBuild([storyResult('button', { imageHash: png.hash })]);
+    await putImage(token, png.hash, png.bytes);
+    const member = await signIn('octocat');
+    const outsider = await signIn('outsider');
+
+    const read = await getAsReviewer(`/api/images/${png.hash}`, member.cookie);
+
+    expect(read.status).toBe(200);
+    expect(new Uint8Array(await read.arrayBuffer())).toEqual(png.bytes);
+    expect((await getAsReviewer(`/api/images/${png.hash}`, outsider.cookie)).status).toBe(404);
+    expect((await getAsReviewer(`/api/images/${imageHash('d')}`, member.cookie)).status).toBe(404);
+    expect((await getAsReviewer('/api/images/not-a-hash', member.cookie)).status).toBe(400);
   });
 });

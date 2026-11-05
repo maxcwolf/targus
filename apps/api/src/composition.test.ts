@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
 import { NoopGitHubClient, OctokitGitHubClient } from './adapters/github-client.adapter.js';
+import { GitHubAppOAuth } from './adapters/github-oauth.adapter.js';
 import { createDeps } from './composition.js';
 
 describe('createDeps', () => {
@@ -17,5 +18,12 @@ describe('createDeps', () => {
     });
 
     expect(deps.github).toBeInstanceOf(OctokitGitHubClient);
+  });
+
+  it('enables GitHub login only when the OAuth client is configured', () => {
+    expect(createDeps(env).oauth).toBeNull();
+    const deps = createDeps({ ...env, GITHUB_CLIENT_ID: 'id', GITHUB_CLIENT_SECRET: 'secret' });
+
+    expect(deps.oauth).toBeInstanceOf(GitHubAppOAuth);
   });
 });

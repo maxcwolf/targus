@@ -40,7 +40,7 @@ async function expectPendingNewBuild(
 test('targus run --from-capture publishes builds to the local Worker', async ({ request }) => {
   test.setTimeout(120_000);
   // The temp dir's random suffix keeps the repo unique when a local server is reused.
-  const token = await createProject(request, `e2e/run-${path.basename(captureDir)}`);
+  const token = await createProject(request, `e2e-cli/run-${path.basename(captureDir)}`);
   await writeFixtureCapture(captureDir);
   const sha = await headSha();
   const common = ['--from-capture', captureDir, '--device-name', 'e2e', '--api-url', apiUrl];

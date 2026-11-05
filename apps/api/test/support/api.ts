@@ -1,16 +1,32 @@
 import { CreateProjectResponse } from '@targus/core';
 import { env } from 'cloudflare:workers';
+import type { Hono } from 'hono';
 
+import type { AppEnv } from '../../src/app-env.js';
 import { createApp } from '../../src/app.js';
+import { createDeps } from '../../src/composition.js';
+import type { ServiceDeps } from '../../src/services/deps.js';
+import { bindServices } from '../../src/services/index.js';
 
 /** The admin token the route tests run with (wrangler.jsonc sets none). */
 export const adminToken = 'test-admin-token';
+/** The session secret the route tests run with; `signIn` signs cookies with it. */
+export const sessionSecret = 'test-session-secret';
 
-const app = createApp();
-const testEnv = { ...env, ADMIN_TOKEN: adminToken };
+const defaultApp = createApp();
+const testEnv = { ...env, ADMIN_TOKEN: adminToken, SESSION_SECRET: sessionSecret };
+
+/** The real app with some dependencies replaced, e.g. a GitHub client that knows members. */
+export function appWith(overrides: Partial<ServiceDeps>): Hono<AppEnv> {
+  return createApp((bindings) => bindServices({ ...createDeps(bindings), ...overrides }));
+}
 
 /** Send a request through the full app with the local D1 and R2 bindings. */
-export function call(path: string, init: RequestInit = {}): Promise<Response> {
+export function call(
+  path: string,
+  init: RequestInit = {},
+  app: Hono<AppEnv> = defaultApp,
+): Promise<Response> {
   return Promise.resolve(app.request(`http://targus.test${path}`, init, testEnv));
 }
 

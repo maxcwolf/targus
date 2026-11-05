@@ -1,9 +1,10 @@
 import {
   createFakeClock,
   createFakeIdGenerator,
+  emptyTally,
+  type BuildStatus,
   resolveBaseline,
   type Approval,
-  type Build,
   type FakeClock,
   type ImageStore,
 } from '@targus/core';
@@ -14,11 +15,21 @@ import type { ApiConfig } from '../../src/config.js';
 import type { ApprovalRepository } from '../../src/repositories/approval.repository.js';
 import type {
   ApiBuildRepository,
+  BuildCompletion,
+  BuildRecord,
   SnapshotRecord,
 } from '../../src/repositories/build.repository.js';
 import type { ImageRecord, ImageRepository } from '../../src/repositories/image.repository.js';
 import type { Project, ProjectRepository } from '../../src/repositories/project.repository.js';
 import type { ServiceDeps } from '../../src/services/deps.js';
+import type { Principal } from '../../src/services/principal.js';
+import {
+  createFakeOAuth,
+  createInMemoryMemberships,
+  createInMemorySessions,
+  createInMemoryUsers,
+  type FakeOAuth,
+} from './in-memory-auth.js';
 
 // In-memory doubles of the API's repositories, for service unit tests. The D1 adapters are
 // tested against the same behaviour in src/repositories/*.test.ts.
@@ -47,31 +58,70 @@ export function createInMemoryProjects(): ProjectRepository & { readonly all: Pr
     findById: (id) => find((project) => project.id === id),
     findByRepo: (repo) => find((project) => project.repo === repo),
     findByTokenHash: (hash) => find((project) => project.id === tokenHashes.get(hash)),
+    listAll: () => Promise.resolve([...all].sort((a, b) => a.name.localeCompare(b.name))),
   };
 }
 
 export interface InMemoryBuilds extends ApiBuildRepository {
-  readonly builds: Build[];
+  readonly builds: BuildRecord[];
   readonly snapshots: Map<string, SnapshotRecord[]>;
-  readonly checkRunIds: Map<string, number | null>;
+}
+
+/** The snapshot-review half of the builds double. */
+function snapshotReviews(
+  snapshots: Map<string, SnapshotRecord[]>,
+): Pick<ApiBuildRepository, 'findSnapshotById' | 'updateSnapshotReview'> {
+  return {
+    findSnapshotById: (snapshotId) =>
+      Promise.resolve(
+        [...snapshots.values()].flat().find((snapshot) => snapshot.id === snapshotId) ?? null,
+      ),
+    updateSnapshotReview(snapshotIds, { review, reviewedBy, reviewedAt }) {
+      const ids = new Set(snapshotIds);
+      for (const [buildId, records] of snapshots) {
+        snapshots.set(
+          buildId,
+          records.map((record) =>
+            ids.has(record.id)
+              ? { ...record, review, reviewedBy, reviewedAt: reviewedAt.toISOString() }
+              : record,
+          ),
+        );
+      }
+      return Promise.resolve();
+    },
+  };
 }
 
 export function createInMemoryBuilds(): InMemoryBuilds {
-  const builds: Build[] = [];
+  const builds: BuildRecord[] = [];
   const snapshots = new Map<string, SnapshotRecord[]>();
-  const checkRunIds = new Map<string, number | null>();
+  const find = (match: (build: BuildRecord) => boolean) =>
+    Promise.resolve(builds.find(match) ?? null);
+  const patch = (buildId: string, fields: Partial<BuildRecord>) => {
+    const index = builds.findIndex((build) => build.id === buildId);
+    const build = builds[index];
+    if (build !== undefined) builds[index] = { ...build, ...fields };
+    return Promise.resolve();
+  };
   return {
     builds,
     snapshots,
-    checkRunIds,
-    create(build) {
+    create(build, tally = emptyTally) {
       const number = builds.filter((other) => other.projectId === build.projectId).length + 1;
-      const created = { ...build, number };
+      const created = { ...build, number, tally };
       builds.push(created);
       return Promise.resolve(created);
     },
-    findById: (projectId, buildId) =>
-      Promise.resolve(builds.find((b) => b.projectId === projectId && b.id === buildId) ?? null),
+    findById: (projectId, buildId) => find((b) => b.projectId === projectId && b.id === buildId),
+    findAnyById: (buildId) => find((b) => b.id === buildId),
+    listForProject: (projectId, limit) =>
+      Promise.resolve(
+        builds
+          .filter((b) => b.projectId === projectId)
+          .sort((a, b) => b.number - a.number)
+          .slice(0, limit),
+      ),
     findLatestSuccessfulForShas: (projectId, shas) =>
       Promise.resolve(
         resolveBaseline(
@@ -79,22 +129,27 @@ export function createInMemoryBuilds(): InMemoryBuilds {
           builds.filter((b) => b.projectId === projectId),
         ),
       ),
+    complete: (buildId, { status, tally, completedAt, checkRunId }) =>
+      patch(buildId, { status, tally, completedAt: completedAt.toISOString(), checkRunId }),
+    updateReview: (buildId, { status, tally }) => patch(buildId, { status, tally }),
     listSnapshots: (buildId) => Promise.resolve([...(snapshots.get(buildId) ?? [])]),
     saveSnapshots(buildId, records) {
       snapshots.set(buildId, [...(snapshots.get(buildId) ?? []), ...records]);
       return Promise.resolve();
     },
-    updateStatus(buildId, status, completedAt, checkRunId = null) {
-      const index = builds.findIndex((build) => build.id === buildId);
-      const build = builds[index];
-      if (build !== undefined) {
-        builds[index] = { ...build, status, completedAt: completedAt.toISOString(), checkRunId };
-      }
-      checkRunIds.set(buildId, checkRunId);
-      return Promise.resolve();
-    },
+    ...snapshotReviews(snapshots),
   };
 }
+
+/** Whether an approval is of this story's hash pair. */
+const samePair =
+  (projectId: string, storyId: string, variant: string, fromHash: string | null, toHash: string) =>
+  (approval: Approval) =>
+    approval.projectId === projectId &&
+    approval.storyId === storyId &&
+    approval.variant === variant &&
+    approval.fromHash === fromHash &&
+    approval.toHash === toHash;
 
 export function createInMemoryApprovals(): ApprovalRepository & { readonly all: Approval[] } {
   const all: Approval[] = [];
@@ -105,18 +160,27 @@ export function createInMemoryApprovals(): ApprovalRepository & { readonly all: 
       all.push(approval);
       return Promise.resolve();
     },
+    exists: (...pair) => Promise.resolve(all.some(samePair(...pair))),
+    delete(...pair) {
+      const keep = all.filter((approval) => !samePair(...pair)(approval));
+      all.splice(0, all.length, ...keep);
+      return Promise.resolve();
+    },
   };
 }
 
 export interface InMemoryImages extends ImageRepository, ImageStore {
   readonly records: Map<string, ImageRecord & { lastReferencedAt: Date }>;
   readonly bytes: Map<string, Uint8Array>;
+  /** What `projectIdsReferencing` answers, by hash. */
+  readonly references: Map<string, string[]>;
 }
 
 /** The image metadata table and the R2 store in one, kept in step like the real pair. */
 export function createInMemoryImages(): InMemoryImages {
   const records = new Map<string, ImageRecord & { lastReferencedAt: Date }>();
   const bytes = new Map<string, Uint8Array>();
+  const references = new Map<string, string[]>();
   return {
     records,
     bytes,
@@ -137,6 +201,9 @@ export function createInMemoryImages(): InMemoryImages {
       return Promise.resolve();
     },
     get: (hash) => Promise.resolve(bytes.get(hash) ?? null),
+    // The real one joins snapshots; service tests set the answer per hash.
+    projectIdsReferencing: (hash) => Promise.resolve(references.get(hash) ?? []),
+    references,
   };
 }
 
@@ -146,6 +213,10 @@ export const testConfig: ApiConfig = {
   diffThreshold: 0.001,
   adminToken: 'admin-secret',
   githubApp: null,
+  sessionSecret: 'session-secret',
+  githubOAuth: { clientId: 'client-id', clientSecret: 'client-secret' },
+  githubOAuthOrigin: 'https://github.test',
+  githubApiOrigin: 'https://api.github.test',
 };
 
 export interface TestDeps extends ServiceDeps {
@@ -155,10 +226,15 @@ export interface TestDeps extends ServiceDeps {
   readonly approvals: ReturnType<typeof createInMemoryApprovals>;
   readonly images: InMemoryImages;
   readonly imageStore: InMemoryImages;
+  readonly users: ReturnType<typeof createInMemoryUsers>;
+  readonly sessions: ReturnType<typeof createInMemorySessions>;
+  readonly memberships: ReturnType<typeof createInMemoryMemberships>;
+  readonly oauth: FakeOAuth | null;
 }
 
 export function createTestDeps(overrides: Partial<ServiceDeps> = {}): TestDeps {
   const images = createInMemoryImages();
+  const users = createInMemoryUsers();
   return {
     config: testConfig,
     clock: createFakeClock(),
@@ -169,7 +245,21 @@ export function createTestDeps(overrides: Partial<ServiceDeps> = {}): TestDeps {
     approvals: createInMemoryApprovals(),
     images,
     imageStore: images,
+    users,
+    sessions: createInMemorySessions(users),
+    memberships: createInMemoryMemberships(),
     github: new NoopGitHubClient(),
+    oauth: createFakeOAuth(),
     ...overrides,
   } as TestDeps;
+}
+
+/** The CLI reading as `project`. */
+export function asProject(project: Project): Principal {
+  return { kind: 'project', project };
+}
+
+/** A `complete` call with an empty tally and no check run. */
+export function completion(status: BuildStatus, completedAt: Date): BuildCompletion {
+  return { status, tally: emptyTally, completedAt, checkRunId: null };
 }

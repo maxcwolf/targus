@@ -1,10 +1,13 @@
 import {
   baselineBuildStatuses,
+  emptyTally,
   type Build,
   type BuildRepository,
   type BuildStatus,
   type NewBuild,
+  type ReviewState,
   type Snapshot,
+  type SnapshotTally,
 } from '@targus/core';
 import { and, asc, desc, eq, getTableColumns, inArray, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
@@ -19,23 +22,86 @@ export interface SnapshotRecord extends Snapshot {
   readonly error: string | null;
 }
 
-/** `BuildRepository` plus the writes the results use-case needs. */
+/** A stored build: the wire `Build` plus its persisted snapshot tally. */
+export interface BuildRecord extends Build {
+  readonly tally: SnapshotTally;
+}
+
+/** What `complete` writes when a build's results arrive. */
+export interface BuildCompletion {
+  readonly status: BuildStatus;
+  readonly tally: SnapshotTally;
+  readonly completedAt: Date;
+  readonly checkRunId: number | null;
+}
+
+/** What `updateReview` writes after a reviewer's decision. */
+export interface BuildReviewUpdate {
+  readonly status: BuildStatus;
+  readonly tally: SnapshotTally;
+}
+
+/** What `updateSnapshotReview` writes on each snapshot. */
+export interface SnapshotReviewUpdate {
+  readonly review: ReviewState;
+  readonly reviewedBy: string;
+  readonly reviewedAt: Date;
+}
+
+/** `BuildRepository` plus the reads and writes the API's use-cases need. */
 export interface ApiBuildRepository extends BuildRepository {
+  create(build: NewBuild, tally?: SnapshotTally): Promise<BuildRecord>;
+  findById(projectId: string, buildId: string): Promise<BuildRecord | null>;
+  findLatestSuccessfulForShas(
+    projectId: string,
+    shas: readonly string[],
+  ): Promise<BuildRecord | null>;
+  /** A build of any project; the caller authorizes it through its project. */
+  findAnyById(buildId: string): Promise<BuildRecord | null>;
+  /** The newest `limit` builds of a project, by number descending. */
+  listForProject(projectId: string, limit: number): Promise<BuildRecord[]>;
+  complete(buildId: string, completion: BuildCompletion): Promise<void>;
+  updateReview(buildId: string, update: BuildReviewUpdate): Promise<void>;
   listSnapshots(buildId: string): Promise<SnapshotRecord[]>;
   saveSnapshots(buildId: string, records: readonly SnapshotRecord[]): Promise<void>;
-  updateStatus(
-    buildId: string,
-    status: BuildStatus,
-    completedAt: Date,
-    checkRunId?: number | null,
-  ): Promise<void>;
+  findSnapshotById(snapshotId: string): Promise<SnapshotRecord | null>;
+  updateSnapshotReview(snapshotIds: readonly string[], update: SnapshotReviewUpdate): Promise<void>;
 }
 
 type BuildRow = typeof builds.$inferSelect;
 type SnapshotRow = typeof snapshots.$inferSelect;
 
-/** The wire `Build`: every column, with ISO timestamps. */
-function toBuild(row: BuildRow): Build {
+/** The tally as the eight `builds` count columns. */
+function tallyColumns(tally: SnapshotTally) {
+  return {
+    pendingCount: tally.pendingCount,
+    deniedCount: tally.deniedCount,
+    unchangedCount: tally.counts.unchanged,
+    changedCount: tally.counts.changed,
+    newCount: tally.counts.new,
+    removedCount: tally.counts.removed,
+    unstableCount: tally.counts.unstable,
+    errorCount: tally.counts.error,
+  };
+}
+
+function toTally(row: BuildRow): SnapshotTally {
+  return {
+    counts: {
+      unchanged: row.unchangedCount,
+      changed: row.changedCount,
+      new: row.newCount,
+      removed: row.removedCount,
+      unstable: row.unstableCount,
+      error: row.errorCount,
+    },
+    pendingCount: row.pendingCount,
+    deniedCount: row.deniedCount,
+  };
+}
+
+/** Every `Build` column with ISO timestamps, plus the tally. */
+function toBuildRecord(row: BuildRow): BuildRecord {
   return {
     id: row.id,
     projectId: row.projectId,
@@ -51,6 +117,7 @@ function toBuild(row: BuildRow): Build {
     createdAt: row.createdAt.toISOString(),
     completedAt: row.completedAt === null ? null : row.completedAt.toISOString(),
     checkRunId: row.checkRunId,
+    tally: toTally(row),
   };
 }
 
@@ -63,7 +130,10 @@ function toSnapshotRow(buildId: string, record: SnapshotRecord): SnapshotRow {
   return { ...record, buildId, reviewedAt };
 }
 
-/** D1 adapter for `builds` and `snapshots`. Every build read is scoped by project (ADR 0007). */
+/**
+ * D1 adapter for `builds` and `snapshots`. Build reads are scoped by project (ADR 0007), except
+ * `findAnyById`, whose callers authorize through the build's project.
+ */
 export class D1BuildRepository implements ApiBuildRepository {
   private readonly db;
 
@@ -71,29 +141,45 @@ export class D1BuildRepository implements ApiBuildRepository {
     this.db = drizzle(database);
   }
 
-  async create(build: NewBuild): Promise<Build> {
+  async create(build: NewBuild, tally: SnapshotTally = emptyTally): Promise<BuildRecord> {
     // One statement, so concurrent creates cannot both take the same number.
     const nextNumber = sql<number>`(SELECT COALESCE(MAX(${builds.number}), 0) + 1 FROM ${builds} WHERE ${builds.projectId} = ${build.projectId})`;
     const row = await this.db
       .insert(builds)
       .values({
         ...build,
+        ...tallyColumns(tally),
         number: nextNumber,
         createdAt: new Date(build.createdAt),
         completedAt: build.completedAt === null ? null : new Date(build.completedAt),
       })
       .returning()
       .get();
-    return toBuild(row);
+    return toBuildRecord(row);
   }
 
-  async findById(projectId: string, buildId: string): Promise<Build | null> {
+  async findById(projectId: string, buildId: string): Promise<BuildRecord | null> {
     const row = await this.db
       .select()
       .from(builds)
       .where(and(eq(builds.projectId, projectId), eq(builds.id, buildId)))
       .get();
-    return row === undefined ? null : toBuild(row);
+    return row === undefined ? null : toBuildRecord(row);
+  }
+
+  async findAnyById(buildId: string): Promise<BuildRecord | null> {
+    const row = await this.db.select().from(builds).where(eq(builds.id, buildId)).get();
+    return row === undefined ? null : toBuildRecord(row);
+  }
+
+  async listForProject(projectId: string, limit: number): Promise<BuildRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(builds)
+      .where(eq(builds.projectId, projectId))
+      .orderBy(desc(builds.number))
+      .limit(limit);
+    return rows.map(toBuildRecord);
   }
 
   /**
@@ -104,7 +190,7 @@ export class D1BuildRepository implements ApiBuildRepository {
   async findLatestSuccessfulForShas(
     projectId: string,
     shas: readonly string[],
-  ): Promise<Build | null> {
+  ): Promise<BuildRecord | null> {
     if (shas.length === 0) return null;
     const order = JSON.stringify(shas);
     const row = await this.db
@@ -124,7 +210,22 @@ export class D1BuildRepository implements ApiBuildRepository {
       )
       .limit(1)
       .get();
-    return row === undefined ? null : toBuild(row);
+    return row === undefined ? null : toBuildRecord(row);
+  }
+
+  async complete(buildId: string, completion: BuildCompletion): Promise<void> {
+    const { status, tally, completedAt, checkRunId } = completion;
+    await this.db
+      .update(builds)
+      .set({ status, completedAt, checkRunId, ...tallyColumns(tally) })
+      .where(eq(builds.id, buildId));
+  }
+
+  async updateReview(buildId: string, update: BuildReviewUpdate): Promise<void> {
+    await this.db
+      .update(builds)
+      .set({ status: update.status, ...tallyColumns(update.tally) })
+      .where(eq(builds.id, buildId));
   }
 
   async listSnapshots(buildId: string): Promise<SnapshotRecord[]> {
@@ -146,15 +247,20 @@ export class D1BuildRepository implements ApiBuildRepository {
     await this.db.batch([first, ...rest]);
   }
 
-  async updateStatus(
-    buildId: string,
-    status: BuildStatus,
-    completedAt: Date,
-    checkRunId: number | null = null,
+  async findSnapshotById(snapshotId: string): Promise<SnapshotRecord | null> {
+    const row = await this.db.select().from(snapshots).where(eq(snapshots.id, snapshotId)).get();
+    return row === undefined ? null : toSnapshotRecord(row);
+  }
+
+  async updateSnapshotReview(
+    snapshotIds: readonly string[],
+    update: SnapshotReviewUpdate,
   ): Promise<void> {
-    await this.db
-      .update(builds)
-      .set({ status, completedAt, checkRunId })
-      .where(eq(builds.id, buildId));
+    // Each chunk binds its ids plus the three SET values; two per id keeps it under the limit.
+    const [first, ...rest] = chunkForD1(snapshotIds, 2).map((ids) =>
+      this.db.update(snapshots).set(update).where(inArray(snapshots.id, ids)),
+    );
+    if (first === undefined) return;
+    await this.db.batch([first, ...rest]);
   }
 }

@@ -1,6 +1,7 @@
 import {
-  buildStatus,
+  buildStatusFromTally,
   compareSnapshot,
+  tallySnapshots,
   TargusError,
   type ApprovalPair,
   type Build,
@@ -84,6 +85,8 @@ function recordFor(
     buildId,
     storyId: result.storyId,
     variant: result.variant,
+    title: result.title,
+    name: result.name,
     imageHash: result.imageHash,
     width: result.width,
     height: result.height,
@@ -119,6 +122,8 @@ function removedRecord(
     buildId,
     storyId,
     variant,
+    title: null,
+    name: null,
     imageHash: null,
     width: null,
     height: null,
@@ -178,9 +183,15 @@ export async function submitResults(
   );
   await deps.builds.saveSnapshots(build.id, records);
 
-  const summary = buildStatus(records);
+  const tally = tallySnapshots(records);
+  const summary = buildStatusFromTally(tally);
   const reviewUrl = `${deps.config.publicUrl}/builds/${build.id}`;
   const checkRun = await reportCheckRun(deps, project, build, summary, reviewUrl);
-  await deps.builds.updateStatus(build.id, summary.status, deps.clock.now(), checkRun?.id ?? null);
+  await deps.builds.complete(build.id, {
+    status: summary.status,
+    tally,
+    completedAt: deps.clock.now(),
+    checkRunId: checkRun?.id ?? null,
+  });
   return { build: { id: build.id, number: build.number }, summary, reviewUrl, checkRun };
 }

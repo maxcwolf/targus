@@ -9,6 +9,8 @@ export interface GitHubAppCredentials {
   readonly appId: string;
   /** PKCS#8 PEM; WebCrypto cannot import the PKCS#1 key GitHub hands out (see README). */
   readonly privateKey: string;
+  /** REST API origin; defaults to `https://api.github.com` (a stub in the e2e suite). */
+  readonly baseUrl?: string;
 }
 
 type Fetch = typeof fetch;
@@ -39,8 +41,8 @@ function isNotFound(error: unknown): boolean {
 
 /**
  * `GitHubClient` for the targus GitHub App. Every call mints an installation access token from
- * the App's private key (plan.md section 5.2). `fetch` is injectable so tests never touch the
- * network.
+ * the App's private key (plan.md section 5.2), against the same `baseUrl`. `fetch` is
+ * injectable so tests never touch the network.
  */
 export class OctokitGitHubClient implements GitHubClient {
   private readonly request: Request;
@@ -48,6 +50,7 @@ export class OctokitGitHubClient implements GitHubClient {
 
   constructor(credentials: GitHubAppCredentials, fetchImpl: Fetch = fetch) {
     this.request = octokitRequest.defaults({
+      baseUrl: credentials.baseUrl ?? 'https://api.github.com',
       headers: { 'user-agent': 'targus' },
       request: { fetch: fetchImpl },
     });

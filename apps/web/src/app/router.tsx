@@ -2,33 +2,62 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  Outlet,
   type RouterHistory,
 } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
-import { HealthBadge } from '../features/health/HealthBadge.js';
+import { BuildPage } from '../features/build/BuildPage.js';
+import { validateFilterSearch } from '../features/build/filters.js';
+import { NotFound } from '../features/errors/ErrorView.js';
+import { BuildsPage } from '../features/projects/BuildsPage.js';
+import { ProjectsPage } from '../features/projects/ProjectsPage.js';
+import { SnapshotPage } from '../features/snapshot/SnapshotPage.js';
+import { RootLayout } from './RootLayout.js';
 
-function RootLayout(): ReactElement {
-  return (
-    <>
-      <header>
-        <strong>targus</strong> <HealthBadge />
-      </header>
-      <main>
-        <Outlet />
-      </main>
-    </>
-  );
-}
+// Route components here only read params and search; the pages live in features/.
+const rootRoute = createRootRoute({
+  component: RootLayout,
+  notFoundComponent: () => <NotFound />,
+});
 
-function HomePage(): ReactElement {
-  return <p>Visual review for React Native on-device Storybook.</p>;
-}
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: ProjectsPage,
+});
 
-const rootRoute = createRootRoute({ component: RootLayout });
-const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomePage });
-const routeTree = rootRoute.addChildren([indexRoute]);
+const projectRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/projects/$projectId',
+  component: function ProjectRoute(): ReactElement {
+    const { projectId } = projectRoute.useParams();
+    return <BuildsPage projectId={projectId} />;
+  },
+});
+
+const buildRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/builds/$buildId',
+  validateSearch: validateFilterSearch,
+  component: function BuildRoute(): ReactElement {
+    const { buildId } = buildRoute.useParams();
+    const { filter } = buildRoute.useSearch();
+    return <BuildPage buildId={buildId} filter={filter} />;
+  },
+});
+
+const snapshotRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/builds/$buildId/snapshots/$snapshotId',
+  validateSearch: validateFilterSearch,
+  component: function SnapshotRoute(): ReactElement {
+    const { buildId, snapshotId } = snapshotRoute.useParams();
+    const { filter } = snapshotRoute.useSearch();
+    return <SnapshotPage buildId={buildId} snapshotId={snapshotId} filter={filter} />;
+  },
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, projectRoute, buildRoute, snapshotRoute]);
 
 /** The app's router. Tests pass a memory history; the browser uses the default. */
 export function createAppRouter(history?: RouterHistory) {

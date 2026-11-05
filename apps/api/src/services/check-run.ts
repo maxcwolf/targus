@@ -57,3 +57,27 @@ export async function reportCheckRun(
     return null;
   }
 }
+
+/**
+ * Move the build's check run to the state of its new summary after a review. Skipped when the
+ * build has no check run or its org no installation; best effort, like `reportCheckRun`: the
+ * review is already stored, so a GitHub outage only leaves the check run stale.
+ */
+export async function syncCheckRun(
+  deps: Pick<ServiceDeps, 'github'>,
+  project: Project,
+  build: Build,
+  summary: BuildStatusSummary,
+): Promise<void> {
+  const installationId = project.org.installationId;
+  if (build.checkRunId === null || installationId === null) return;
+  try {
+    await deps.github.updateCheckRun(
+      { installationId, repo: project.repo, headSha: build.sha },
+      build.checkRunId,
+      checkRunState(summary),
+    );
+  } catch (error) {
+    console.error('updating the check run failed', error);
+  }
+}

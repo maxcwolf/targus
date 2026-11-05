@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { newProject } from '../../test/support/fixtures.js';
+import { signInReviewer } from '../../test/support/in-memory-auth.js';
 import { createTestDeps, testConfig } from '../../test/support/in-memory.js';
-import { authenticateAdmin, authenticateProjectToken } from './auth.service.js';
+import {
+  authenticateAdmin,
+  authenticateProjectToken,
+  authenticateSession,
+} from './auth.service.js';
 
 describe('authenticateAdmin', () => {
   it('accepts the configured admin token', async () => {
@@ -41,5 +46,26 @@ describe('authenticateProjectToken', () => {
     await expect(authenticateProjectToken(deps, 'nope')).rejects.toMatchObject({
       code: 'unauthorized',
     });
+  });
+});
+
+describe('authenticateSession', () => {
+  it('returns the reviewer of an active session', async () => {
+    const deps = createTestDeps();
+    const reviewer = await signInReviewer(deps, 'octocat');
+
+    expect(await authenticateSession(deps, reviewer.sessionId)).toEqual(reviewer);
+  });
+
+  it('rejects a missing, unknown or expired session', async () => {
+    const deps = createTestDeps();
+    const reviewer = await signInReviewer(deps, 'octocat');
+    deps.clock.advance(24 * 60 * 60 * 1000);
+
+    for (const sessionId of [null, 'nope', reviewer.sessionId]) {
+      await expect(authenticateSession(deps, sessionId)).rejects.toMatchObject({
+        code: 'unauthorized',
+      });
+    }
   });
 });

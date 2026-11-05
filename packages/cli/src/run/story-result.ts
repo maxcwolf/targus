@@ -42,6 +42,8 @@ export function errorResult(story: CaptureResult): StoryResult {
   return {
     storyId: story.id,
     variant: defaultVariant,
+    title: story.title,
+    name: story.name,
     state: 'error',
     imageHash: null,
     width: null,
@@ -95,6 +97,8 @@ export async function judgeStory(
     result: {
       storyId: story.id,
       variant: defaultVariant,
+      title: story.title,
+      name: story.name,
       state,
       imageHash: story.hash,
       width: story.width,

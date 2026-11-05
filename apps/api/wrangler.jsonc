@@ -40,9 +40,17 @@
   //   ADMIN_TOKEN             bearer token for POST /api/admin/projects (admin routes 401 without it)
   //   GITHUB_APP_ID           GitHub App id                      } both or neither; without them
   //   GITHUB_APP_PRIVATE_KEY  GitHub App private key, PKCS#8 PEM } check runs are skipped
+  //   SESSION_SECRET          signs the session cookie (session routes 401 without it)
+  //   GITHUB_CLIENT_ID        GitHub App OAuth client id         } both or neither; without them
+  //   GITHUB_CLIENT_SECRET    GitHub App OAuth client secret     } GET /api/auth/github is 501
+  //
+  // GITHUB_OAUTH_ORIGIN and GITHUB_API_ORIGIN are where login and the REST API live. The e2e
+  // suite (and local dev, if wanted) points them at a stub GitHub instead of the real one.
   "vars": {
     "APP_VERSION": "0.0.0",
     "PUBLIC_URL": "http://localhost:8787",
     "DIFF_THRESHOLD": "0.001",
+    "GITHUB_OAUTH_ORIGIN": "https://github.com",
+    "GITHUB_API_ORIGIN": "https://api.github.com",
   },
 }

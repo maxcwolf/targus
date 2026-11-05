@@ -1,7 +1,10 @@
-import { sql } from 'drizzle-orm';
+import { eq, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
-import { images } from '../db/schema.js';
+import { builds, images, snapshots } from '../db/schema.js';
+
+/** At most this many projects are returned by `projectIdsReferencing`. */
+const referencingLimit = 20;
 
 /** What the API knows about one stored PNG. */
 export interface ImageRecord {
@@ -22,6 +25,11 @@ export interface ImageRepository {
   record(image: ImageRecord, at: Date): Promise<void>;
   /** Bump `last_referenced_at` of the rows that exist (for the v1.1 retention job). */
   touch(hashes: readonly string[], at: Date): Promise<void>;
+  /**
+   * Projects with a snapshot whose image, baseline or diff is `hash` (at most 20), for
+   * authorizing a reviewer's read of an image.
+   */
+  projectIdsReferencing(hash: string): Promise<string[]>;
 }
 
 /** Membership test against a JSON array bound as one parameter (D1 binds at most 100). */
@@ -48,6 +56,21 @@ export function createImageRepository(database: D1Database): ImageRepository {
     async touch(hashes, at) {
       if (hashes.length === 0) return;
       await db.update(images).set({ lastReferencedAt: at }).where(hashIn(hashes));
+    },
+    async projectIdsReferencing(hash) {
+      const rows = await db
+        .selectDistinct({ projectId: builds.projectId })
+        .from(snapshots)
+        .innerJoin(builds, eq(builds.id, snapshots.buildId))
+        .where(
+          or(
+            eq(snapshots.imageHash, hash),
+            eq(snapshots.baselineHash, hash),
+            eq(snapshots.diffHash, hash),
+          ),
+        )
+        .limit(referencingLimit);
+      return rows.map((row) => row.projectId);
     },
   };
 }

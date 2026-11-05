@@ -16,4 +16,14 @@ export interface Bindings {
   readonly GITHUB_APP_ID?: string;
   /** Secret: GitHub App private key, PKCS#8 PEM. */
   readonly GITHUB_APP_PRIVATE_KEY?: string;
+  /** Secret: signs the session cookie. Every session route answers 401 without it. */
+  readonly SESSION_SECRET?: string;
+  /** Secret: the GitHub App's OAuth client id. GitHub login needs both OAuth secrets. */
+  readonly GITHUB_CLIENT_ID?: string;
+  /** Secret: the GitHub App's OAuth client secret. */
+  readonly GITHUB_CLIENT_SECRET?: string;
+  /** Origin of GitHub's OAuth pages; defaults to https://github.com. */
+  readonly GITHUB_OAUTH_ORIGIN?: string;
+  /** Origin of the GitHub REST API; defaults to https://api.github.com. */
+  readonly GITHUB_API_ORIGIN?: string;
 }

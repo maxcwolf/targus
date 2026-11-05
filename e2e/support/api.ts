@@ -39,11 +39,20 @@ async function json(response: Awaited<ReturnType<APIRequestContext['get']>>): Pr
   return response.json();
 }
 
-/** Create a project through the admin route and return its token (shown once). */
-export async function createProject(request: APIRequestContext, repo: string): Promise<string> {
+/**
+ * Create a project through the admin route and return its token (shown once). The GitHub org is
+ * the repo's owner; orgs are shared between projects, so specs that need different installation
+ * settings use different owners. With an installation id the Worker reports check runs to the
+ * GitHub stub and checks org membership there; without one it skips both.
+ */
+export async function createProject(
+  request: APIRequestContext,
+  repo: string,
+  installationId: number | null = null,
+): Promise<string> {
   const response = await request.post('/api/admin/projects', {
     headers: bearer(e2eConfig.adminToken),
-    data: { githubOrg: 'e2e', installationId: null, repo, name: repo },
+    data: { githubOrg: repo.split('/')[0], installationId, repo, name: repo },
   });
   return CreatedProject.parse(await json(response)).token;
 }

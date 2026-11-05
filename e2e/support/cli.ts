@@ -10,10 +10,27 @@ export const repoRoot = path.resolve(import.meta.dirname, '..', '..');
 /** The built CLI; the `e2e` script runs `yarn workspace @targus/cli build` first. */
 const cliBin = path.join(repoRoot, 'packages', 'cli', 'dist', 'bin.js');
 
-/** `git rev-parse HEAD` of the repo: the CLI reads git from its cwd, which is the repo. */
-export async function headSha(): Promise<string> {
-  const { stdout } = await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot });
+async function git(args: readonly string[]): Promise<string> {
+  const { stdout } = await execFileAsync('git', args, { cwd: repoRoot });
   return stdout.trim();
+}
+
+/** `git rev-parse HEAD` of the repo: the CLI reads git from its cwd, which is the repo. */
+export function headSha(): Promise<string> {
+  return git(['rev-parse', 'HEAD']);
+}
+
+/**
+ * The merge base `targus run` will report for a PR build from this checkout (`origin/main`,
+ * else `main`, as commands/run.ts resolves it). A main build on this sha is the PR build's
+ * baseline, whichever branch the e2e suite runs from.
+ */
+export async function mergeBaseSha(): Promise<string> {
+  for (const ref of ['origin/main', 'main']) {
+    const sha = await git(['merge-base', ref, 'HEAD']).catch(() => null);
+    if (sha !== null) return sha;
+  }
+  return headSha();
 }
 
 /**

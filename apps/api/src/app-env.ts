@@ -1,5 +1,5 @@
 import type { Bindings } from './bindings.js';
-import type { Project, Services } from './services/index.js';
+import type { Principal, Project, Reviewer, Services } from './services/index.js';
 
 /** Hono environment shared by every route: bindings plus the request's bound services. */
 export interface AppEnv {
@@ -11,4 +11,16 @@ export interface AppEnv {
 export interface ProjectEnv {
   Bindings: Bindings;
   Variables: { services: Services; project: Project };
+}
+
+/** Routes behind `sessionAuth`, which puts the signed-in reviewer on the context. */
+export interface ReviewerEnv {
+  Bindings: Bindings;
+  Variables: { services: Services; reviewer: Reviewer };
+}
+
+/** Routes behind `readerAuth`: a project token or a session, whichever the request carries. */
+export interface PrincipalEnv {
+  Bindings: Bindings;
+  Variables: { services: Services; principal: Principal };
 }

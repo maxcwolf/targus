@@ -1,4 +1,4 @@
-import { eq, type SQL } from 'drizzle-orm';
+import { asc, eq, type SQL } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
 import { orgs, projects } from '../db/schema.js';
@@ -37,6 +37,8 @@ export interface ProjectRepository {
   findById(id: string): Promise<Project | null>;
   findByRepo(repo: string): Promise<Project | null>;
   findByTokenHash(tokenHash: string): Promise<Project | null>;
+  /** Every project, ordered by name; the review UI filters them by org membership. */
+  listAll(): Promise<Project[]>;
 }
 
 type Row = Omit<typeof projects.$inferSelect, 'tokenHash'> & {
@@ -51,8 +53,8 @@ function toProject(row: Row): Project {
 
 type Db = ReturnType<typeof drizzle>;
 
-async function findOne(db: Db, where: SQL): Promise<Project | null> {
-  const row = await db
+function selectProjects(db: Db) {
+  return db
     .select({
       id: projects.id,
       orgId: projects.orgId,
@@ -64,9 +66,11 @@ async function findOne(db: Db, where: SQL): Promise<Project | null> {
       installationId: orgs.installationId,
     })
     .from(projects)
-    .innerJoin(orgs, eq(orgs.id, projects.orgId))
-    .where(where)
-    .get();
+    .innerJoin(orgs, eq(orgs.id, projects.orgId));
+}
+
+async function findOne(db: Db, where: SQL): Promise<Project | null> {
+  const row = await selectProjects(db).where(where).get();
   return row === undefined ? null : toProject(row);
 }
 
@@ -119,5 +123,9 @@ export function createProjectRepository(database: D1Database): ProjectRepository
     findById: (id) => findOne(db, eq(projects.id, id)),
     findByRepo: (repo) => findOne(db, eq(projects.repo, repo)),
     findByTokenHash: (tokenHash) => findOne(db, eq(projects.tokenHash, tokenHash)),
+    async listAll() {
+      const rows = await selectProjects(db).orderBy(asc(projects.name), asc(projects.id));
+      return rows.map(toProject);
+    },
   };
 }

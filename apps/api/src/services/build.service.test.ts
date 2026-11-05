@@ -1,4 +1,11 @@
-import { CreateBuildResponse, GetBuildResponse, ListSnapshotsResponse } from '@targus/core';
+import {
+  CreateBuildResponse,
+  emptyTally,
+  GetBuildResponse,
+  ListBuildsResponse,
+  ListSnapshotsResponse,
+  tallySnapshots,
+} from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -9,10 +16,17 @@ import {
   sha,
   snapshotRecord,
 } from '../../test/support/fixtures.js';
-import { createTestDeps, type TestDeps } from '../../test/support/in-memory.js';
+import { createRecordingGitHub } from '../../test/support/github-recorder.js';
+import { signInReviewer } from '../../test/support/in-memory-auth.js';
+import {
+  asProject,
+  completion,
+  createTestDeps,
+  type TestDeps,
+} from '../../test/support/in-memory.js';
 import type { SnapshotRecord } from '../repositories/build.repository.js';
 import type { Project } from '../repositories/project.repository.js';
-import { createBuild, getBuild, listSnapshots } from './build.service.js';
+import { createBuild, getBuild, listBuilds, listSnapshots } from './build.service.js';
 
 async function setup(): Promise<{ deps: TestDeps; project: Project }> {
   const deps = createTestDeps();
@@ -88,7 +102,7 @@ describe('createBuild with a baseline', () => {
   it('resolves the baseline and returns the accepted image of each of its stories', async () => {
     const { deps, project } = await setup();
     const baselineId = (await createBuild(deps, project, createBuildRequest(sha('b')))).build.id;
-    await deps.builds.updateStatus(baselineId, 'accepted', deps.clock.now());
+    await deps.builds.complete(baselineId, completion('accepted', deps.clock.now()));
     await deps.builds.saveSnapshots(baselineId, baselineRecords(baselineId));
 
     const response = await createBuild(
@@ -116,7 +130,7 @@ describe('getBuild and listSnapshots', () => {
     const { deps, project } = await setup();
     const { build } = await createBuild(deps, project, createBuildRequest(sha('a')));
 
-    const response = await getBuild(deps, project, build.id);
+    const response = await getBuild(deps, asProject(project), build.id);
 
     expect(GetBuildResponse.parse(response).build.status).toBe('in_progress');
     expect(response.build.checkRunId).toBeNull();
@@ -134,13 +148,16 @@ describe('getBuild and listSnapshots', () => {
     const { build } = await createBuild(deps, project, createBuildRequest(sha('a')));
     const record = snapshotRecord('s1', build.id, { blank: true });
     await deps.builds.saveSnapshots(build.id, [record]);
-    await deps.builds.updateStatus(build.id, 'pending', deps.clock.now());
+    await deps.builds.complete(build.id, {
+      ...completion('pending', deps.clock.now()),
+      tally: tallySnapshots([record]),
+    });
 
-    expect((await getBuild(deps, project, build.id)).summary).toMatchObject({
+    expect((await getBuild(deps, asProject(project), build.id)).summary).toMatchObject({
       status: 'pending',
       pendingCount: 1,
     });
-    const listed = await listSnapshots(deps, project, build.id);
+    const listed = await listSnapshots(deps, asProject(project), build.id);
     expect(ListSnapshotsResponse.parse(listed)).toEqual(listed);
     expect(listed.snapshots[0]).not.toHaveProperty('blank');
     expect(listed.snapshots[0]).not.toHaveProperty('error');
@@ -151,9 +168,64 @@ describe('getBuild and listSnapshots', () => {
     const other = await deps.projects.create(newProject('other'));
     const { build } = await createBuild(deps, other, createBuildRequest(sha('a')));
 
-    await expect(getBuild(deps, project, build.id)).rejects.toMatchObject({ code: 'not_found' });
-    await expect(listSnapshots(deps, project, build.id)).rejects.toMatchObject({
+    await expect(getBuild(deps, asProject(project), build.id)).rejects.toMatchObject({
       code: 'not_found',
+    });
+    await expect(listSnapshots(deps, asProject(project), build.id)).rejects.toMatchObject({
+      code: 'not_found',
+    });
+  });
+});
+
+describe('build reads for reviewers', () => {
+  async function reviewSetup() {
+    const deps = createTestDeps({ github: createRecordingGitHub(['octocat']) });
+    const project = await deps.projects.create(newProject('rev', { installationId: 42 }));
+    const member = await signInReviewer(deps, 'octocat');
+    const outsider = await signInReviewer(deps, 'outsider');
+    return { deps, project, member, outsider };
+  }
+
+  it('lets a member read a build and its snapshots, and forbids an outsider', async () => {
+    const { deps, project, member, outsider } = await reviewSetup();
+    const { build } = await createBuild(deps, project, createBuildRequest(sha('a')));
+
+    const read = await getBuild(deps, { kind: 'reviewer', reviewer: member }, build.id);
+
+    expect(read.build).not.toHaveProperty('tally');
+    expect(read.counts).toEqual(emptyTally.counts);
+    expect(
+      (await listSnapshots(deps, { kind: 'reviewer', reviewer: member }, build.id)).snapshots,
+    ).toEqual([]);
+    await expect(
+      getBuild(deps, { kind: 'reviewer', reviewer: outsider }, build.id),
+    ).rejects.toMatchObject({ code: 'forbidden' });
+  });
+
+  it('lists builds newest first with status and counts from the stored tally', async () => {
+    const { deps, project, member } = await reviewSetup();
+    const first = (await createBuild(deps, project, createBuildRequest(sha('a')))).build;
+    await createBuild(deps, project, createBuildRequest(sha('b')));
+    const tally = { ...emptyTally, counts: { ...emptyTally.counts, changed: 2 }, pendingCount: 2 };
+    await deps.builds.complete(first.id, { ...completion('pending', deps.clock.now()), tally });
+
+    const response = await listBuilds(deps, member, project.id);
+
+    expect(ListBuildsResponse.parse(response)).toEqual(response);
+    expect(response.builds.map((entry) => entry.build.number)).toEqual([2, 1]);
+    expect(response.builds[1]).toMatchObject({
+      summary: { status: 'pending', pendingCount: 2 },
+      counts: { changed: 2 },
+    });
+    expect((await listBuilds(deps, member, project.id, 1)).builds).toHaveLength(1);
+  });
+
+  it('answers not_found for an unknown project and forbidden outside the org', async () => {
+    const { deps, project, member, outsider } = await reviewSetup();
+
+    await expect(listBuilds(deps, member, 'nope')).rejects.toMatchObject({ code: 'not_found' });
+    await expect(listBuilds(deps, outsider, project.id)).rejects.toMatchObject({
+      code: 'forbidden',
     });
   });
 });

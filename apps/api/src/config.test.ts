@@ -16,9 +16,38 @@ describe('loadConfig', () => {
       diffThreshold: 0.002,
       adminToken: null,
       githubApp: null,
+      sessionSecret: null,
+      githubOAuth: null,
+      githubOAuthOrigin: 'https://github.com',
+      githubApiOrigin: 'https://api.github.com',
     });
   });
 
+  it('reads the session secret, the OAuth client and GitHub origins without trailing slashes', () => {
+    const config = loadConfig({
+      ...vars,
+      SESSION_SECRET: 'shh',
+      GITHUB_CLIENT_ID: 'Iv1.abc',
+      GITHUB_CLIENT_SECRET: 'client-secret',
+      GITHUB_OAUTH_ORIGIN: 'http://localhost:9999/',
+      GITHUB_API_ORIGIN: '',
+    });
+
+    expect(config).toMatchObject({
+      sessionSecret: 'shh',
+      githubOAuth: { clientId: 'Iv1.abc', clientSecret: 'client-secret' },
+      githubOAuthOrigin: 'http://localhost:9999',
+      githubApiOrigin: 'https://api.github.com',
+    });
+  });
+
+  it('rejects a half-configured OAuth client and a malformed origin', () => {
+    expect(() => loadConfig({ ...vars, GITHUB_CLIENT_ID: 'Iv1.abc' })).toThrow(/CLIENT_SECRET/);
+    expect(() => loadConfig({ ...vars, GITHUB_API_ORIGIN: 'nope' })).toThrow();
+  });
+});
+
+describe('loadConfig secrets and thresholds', () => {
   it('defaults the diff threshold and treats blank secrets as unset', () => {
     const config = loadConfig({ ...vars, DIFF_THRESHOLD: '', ADMIN_TOKEN: ' ' });
 

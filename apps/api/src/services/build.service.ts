@@ -1,21 +1,26 @@
 import {
   acceptedImageHash,
   baselineShaOrder,
-  buildStatus,
+  buildStatusFromTally,
+  emptyTally,
   TargusError,
   type BaselineEntry,
   type Build,
   type BuildStatusSummary,
+  type BuildWithSummary,
   type CreateBuildRequest,
   type CreateBuildResponse,
   type GetBuildResponse,
+  type ListBuildsResponse,
   type ListSnapshotsResponse,
   type Snapshot,
 } from '@targus/core';
 
-import type { SnapshotRecord } from '../repositories/build.repository.js';
+import type { BuildRecord, SnapshotRecord } from '../repositories/build.repository.js';
 import type { Project } from '../repositories/project.repository.js';
+import { requireBuildAccess, requireProjectAccess } from './access.service.js';
 import type { ServiceDeps } from './deps.js';
+import type { Principal, Reviewer } from './principal.js';
 
 /** The accepted image of every story of a build (plan.md section 6, rule 5), skipping none. */
 export function baselineEntries(snapshots: readonly Snapshot[]): BaselineEntry[] {
@@ -32,7 +37,7 @@ export async function requireBuild(
   deps: Pick<ServiceDeps, 'builds'>,
   project: Project,
   buildId: string,
-): Promise<Build> {
+): Promise<BuildRecord> {
   const build = await deps.builds.findById(project.id, buildId);
   if (build === null) throw new TargusError('not_found', `no build ${buildId}`);
   return build;
@@ -59,21 +64,24 @@ export async function createBuild(
   const present = hashes.filter((hash) => !missing.includes(hash));
   await deps.images.touch([...present, ...baselines.map((entry) => entry.imageHash)], now);
 
-  const build = await deps.builds.create({
-    id: deps.ids.next(),
-    projectId: project.id,
-    sha: request.sha,
-    branch: request.branch,
-    prNumber: request.prNumber,
-    mergeBaseSha: request.mergeBaseSha,
-    baselineBuildId: baseline?.id ?? null,
-    trigger: request.trigger,
-    device: request.device,
-    status: 'in_progress',
-    createdAt: now.toISOString(),
-    completedAt: null,
-    checkRunId: null,
-  });
+  const build = await deps.builds.create(
+    {
+      id: deps.ids.next(),
+      projectId: project.id,
+      sha: request.sha,
+      branch: request.branch,
+      prNumber: request.prNumber,
+      mergeBaseSha: request.mergeBaseSha,
+      baselineBuildId: baseline?.id ?? null,
+      trigger: request.trigger,
+      device: request.device,
+      status: 'in_progress',
+      createdAt: now.toISOString(),
+      completedAt: null,
+      checkRunId: null,
+    },
+    emptyTally,
+  );
   return {
     build: { id: build.id, number: build.number },
     baselineBuildId: build.baselineBuildId,
@@ -82,11 +90,14 @@ export async function createBuild(
   };
 }
 
+/** The max builds `GET /api/projects/:id/builds` returns by default. */
+const defaultBuildsLimit = 50;
+
 /**
- * The summary of a build. While it is `in_progress` there is nothing to fold yet, so it says so,
- * with no conclusion and every count 0.
+ * The summary of a build, from its stored tally. While it is `in_progress` there is nothing to
+ * fold yet, so it says so, with no conclusion and every count 0.
  */
-function summarize(build: Build, snapshots: readonly Snapshot[]): BuildStatusSummary {
+function summarize(build: BuildRecord): BuildStatusSummary {
   if (build.status === 'in_progress') {
     return {
       status: 'in_progress',
@@ -96,7 +107,32 @@ function summarize(build: Build, snapshots: readonly Snapshot[]): BuildStatusSum
       errorCount: 0,
     };
   }
-  return buildStatus(snapshots);
+  return buildStatusFromTally(build.tally);
+}
+
+/** The wire `Build`, without the storage-only tally. */
+function toWireBuild(record: BuildRecord): Build {
+  return {
+    id: record.id,
+    projectId: record.projectId,
+    number: record.number,
+    sha: record.sha,
+    branch: record.branch,
+    prNumber: record.prNumber,
+    mergeBaseSha: record.mergeBaseSha,
+    baselineBuildId: record.baselineBuildId,
+    trigger: record.trigger,
+    device: record.device,
+    status: record.status,
+    createdAt: record.createdAt,
+    completedAt: record.completedAt,
+    checkRunId: record.checkRunId,
+  };
+}
+
+/** A build as the API returns it: the build, its status summary and its snapshot counts. */
+export function withSummary(build: BuildRecord): BuildWithSummary {
+  return { build: toWireBuild(build), summary: summarize(build), counts: build.tally.counts };
 }
 
 /** The wire form of a stored snapshot, without the storage-only `blank` and `error`. */
@@ -106,6 +142,8 @@ export function toSnapshot(record: SnapshotRecord): Snapshot {
     buildId: record.buildId,
     storyId: record.storyId,
     variant: record.variant,
+    title: record.title,
+    name: record.name,
     imageHash: record.imageHash,
     width: record.width,
     height: record.height,
@@ -119,23 +157,39 @@ export function toSnapshot(record: SnapshotRecord): Snapshot {
   };
 }
 
-/** `GET /api/builds/:id`. */
+type ReadDeps = Pick<ServiceDeps, 'builds' | 'clock' | 'github' | 'memberships' | 'projects'>;
+
+/** `GET /api/builds/:id`, for the CLI's project token or a reviewer of the project's org. */
 export async function getBuild(
-  deps: Pick<ServiceDeps, 'builds'>,
-  project: Project,
+  deps: ReadDeps,
+  principal: Principal,
   buildId: string,
 ): Promise<GetBuildResponse> {
-  const build = await requireBuild(deps, project, buildId);
-  return { build, summary: summarize(build, await deps.builds.listSnapshots(build.id)) };
+  const { build } = await requireBuildAccess(deps, principal, buildId);
+  return withSummary(build);
 }
 
 /** `GET /api/builds/:id/snapshots`. */
 export async function listSnapshots(
-  deps: Pick<ServiceDeps, 'builds'>,
-  project: Project,
+  deps: ReadDeps,
+  principal: Principal,
   buildId: string,
 ): Promise<ListSnapshotsResponse> {
-  const build = await requireBuild(deps, project, buildId);
+  const { build } = await requireBuildAccess(deps, principal, buildId);
   const records = await deps.builds.listSnapshots(build.id);
   return { snapshots: records.map(toSnapshot) };
+}
+
+/** `GET /api/projects/:id/builds`: the newest builds first, each with its summary. */
+export async function listBuilds(
+  deps: ReadDeps,
+  reviewer: Reviewer,
+  projectId: string,
+  limit: number = defaultBuildsLimit,
+): Promise<ListBuildsResponse> {
+  const project = await deps.projects.findById(projectId);
+  if (project === null) throw new TargusError('not_found', `no project ${projectId}`);
+  await requireProjectAccess(deps, { kind: 'reviewer', reviewer }, project);
+  const builds = await deps.builds.listForProject(project.id, limit);
+  return { builds: builds.map(withSummary) };
 }

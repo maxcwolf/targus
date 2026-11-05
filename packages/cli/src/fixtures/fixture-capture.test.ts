@@ -34,6 +34,14 @@ describe('fixture capture', () => {
     expect(fixtureCaptureReport()).toEqual(fixtureCaptureReport());
   });
 
+  it('changes only the red story in the changed variant', () => {
+    const base = fixtureCaptureReport().stories.map((story) => story.hash);
+    const changed = fixtureCaptureReport('changed').stories.map((story) => story.hash);
+
+    expect(changed[0]).not.toBe(base[0]);
+    expect(changed.slice(1)).toEqual(base.slice(1));
+  });
+
   it('writes a valid capture directory that loads back unchanged', async () => {
     const manifest = await writeFixtureCapture(dir);
 

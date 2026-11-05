@@ -26,10 +26,18 @@ function story(id: string, title: string, name: string, png: Uint8Array): Captur
 }
 
 /**
+ * `base` is the fixture as first captured; `changed` repaints the red story so a build from it
+ * has one `changed` story against a `base` baseline and two `unchanged` ones.
+ */
+export type FixtureCaptureVariant = 'base' | 'changed';
+
+/**
  * A tiny, deterministic three-story capture (two solid colours and a gradient) for tests and the
  * e2e suite, generated rather than committed as binaries.
  */
-export function fixtureCaptureReport(): CaptureReport {
+export function fixtureCaptureReport(variant: FixtureCaptureVariant = 'base'): CaptureReport {
+  const red: [number, number, number, number] =
+    variant === 'changed' ? [120, 40, 160, 255] : [220, 40, 40, 255];
   const gradient = encodeRgbaPng(width, height, (x, y) => [
     Math.round((x / (width - 1)) * 255),
     Math.round((y / (height - 1)) * 255),
@@ -38,12 +46,7 @@ export function fixtureCaptureReport(): CaptureReport {
   ]);
   return {
     stories: [
-      story(
-        'fixture-solid--red',
-        'Fixture/Solid',
-        'Red',
-        encodeSolidPng(width, height, [220, 40, 40, 255]),
-      ),
+      story('fixture-solid--red', 'Fixture/Solid', 'Red', encodeSolidPng(width, height, red)),
       story(
         'fixture-solid--blue',
         'Fixture/Solid',
@@ -58,8 +61,11 @@ export function fixtureCaptureReport(): CaptureReport {
 }
 
 /** Write the fixture capture to `dir` as `targus capture` would: PNGs plus `manifest.json`. */
-export async function writeFixtureCapture(dir: string): Promise<CaptureManifest> {
-  return writeCaptureOutput(dir, fixtureCaptureReport(), {
+export async function writeFixtureCapture(
+  dir: string,
+  variant: FixtureCaptureVariant = 'base',
+): Promise<CaptureManifest> {
+  return writeCaptureOutput(dir, fixtureCaptureReport(variant), {
     udid: 'FIXTURE',
     bundleId: 'dev.targus.fixture',
     appPath: null,
