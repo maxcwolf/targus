@@ -30,9 +30,9 @@
     "test": "vitest run --coverage"
   },
   "peerDependencies": {
-    "@storybook/react-native": ">=9",
-    "react": ">=18",
-    "react-native": ">=0.74"
+    "@storybook/react-native": ">=10",
+    "react": ">=19",
+    "react-native": ">=0.79"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",
@@ -45,10 +45,10 @@
     "vitest": "5.1.0"
   },
   "peerDependenciesMeta": {
-    "react-native": {
+    "@storybook/react-native": {
       "optional": true
     },
-    "@storybook/react-native": {
+    "react-native": {
       "optional": true
     }
   }

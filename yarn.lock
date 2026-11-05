@@ -2590,6 +2590,11 @@ __metadata:
     "@storybook/react-native": ">=10"
     react: ">=19"
     react-native: ">=0.79"
+  peerDependenciesMeta:
+    "@storybook/react-native":
+      optional: true
+    react-native:
+      optional: true
   languageName: unknown
   linkType: soft
 
