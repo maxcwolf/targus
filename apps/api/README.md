@@ -104,7 +104,9 @@ new migrations with `wrangler d1 migrations apply targus --remote` before deploy
 
 ### GitHub App setup
 
-One GitHub App ("targus") provides login, org membership and check runs (ADR 0007):
+One GitHub App provides login, org membership and check runs (ADR 0007). The production one is
+`targus-review` (App ID 5630481, owned by @maxcwolf, installable on any account; registered
+2026-11-05 with every secret below set on the Worker). To register another:
 
 - **Callback URL**: `${PUBLIC_URL}/api/auth/github/callback`, for example
   `http://localhost:8787/api/auth/github/callback` locally.
