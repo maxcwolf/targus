@@ -2,13 +2,20 @@ import { describe, expect, it } from 'vitest';
 
 import {
   Approval,
+  baselineBuildStatuses,
   Build,
+  BuildStatus,
+  BuildStatusSummary,
   CreateBuildRequest,
+  CreateProjectRequest,
+  CreateProjectResponse,
   CreateBuildResponse,
   HealthResponse,
   ReviewRequest,
   Snapshot,
   SubmitResultsRequest,
+  SubmitResultsResponse,
+  UploadImageResponse,
 } from './index.js';
 
 const sha = 'a'.repeat(40);
@@ -75,6 +82,7 @@ describe('Build and Snapshot', () => {
       status: 'pending',
       createdAt: '2026-11-04T10:00:00.000Z',
       completedAt: null,
+      checkRunId: null,
     });
     const snapshot = Snapshot.parse({
       id: 'snapshot-1',
@@ -95,7 +103,32 @@ describe('Build and Snapshot', () => {
 
     expect(snapshot.buildId).toBe(build.id);
   });
+});
 
+describe('Build checkRunId', () => {
+  it('requires a check run id that is a positive integer or null', () => {
+    const build = {
+      id: 'build-1',
+      projectId: 'project-1',
+      number: 1,
+      sha,
+      branch: 'main',
+      prNumber: null,
+      mergeBaseSha: null,
+      baselineBuildId: null,
+      trigger: 'main',
+      device: 'iPhone 16',
+      status: 'pending',
+      createdAt: '2026-11-04T10:00:00.000Z',
+      completedAt: null,
+    };
+    expect(Build.parse({ ...build, checkRunId: 901 }).checkRunId).toBe(901);
+    expect(Build.safeParse(build).success).toBe(false);
+    expect(Build.safeParse({ ...build, checkRunId: 0 }).success).toBe(false);
+  });
+});
+
+describe('SnapshotState', () => {
   it('rejects an unknown snapshot state', () => {
     expect(Snapshot.shape.state.safeParse('flaky').success).toBe(false);
   });
@@ -200,5 +233,81 @@ describe('ReviewRequest', () => {
     expect(ReviewRequest.parse({ decision: 'approve' }).decision).toBe('approve');
     expect(ReviewRequest.parse({ decision: 'deny' }).decision).toBe('deny');
     expect(ReviewRequest.safeParse({ decision: 'maybe' }).success).toBe(false);
+  });
+});
+
+describe('CreateProjectRequest', () => {
+  it('defaults the default branch to main and validates the repo name', () => {
+    const request = CreateProjectRequest.parse({
+      githubOrg: 'example-org',
+      installationId: null,
+      repo: 'example-org/example-app',
+      name: 'the pilot app',
+    });
+
+    expect(request.defaultBranch).toBe('main');
+    expect(CreateProjectRequest.safeParse({ ...request, repo: 'the pilot app' }).success).toBe(false);
+  });
+
+  it('requires the returned token to be at least 32 characters', () => {
+    const project = {
+      id: 'p1',
+      orgId: 'o1',
+      repo: 'example-org/example-app',
+      name: 'the pilot app',
+      defaultBranch: 'main',
+    };
+
+    expect(CreateProjectResponse.safeParse({ project, token: 'short' }).success).toBe(false);
+    expect(CreateProjectResponse.safeParse({ project, token: 't'.repeat(32) }).success).toBe(true);
+  });
+});
+
+describe('SubmitResultsResponse', () => {
+  it('accepts a null check run and requires a review url', () => {
+    const summary = {
+      status: 'pending',
+      conclusion: null,
+      pendingCount: 2,
+      deniedCount: 0,
+      errorCount: 0,
+    };
+    const response = { build: { id: 'b1', number: 3 }, summary, reviewUrl: 'https://x.test/b1' };
+
+    expect(SubmitResultsResponse.safeParse({ ...response, checkRun: null }).success).toBe(true);
+    expect(SubmitResultsResponse.safeParse({ ...response, checkRun: { id: 9 } }).success).toBe(
+      true,
+    );
+    expect(SubmitResultsResponse.safeParse({ ...response, reviewUrl: 'nope' }).success).toBe(false);
+  });
+});
+
+describe('BuildStatusSummary', () => {
+  it('accepts an in_progress build with no conclusion', () => {
+    const summary = {
+      status: 'in_progress',
+      conclusion: null,
+      pendingCount: 0,
+      deniedCount: 0,
+      errorCount: 0,
+    };
+    expect(BuildStatusSummary.parse(summary).status).toBe('in_progress');
+    expect(BuildStatusSummary.safeParse({ ...summary, status: 'queued' }).success).toBe(false);
+  });
+});
+
+describe('baselineBuildStatuses', () => {
+  it('lists the signed-off build statuses, each a valid BuildStatus', () => {
+    expect(baselineBuildStatuses).toEqual(['passed', 'accepted']);
+    for (const status of baselineBuildStatuses) {
+      expect(BuildStatus.parse(status)).toBe(status);
+    }
+  });
+});
+
+describe('UploadImageResponse', () => {
+  it('requires a sha256 hash', () => {
+    expect(UploadImageResponse.safeParse({ hash, stored: true }).success).toBe(true);
+    expect(UploadImageResponse.safeParse({ hash: 'abc', stored: true }).success).toBe(false);
   });
 });

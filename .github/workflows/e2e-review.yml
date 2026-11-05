@@ -30,7 +30,9 @@ jobs:
       - run: yarn playwright install --with-deps chromium
       - name: Build the review UI
         run: yarn workspace @targus/web build
-      # Playwright's webServer rebuilds the web app and starts `wrangler dev` serving it.
+      # `yarn e2e` builds the CLI (run.spec.ts drives `targus run`); Playwright's webServer then
+      # migrates a fresh local D1, rebuilds the web app and starts `wrangler dev` serving it.
+      # The checkout's HEAD (shallow is enough) is the sha the e2e builds are opened on.
       - run: yarn e2e
       - if: failure()
         uses: actions/upload-artifact@v7

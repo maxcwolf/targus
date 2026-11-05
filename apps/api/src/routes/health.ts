@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 
-import type { AppEnv } from '../bindings.js';
+import type { AppEnv } from '../app-env.js';
 import { loadConfig } from '../config.js';
 import { getHealth } from '../services/health.service.js';
 

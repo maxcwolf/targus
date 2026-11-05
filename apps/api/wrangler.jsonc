@@ -31,5 +31,18 @@
     },
   ],
   "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "targus-images" }],
-  "vars": { "APP_VERSION": "0.0.0" },
+  // Plain configuration, validated by src/config.ts. PUBLIC_URL is the origin of the review UI
+  // (check-run "details" links and `reviewUrl`); override it per environment on deploy.
+  // DIFF_THRESHOLD is the changed-pixel ratio at or under which a snapshot is unchanged.
+  //
+  // Secrets are not listed here. Set them with `wrangler secret put <NAME>` in production and in
+  // apps/api/.dev.vars locally (gitignored; see apps/api/README.md):
+  //   ADMIN_TOKEN             bearer token for POST /api/admin/projects (admin routes 401 without it)
+  //   GITHUB_APP_ID           GitHub App id                      } both or neither; without them
+  //   GITHUB_APP_PRIVATE_KEY  GitHub App private key, PKCS#8 PEM } check runs are skipped
+  "vars": {
+    "APP_VERSION": "0.0.0",
+    "PUBLIC_URL": "http://localhost:8787",
+    "DIFF_THRESHOLD": "0.001",
+  },
 }

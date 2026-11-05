@@ -1,0 +1,266 @@
+import { createFakeClock, diffImages, isBlankPng, isTargusError } from '@targus/core';
+import { describe, expect, it } from 'vitest';
+
+import type { CaptureReport, CaptureResult } from '../capture/capture-stories.js';
+import { compareWithCore } from '../capture/compare-images.js';
+import { sha256Hex } from '../capture/png.js';
+import { encodeSolidPng, type Rgba } from '../capture/solid-png.fake.js';
+import { createBuildRequest, runBuild, type RunBuildInput } from './run-build.js';
+import { createFakeTargusApi, type FakeTargusApi } from './targus-api.fake.js';
+
+const sha = 'a'.repeat(40);
+const base = 'b'.repeat(40);
+const white: Rgba = [255, 255, 255, 255];
+const red: Rgba = [255, 0, 0, 255];
+const whitePng = encodeSolidPng(10, 10, white);
+/** 1 of 100 pixels differs: ratio 0.01. */
+const onePixelOff = encodeSolidPng(10, 10, white, { x: 3, y: 3, color: red });
+
+function captured(
+  id: string,
+  png: Uint8Array,
+  overrides: Partial<CaptureResult> = {},
+): CaptureResult {
+  return {
+    id,
+    title: 'T',
+    name: id,
+    png,
+    hash: sha256Hex(png),
+    width: 10,
+    height: 10,
+    renderMs: 1,
+    captureMs: 1,
+    attempts: 1,
+    stable: true,
+    blank: null,
+    error: null,
+    ...overrides,
+  };
+}
+
+function errored(id: string, error: string): CaptureResult {
+  return { ...captured(id, whitePng), png: null, hash: null, width: 0, height: 0, error };
+}
+
+function report(stories: CaptureResult[]): CaptureReport {
+  return { stories, startedAt: '2026-11-04T10:00:00.000Z', durationMs: 1000 };
+}
+
+function input(
+  api: FakeTargusApi,
+  stories: CaptureResult[],
+  overrides: Partial<RunBuildInput> = {},
+): RunBuildInput {
+  return {
+    report: report(stories),
+    git: { sha, mergeBaseSha: base, ancestors: [base] },
+    ci: { branch: 'feature/x', prNumber: 3, trigger: 'pr' },
+    device: 'iPhone 16',
+    api,
+    clock: createFakeClock(),
+    threshold: 0.001,
+    compareImages: compareWithCore,
+    hash: sha256Hex,
+    isBlank: isBlankPng,
+    ...overrides,
+  };
+}
+
+async function resultsFor(api: FakeTargusApi, stories: CaptureResult[], threshold = 0.001) {
+  const output = await runBuild(input(api, stories, { threshold }));
+  return { output, byId: new Map(output.results.map((result) => [result.storyId, result])) };
+}
+
+describe('runBuild', () => {
+  it('opens a build with every captured story and no errored ones', async () => {
+    const api = createFakeTargusApi();
+
+    await runBuild(input(api, [captured('a', whitePng), errored('b', 'boom')]));
+
+    expect(api.callsOf('createBuild')[0]?.request).toEqual({
+      sha,
+      branch: 'feature/x',
+      prNumber: 3,
+      mergeBaseSha: base,
+      ancestors: [base],
+      trigger: 'pr',
+      device: 'iPhone 16',
+      snapshots: [
+        { storyId: 'a', variant: 'default', imageHash: sha256Hex(whitePng), width: 10, height: 10 },
+      ],
+    });
+  });
+
+  it('marks a story without a baseline new and uploads it as missing', async () => {
+    const api = createFakeTargusApi();
+
+    const { output, byId } = await resultsFor(api, [captured('a', whitePng)]);
+
+    expect(byId.get('a')).toMatchObject({
+      state: 'new',
+      diffHash: null,
+      diffRatio: null,
+      blank: true,
+    });
+    expect(output.uploaded).toEqual([sha256Hex(whitePng)]);
+    expect(api.callsOf('getImage')).toEqual([]);
+    expect(output.counts.new).toBe(1);
+  });
+
+  it('marks the same hash unchanged without downloading the baseline', async () => {
+    const api = createFakeTargusApi({ baselines: { a: whitePng } });
+
+    const { output, byId } = await resultsFor(api, [captured('a', whitePng, { blank: false })]);
+
+    expect(byId.get('a')).toMatchObject({ state: 'unchanged', diffRatio: 0, blank: false });
+    expect(api.callsOf('getImage')).toEqual([]);
+    expect(output.uploaded).toEqual([]);
+  });
+});
+
+describe('runBuild against a baseline', () => {
+  it('marks a diff above the threshold changed and uploads the diff image', async () => {
+    const api = createFakeTargusApi({ baselines: { a: whitePng } });
+
+    const { output, byId } = await resultsFor(api, [captured('a', onePixelOff)]);
+
+    const diffPng = diffImages(whitePng, onePixelOff).diffPng;
+    if (diffPng === null) throw new Error('expected a diff image');
+    const diffHash = sha256Hex(diffPng);
+    expect(byId.get('a')).toMatchObject({
+      state: 'changed',
+      diffRatio: 0.01,
+      diffHash,
+      imageHash: sha256Hex(onePixelOff),
+      blank: false,
+    });
+    expect(api.callsOf('getImage')).toEqual([{ method: 'getImage', hash: sha256Hex(whitePng) }]);
+    expect(output.uploaded).toEqual([sha256Hex(onePixelOff), diffHash]);
+    expect(api.images.get(diffHash)).toEqual(diffPng);
+  });
+
+  it('marks a diff at or below the threshold unchanged and keeps no diff image', async () => {
+    const api = createFakeTargusApi({ baselines: { a: whitePng } });
+
+    const { output, byId } = await resultsFor(api, [captured('a', onePixelOff)], 0.05);
+
+    expect(byId.get('a')).toMatchObject({ state: 'unchanged', diffRatio: 0.01, diffHash: null });
+    expect(output.uploaded).toEqual([sha256Hex(onePixelOff)]);
+  });
+
+  it('marks an unstable story unstable but still records its diff', async () => {
+    const api = createFakeTargusApi({ baselines: { a: whitePng } });
+
+    const { byId } = await resultsFor(api, [captured('a', onePixelOff, { stable: false })]);
+
+    expect(byId.get('a')).toMatchObject({ state: 'unstable', diffRatio: 0.01 });
+    expect(byId.get('a')?.diffHash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('reports an errored story with its message and no image', async () => {
+    const api = createFakeTargusApi({ baselines: { a: whitePng } });
+
+    const { output, byId } = await resultsFor(api, [errored('a', 'render threw')]);
+
+    expect(byId.get('a')).toEqual({
+      storyId: 'a',
+      variant: 'default',
+      state: 'error',
+      imageHash: null,
+      width: null,
+      height: null,
+      diffHash: null,
+      diffRatio: null,
+      error: 'render threw',
+      blank: false,
+    });
+    expect(output.counts.error).toBe(1);
+    expect(output.response.summary.errorCount).toBe(1);
+  });
+});
+
+describe('runBuild uploads and submit', () => {
+  it('uploads only missing captures, each hash once', async () => {
+    const blue = encodeSolidPng(10, 10, [0, 0, 255, 255]);
+    const api = createFakeTargusApi({ stored: [whitePng] });
+
+    const { output } = await resultsFor(api, [
+      captured('a', whitePng),
+      captured('b', blue),
+      captured('c', blue),
+    ]);
+
+    expect(output.uploaded).toEqual([sha256Hex(blue)]);
+    expect(api.callsOf('uploadImage')).toHaveLength(1);
+  });
+
+  it('submits every result with the capture plus run duration and counts removed stories', async () => {
+    const api = createFakeTargusApi({ baselines: { gone: whitePng } });
+    const clock = createFakeClock();
+    const slowApi: FakeTargusApi = {
+      ...api,
+      createBuild: async (request) => {
+        clock.advance(250);
+        return api.createBuild(request);
+      },
+    };
+
+    const output = await runBuild(input(slowApi, [captured('a', whitePng)], { clock }));
+
+    const [submit] = api.callsOf('submitResults');
+    expect(submit?.buildId).toBe('build-1');
+    expect(submit?.request.durationMs).toBe(1250);
+    expect(submit?.request.results.map((result) => result.storyId)).toEqual(['a']);
+    expect(output.counts).toEqual({
+      unchanged: 0,
+      changed: 0,
+      new: 1,
+      removed: 1,
+      unstable: 0,
+      error: 0,
+    });
+    expect(output.response.reviewUrl).toBe('https://targus.test/builds/build-1');
+  });
+});
+
+describe('runBuild server mismatch', () => {
+  it('fails when the server asks for an image that was not captured', async () => {
+    const api = createFakeTargusApi();
+    const lying: FakeTargusApi = {
+      ...api,
+      createBuild: async (request) => ({
+        ...(await api.createBuild(request)),
+        missingImageHashes: ['f'.repeat(64)],
+      }),
+    };
+
+    await expect(runBuild(input(lying, [captured('a', whitePng)]))).rejects.toThrow(
+      'was not captured',
+    );
+  });
+});
+
+describe('createBuildRequest', () => {
+  it('needs a branch', () => {
+    const api = createFakeTargusApi();
+    const ci = { branch: null, prNumber: null, trigger: 'pr' } as const;
+
+    expect(() => createBuildRequest(input(api, [], { ci }))).toThrow('--branch');
+  });
+
+  it('rejects an invalid sha before calling the API and caps the ancestors', () => {
+    const api = createFakeTargusApi();
+    const git = { sha: 'abc', mergeBaseSha: null, ancestors: [] };
+
+    let code: string | undefined;
+    try {
+      createBuildRequest(input(api, [], { git }));
+    } catch (error) {
+      code = isTargusError(error) ? error.code : 'other';
+    }
+    expect(code).toBe('bad_request');
+    const many = { sha, mergeBaseSha: null, ancestors: Array.from({ length: 150 }, () => base) };
+    expect(createBuildRequest(input(api, [], { git: many })).ancestors).toHaveLength(100);
+  });
+});

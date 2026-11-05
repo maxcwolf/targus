@@ -231,7 +231,9 @@ template, Changesets, one trivial test per package, and the e2e harness running 
 Then `packages/core` and `packages/cli` with `capture` and `compare` producing a local HTML
 report. Already useful without a backend.
 
-**M2 — Service.** `apps/api` with builds, images, baseline resolution, project tokens, D1 migrations, Wrangler deploy. `targus run` end to end with the check run created.
+**M2 — Service. Built 2026-11-04, not yet deployed.** `apps/api` has the admin, builds, images and results routes over D1 and R2, project-token auth, server-side classification with `compareSnapshot`, check runs through a GitHub App client (no-op until the secrets exist), a migration drift test and a full-flow test. `targus run` opens a build, diffs against baselines locally, uploads images and submits results; an e2e runs the built CLI against the local Worker. Remaining: `wrangler login` and the first deploy, which need the Cloudflare account; the GitHub App registration for check runs; review-side auth on image download (M3).
+
+Original scope: `apps/api` with builds, images, baseline resolution, project tokens, D1 migrations, Wrangler deploy. `targus run` end to end with the check run created.
 
 **M3 — Review app.** GitHub login, build list, snapshot viewer, approve/deny, approve-all, check-run updates.
 

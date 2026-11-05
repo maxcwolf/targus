@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { buildStatus } from '../build-status.js';
+import { TargusError } from '../errors.js';
 import { compareSnapshot, type CompareSnapshotInput } from './compare-snapshot.js';
 
 const before = 'a'.repeat(64);
@@ -103,6 +104,13 @@ describe('compareSnapshot errored stories', () => {
     expect(compareSnapshot(input({ current }))).toEqual({ state: 'error', review: 'pending' });
   });
 
+  it('accepts an errored capture with no image hash', () => {
+    const current = { imageHash: null, unstable: false, error: 'TypeError: boom' };
+
+    expect(compareSnapshot(input({ current }))).toEqual({ state: 'error', review: 'pending' });
+    expect(compareSnapshot(input({ current, baseline: null })).state).toBe('error');
+  });
+
   it('ignores a matching approval and a missing baseline for an errored story', () => {
     const current = { imageHash: after, unstable: true, error: 'render timed out' };
     const approvals = [{ fromHash: null, toHash: after }];
@@ -119,6 +127,13 @@ describe('compareSnapshot invalid input', () => {
     expect(() => compareSnapshot(input({ current: null, baseline: null }))).toThrow(
       /capture or a baseline/,
     );
+  });
+
+  it('refuses a capture with neither an error nor an image hash', () => {
+    const current = { imageHash: null, unstable: false, error: null };
+
+    expect(() => compareSnapshot(input({ current }))).toThrow(/needs an image hash/);
+    expect(() => compareSnapshot(input({ current, baseline: null }))).toThrow(TargusError);
   });
 });
 

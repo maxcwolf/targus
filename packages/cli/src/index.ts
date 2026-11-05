@@ -25,3 +25,10 @@ export { CaptureManifest, readCaptureManifest, writeCaptureOutput } from './capt
 export { runCapture, type CaptureCommandOptions } from './commands/capture.js';
 export { runCompare, type CompareCommandOptions } from './commands/compare.js';
 export type { CaptureComparison } from './compare/compare-captures.js';
+export { runRun, type RunCommandOptions } from './commands/run.js';
+export { TargusApiClient, type TargusApiClientOptions } from './adapters/api-client.adapter.js';
+export { GitCli, type GitMetadata } from './adapters/git.adapter.js';
+export { resolveCiContext, type CiContext, type CiEnv } from './run/ci-context.js';
+export { runBuild, type RunBuildInput, type RunBuildOutput } from './run/run-build.js';
+export type { TargusApi } from './run/targus-api.js';
+export { fixtureCaptureReport, writeFixtureCapture } from './fixtures/fixture-capture.js';

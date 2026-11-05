@@ -18,6 +18,15 @@ export const BuildStatus = z.enum([
 ]);
 export type BuildStatus = z.infer<typeof BuildStatus>;
 
+/**
+ * Statuses whose images may serve as a baseline: everything a reviewer has signed off
+ * (plan.md section 6, rule 1). `resolveBaseline` and the API's SQL baseline query both use it.
+ */
+export const baselineBuildStatuses = [
+  'passed',
+  'accepted',
+] as const satisfies readonly BuildStatus[];
+
 /** A full 40-character git commit sha, lowercase hex. */
 export const GitSha = z.string().regex(/^[0-9a-f]{40}$/, 'expected a full 40-character git sha');
 
@@ -36,5 +45,7 @@ export const Build = z.object({
   status: BuildStatus,
   createdAt: z.iso.datetime(),
   completedAt: z.iso.datetime().nullable(),
+  /** The `targus/ios` GitHub check run, or null when none was created. */
+  checkRunId: z.number().int().positive().nullable(),
 });
 export type Build = z.infer<typeof Build>;

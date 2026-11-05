@@ -29,7 +29,8 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "fixture:capture": "tsc -b tsconfig.lib.json && node dist/bin.js fixture-capture"
   },
   "dependencies": {
     "@targus/core": "workspace:*",

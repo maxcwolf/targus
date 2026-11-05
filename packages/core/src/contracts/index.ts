@@ -1,5 +1,13 @@
 export { Approval } from './approval.js';
-export { Build, BuildStatus, BuildTrigger, GitSha } from './build.js';
+export { baselineBuildStatuses, Build, BuildStatus, BuildTrigger, GitSha } from './build.js';
+export {
+  BuildStatusSummary,
+  GetBuildResponse,
+  ListSnapshotsResponse,
+  SubmitResultsResponse,
+  UploadImageResponse,
+} from './build-summary.js';
+export { CreateProjectRequest, CreateProjectResponse, RepoFullName } from './project.js';
 export {
   BaselineEntry,
   CapturedSnapshot,

@@ -12,9 +12,13 @@
     "dev": "WRANGLER_BUILD_CONDITIONS=development,workerd,worker,browser wrangler dev",
     "deploy": "yarn workspace @targus/web build && wrangler deploy",
     "db:generate": "drizzle-kit generate",
-    "test": "vitest run --coverage"
+    "db:migrate:local": "wrangler d1 migrations apply targus --local",
+    "test": "vitest run --coverage && yarn test:drift",
+    "test:drift": "vitest run --config vitest.node.config.ts"
   },
   "dependencies": {
+    "@octokit/auth-app": "^8.3.1",
+    "@octokit/request": "^10.0.16",
     "@targus/core": "workspace:*",
     "drizzle-orm": "0.45.4",
     "hono": "4.13.16",

@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { BuildStatus } from '../contracts/build.js';
+import { baselineBuildStatuses, BuildStatus } from '../contracts/build.js';
 import { baselineResolutionCases } from './baseline-resolution-cases.js';
 import { baselineShaOrder, resolveBaseline, type BaselineCandidate } from './resolve-baseline.js';
 
@@ -53,7 +53,16 @@ const candidateArb: fc.Arbitrary<BaselineCandidate> = fc.record({
     .map((day) => new Date(Date.UTC(2026, 10, 1 + day)).toISOString()),
 });
 const successful = (candidate: BaselineCandidate): boolean =>
-  candidate.status === 'passed' || candidate.status === 'accepted';
+  (baselineBuildStatuses as readonly string[]).includes(candidate.status);
+
+describe('resolveBaseline statuses', () => {
+  it.each(BuildStatus.options)('treats a %s build as a baseline only if signed off', (status) => {
+    const candidate = { id: 'b1', sha: a, status, createdAt: '2026-11-01T00:00:00.000Z' };
+    const expected = (baselineBuildStatuses as readonly string[]).includes(status);
+
+    expect(resolveBaseline([a], [candidate]) !== null).toBe(expected);
+  });
+});
 
 describe('resolveBaseline properties', () => {
   it('returns null or a successful candidate on the earliest sha that has one', () => {

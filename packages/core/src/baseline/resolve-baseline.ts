@@ -1,10 +1,9 @@
-import type { Build, BuildStatus } from '../contracts/build.js';
+import { baselineBuildStatuses, type Build, type BuildStatus } from '../contracts/build.js';
 
 /** The build fields baseline resolution reads. */
 export type BaselineCandidate = Pick<Build, 'id' | 'sha' | 'status' | 'createdAt'>;
 
-/** Statuses whose images may serve as a baseline: everything a reviewer has signed off. */
-const successfulStatuses: ReadonlySet<BuildStatus> = new Set<BuildStatus>(['passed', 'accepted']);
+const successfulStatuses: ReadonlySet<BuildStatus> = new Set<BuildStatus>(baselineBuildStatuses);
 
 /**
  * The shas to search for a baseline, nearest first (plan.md section 6, rule 1): the merge base,

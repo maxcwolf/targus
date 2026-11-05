@@ -9,6 +9,7 @@ import {
   createProgram,
   exitCodeFor,
   notImplementedExitCode,
+  unauthorizedExitCode,
   type CommandRunners,
 } from './program.js';
 import { cliVersion } from './version.js';
@@ -151,9 +152,13 @@ describe('targus program validation', () => {
 });
 
 describe('exitCodeFor', () => {
-  it('maps not_implemented to 2 and every other TargusError code to 1', () => {
+  it('maps not_implemented to 2, auth failures to 3 and every other code to 1', () => {
     expect(exitCodeFor('not_implemented')).toBe(notImplementedExitCode);
+    expect(exitCodeFor('unauthorized')).toBe(unauthorizedExitCode);
+    expect(exitCodeFor('forbidden')).toBe(unauthorizedExitCode);
+    expect(unauthorizedExitCode).toBe(3);
     expect(exitCodeFor('internal')).toBe(1);
+    expect(exitCodeFor('bad_request')).toBe(1);
   });
 });
 
@@ -162,7 +167,14 @@ describe('loadConfig', () => {
     expect(loadConfig({ TARGUS_TOKEN: 'secret' })).toEqual({
       apiUrl: 'http://localhost:8787',
       token: 'secret',
+      ci: {},
     });
+  });
+
+  it('passes the CI variables through and ignores the rest of the environment', () => {
+    expect(
+      loadConfig({ CIRCLE_BRANCH: 'main', GITHUB_REF: 'refs/heads/main', HOME: '/home' }).ci,
+    ).toEqual({ CIRCLE_BRANCH: 'main', GITHUB_REF: 'refs/heads/main' });
   });
 
   it('rejects an invalid API URL', () => {

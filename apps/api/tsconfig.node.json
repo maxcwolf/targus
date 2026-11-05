@@ -5,5 +5,5 @@
     "tsBuildInfoFile": "${configDir}/.tsbuild/node.tsbuildinfo",
     "types": ["node"]
   },
-  "include": ["vitest.config.ts", "drizzle.config.ts"]
+  "include": ["vitest.config.ts", "vitest.node.config.ts", "drizzle.config.ts", "test/node"]
 }

@@ -4,5 +4,6 @@
     "lib": ["ES2023", "DOM"],
     "types": ["node"]
   },
-  "include": ["*.ts"]
+  "include": ["*.ts", "support/*.ts"],
+  "references": [{ "path": "../packages/cli/tsconfig.lib.json" }]
 }

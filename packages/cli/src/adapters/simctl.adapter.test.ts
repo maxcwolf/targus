@@ -134,3 +134,27 @@ describe('SimctlDriver screenshot and shutdown', () => {
     await expect(new SimctlDriver({ udid, exec }).shutdown()).rejects.toThrow('ENOENT');
   });
 });
+
+describe('SimctlDriver deviceName', () => {
+  const list = {
+    devices: {
+      'com.apple.CoreSimulator.SimRuntime.iOS-18-0': [
+        { udid: 'OTHER', name: 'iPhone SE' },
+        { udid, name: 'iPhone 16' },
+      ],
+    },
+  };
+
+  it('looks the UDID up in simctl list', async () => {
+    const fake = fakeExec({}, Buffer.from(JSON.stringify(list)));
+
+    expect(await new SimctlDriver({ udid, exec: fake.exec }).deviceName()).toBe('iPhone 16');
+    expect(fake.argv()).toEqual([['xcrun', 'simctl', 'list', 'devices', '--json']]);
+  });
+
+  it('returns null for an unknown UDID', async () => {
+    const fake = fakeExec({}, Buffer.from(JSON.stringify(list)));
+
+    expect(await new SimctlDriver({ udid: 'NOPE', exec: fake.exec }).deviceName()).toBeNull();
+  });
+});

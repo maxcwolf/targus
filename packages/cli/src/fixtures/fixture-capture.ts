@@ -1,0 +1,69 @@
+import { isBlankPng } from '@targus/core';
+
+import type { CaptureReport, CaptureResult } from '../capture/capture-stories.js';
+import { writeCaptureOutput, type CaptureManifest } from '../capture/manifest.js';
+import { readPngSize, sha256Hex } from '../capture/png.js';
+import { encodeRgbaPng, encodeSolidPng } from '../capture/solid-png.fake.js';
+
+const width = 24;
+const height = 48;
+
+function story(id: string, title: string, name: string, png: Uint8Array): CaptureResult {
+  return {
+    id,
+    title,
+    name,
+    png,
+    hash: sha256Hex(png),
+    ...readPngSize(png),
+    renderMs: 10,
+    captureMs: 500,
+    attempts: 1,
+    stable: true,
+    blank: isBlankPng(png),
+    error: null,
+  };
+}
+
+/**
+ * A tiny, deterministic three-story capture (two solid colours and a gradient) for tests and the
+ * e2e suite, generated rather than committed as binaries.
+ */
+export function fixtureCaptureReport(): CaptureReport {
+  const gradient = encodeRgbaPng(width, height, (x, y) => [
+    Math.round((x / (width - 1)) * 255),
+    Math.round((y / (height - 1)) * 255),
+    128,
+    255,
+  ]);
+  return {
+    stories: [
+      story(
+        'fixture-solid--red',
+        'Fixture/Solid',
+        'Red',
+        encodeSolidPng(width, height, [220, 40, 40, 255]),
+      ),
+      story(
+        'fixture-solid--blue',
+        'Fixture/Solid',
+        'Blue',
+        encodeSolidPng(width, height, [40, 80, 220, 255]),
+      ),
+      story('fixture-gradient--default', 'Fixture/Gradient', 'Default', gradient),
+    ],
+    startedAt: '2026-01-01T00:00:00.000Z',
+    durationMs: 1500,
+  };
+}
+
+/** Write the fixture capture to `dir` as `targus capture` would: PNGs plus `manifest.json`. */
+export async function writeFixtureCapture(dir: string): Promise<CaptureManifest> {
+  return writeCaptureOutput(dir, fixtureCaptureReport(), {
+    udid: 'FIXTURE',
+    bundleId: 'dev.targus.fixture',
+    appPath: null,
+    settleMs: 300,
+    stabilityGapMs: 150,
+  });
+}

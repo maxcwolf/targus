@@ -1,15 +1,26 @@
 import { z } from 'zod';
 
+import type { CiEnv } from './run/ci-context.js';
+
 // The only file in this package allowed to read process.env (ESLint no-restricted-properties).
 const EnvSchema = z.object({
   // Defaults to the local `wrangler dev` Worker until a hosted URL exists (M2).
   TARGUS_API_URL: z.url().default('http://localhost:8787'),
   TARGUS_TOKEN: z.string().min(1).optional(),
+  // CI variables `targus run` derives the branch and PR number from (run/ci-context.ts).
+  CIRCLE_BRANCH: z.string().optional(),
+  CIRCLE_PULL_REQUEST: z.string().optional(),
+  CIRCLE_PR_NUMBER: z.string().optional(),
+  GITHUB_HEAD_REF: z.string().optional(),
+  GITHUB_REF_NAME: z.string().optional(),
+  GITHUB_REF: z.string().optional(),
 });
 
 export interface CliConfig {
   readonly apiUrl: string;
+  /** The project token. Only ever read from `TARGUS_TOKEN`, never a flag, so it stays out of logs. */
   readonly token: string | undefined;
+  readonly ci: CiEnv;
 }
 
 /** Validate the environment once at startup; throws a readable error when it is invalid. */
@@ -20,7 +31,8 @@ export function loadConfig(
   if (!result.success) {
     throw new Error(`Invalid targus environment:\n${z.prettifyError(result.error)}`);
   }
-  return { apiUrl: result.data.TARGUS_API_URL, token: result.data.TARGUS_TOKEN };
+  const { TARGUS_API_URL, TARGUS_TOKEN, ...ci } = result.data;
+  return { apiUrl: TARGUS_API_URL, token: TARGUS_TOKEN, ci };
 }
 
 /**

@@ -1,13 +1,18 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
-// D1 schema (plan.md section 6). M1 holds only the tenancy roots; builds, snapshots and the
-// rest arrive with M2. Every table hangs off org_id through projects (ADR 0007), and every
-// foreign key is indexed to keep D1 row reads low.
+// D1 schema (plan.md section 6). Every table hangs off org_id through projects (ADR 0007), and
+// every foreign key and every lookup the repositories run is indexed to keep D1 row reads low
+// (plan.md section 9).
 //
 // After editing this file run `yarn workspace @targus/api db:generate` and commit the new
-// migration in migrations/.
-// TODO(M2): migration drift test — `drizzle-kit generate` against this schema must produce no
-// new migration (docs/engineering-standards.md section 3.2, api).
+// migration in migrations/. `test/node/migration-drift.test.ts` fails when they disagree.
+
+/** Values of `builds.status`; mirrors `BuildStatus` in @targus/core. */
+const buildStatuses = ['in_progress', 'pending', 'accepted', 'denied', 'passed', 'failed'] as const;
+/** Values of `snapshots.state`; mirrors `SnapshotState` in @targus/core. */
+const snapshotStates = ['unchanged', 'changed', 'new', 'removed', 'unstable', 'error'] as const;
+/** Values of `snapshots.review`; mirrors `ReviewState` in @targus/core. */
+const reviewStates = ['pending', 'approved', 'denied'] as const;
 
 export const orgs = sqliteTable('orgs', {
   id: text('id').primaryKey(),
@@ -32,5 +37,110 @@ export const projects = sqliteTable(
   (table) => [
     index('projects_org_id_idx').on(table.orgId),
     uniqueIndex('projects_repo_unique').on(table.repo),
+    uniqueIndex('projects_token_hash_unique').on(table.tokenHash),
   ],
+);
+
+export const builds = sqliteTable(
+  'builds',
+  {
+    id: text('id').primaryKey(),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id),
+    number: integer('number').notNull(),
+    sha: text('sha').notNull(),
+    branch: text('branch').notNull(),
+    prNumber: integer('pr_number'),
+    mergeBaseSha: text('merge_base_sha'),
+    baselineBuildId: text('baseline_build_id'),
+    trigger: text('trigger', { enum: ['pr', 'main'] }).notNull(),
+    device: text('device').notNull(),
+    status: text('status', { enum: buildStatuses }).notNull(),
+    checkRunId: integer('check_run_id'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
+  },
+  (table) => [
+    // Covers the project_id foreign key and the baseline lookup by project and sha.
+    index('builds_project_sha_idx').on(table.projectId, table.sha, table.createdAt),
+    uniqueIndex('builds_project_number_unique').on(table.projectId, table.number),
+    index('builds_baseline_build_id_idx').on(table.baselineBuildId),
+  ],
+);
+
+export const snapshots = sqliteTable(
+  'snapshots',
+  {
+    id: text('id').primaryKey(),
+    buildId: text('build_id')
+      .notNull()
+      .references(() => builds.id),
+    storyId: text('story_id').notNull(),
+    variant: text('variant').notNull(),
+    imageHash: text('image_hash'),
+    width: integer('width'),
+    height: integer('height'),
+    baselineHash: text('baseline_hash'),
+    diffHash: text('diff_hash'),
+    diffRatio: real('diff_ratio'),
+    state: text('state', { enum: snapshotStates }).notNull(),
+    review: text('review', { enum: reviewStates }).notNull(),
+    reviewedBy: text('reviewed_by'),
+    reviewedAt: integer('reviewed_at', { mode: 'timestamp_ms' }),
+    /** Every pixel is the same colour (plan.md section 5.1, capture hygiene). */
+    blank: integer('blank', { mode: 'boolean' }).notNull().default(false),
+    /** The render error of an `error` snapshot (ADR 0004, rule 6). */
+    error: text('error'),
+  },
+  (table) => [
+    // Covers the build_id foreign key and "snapshots of a build".
+    uniqueIndex('snapshots_build_story_variant_unique').on(
+      table.buildId,
+      table.storyId,
+      table.variant,
+    ),
+  ],
+);
+
+export const approvals = sqliteTable(
+  'approvals',
+  {
+    id: text('id').primaryKey(),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id),
+    storyId: text('story_id').notNull(),
+    variant: text('variant').notNull(),
+    /** Null when a `new` story was approved. */
+    fromHash: text('from_hash'),
+    toHash: text('to_hash').notNull(),
+    approvedBy: text('approved_by').notNull(),
+    approvedAt: integer('approved_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    // Covers the project_id foreign key and the carry-forward match (plan.md section 6, rule 3).
+    index('approvals_project_story_hashes_idx').on(
+      table.projectId,
+      table.storyId,
+      table.variant,
+      table.fromHash,
+      table.toHash,
+    ),
+  ],
+);
+
+/** Metadata of every PNG in R2, so "which hashes are missing" is one D1 query. */
+export const images = sqliteTable(
+  'images',
+  {
+    hash: text('hash').primaryKey(),
+    sizeBytes: integer('size_bytes').notNull(),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    lastReferencedAt: integer('last_referenced_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  // For the v1.1 retention job: images not referenced in the last 90 days (plan.md section 9).
+  (table) => [index('images_last_referenced_at_idx').on(table.lastReferencedAt)],
 );
