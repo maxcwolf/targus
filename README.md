@@ -26,6 +26,6 @@ right layer with a test beside them.
 
 ## Notes
 
-- `.github/CODEOWNERS` names `@example-org/targus-maintainers`, a placeholder team that does not
-  exist yet. Create it (or change the owner) before enabling "require review from code owners".
+- `.github/CODEOWNERS` names `@maxcwolf` while the repo lives under that account. Point it at an
+  org team when the repo moves, before enabling "require review from code owners".
 - `spike/` is the throwaway M0 capture spike. It is not a workspace and no guard checks it.
