@@ -130,14 +130,27 @@ describe('BuildPage counter filters', () => {
   });
 });
 
-describe('BuildPage approve all', () => {
-  it('approves all pending changes after an inline confirmation', async () => {
+describe('BuildPage actions', () => {
+  it('makes Verify changes the primary action and opens the first unreviewed change', async () => {
+    renderApp('/builds/build-12?filter=all');
+
+    const verify = await screen.findByRole('link', { name: 'Verify changes' });
+    expect(verify).toHaveClass('button', 'primary');
+    expect(verify).toHaveAttribute('href', '/builds/build-12/snapshots/snap-new?filter=unreviewed');
+    expect(screen.getByRole('button', { name: 'Batch' })).not.toHaveClass('primary');
+
+    fireEvent.click(verify);
+    expect(await screen.findByRole('heading', { name: /Large/ })).toBeInTheDocument();
+    expect(apiState.calls).toEqual([]);
+  });
+
+  it('approves the whole batch after an inline confirmation', async () => {
     renderApp('/builds/build-12');
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Approve all' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Batch' }));
     expect(apiState.calls).toEqual([]);
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Approve all' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Batch' }));
     fireEvent.click(screen.getByRole('button', { name: 'Confirm: approve 2 changes' }));
 
     expect(await screen.findByText('All changes approved')).toBeInTheDocument();
@@ -145,7 +158,8 @@ describe('BuildPage approve all', () => {
     expect(screen.getByRole('status', { name: 'Build status' })).toHaveTextContent('Accepted');
     expect(await screen.findByRole('tab', { name: '3 Accepted' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: '3 of 3 changes reviewed' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Approve all' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Batch' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Verify changes' })).toBeDisabled();
   });
 
   it('shows the API error when approve-all fails', async () => {
@@ -156,7 +170,7 @@ describe('BuildPage approve all', () => {
     );
     renderApp('/builds/build-12');
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Approve all' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Batch' }));
     fireEvent.click(screen.getByRole('button', { name: /^Confirm/ }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Build is still in progress');
@@ -171,7 +185,8 @@ describe('BuildPage states', () => {
       await screen.findByText('1 story failed to render; a later build must fix it'),
     ).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /Stories/ })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('button', { name: 'Approve all' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Batch' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Verify changes' })).toBeDisabled();
     expect(screen.queryByRole('link', { name: /PR #/ })).not.toBeInTheDocument();
     expect(document.querySelector('.info-card')).toHaveTextContent('Baselinenone');
     expect(screen.getByText('Error', { selector: '.pill' })).toBeInTheDocument();
@@ -184,7 +199,7 @@ describe('BuildPage states', () => {
     expect(screen.getByText('Build not found')).toBeInTheDocument();
   });
 
-  it('disables approve-all while the build is still uploading', async () => {
+  it('disables both actions while the build is still uploading', async () => {
     server.use(
       http.get('*/api/builds/:id', () =>
         HttpResponse.json({
@@ -203,6 +218,6 @@ describe('BuildPage states', () => {
     renderApp('/builds/build-12');
 
     expect(await screen.findByText(/Capture in progress/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Approve all' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Batch' })).toBeDisabled();
   });
 });

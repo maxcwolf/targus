@@ -102,7 +102,7 @@ test('a reviewer approves a baseline, then denies and approves a changed story',
   await expect(page.getByRole('banner')).toContainText('octocat');
   await expect(page.getByRole('status', { name: 'Build status' })).toHaveText('Pending review');
 
-  await page.getByRole('button', { name: 'Approve all' }).click();
+  await page.getByRole('button', { name: 'Batch' }).click();
   await page.getByRole('button', { name: /^Confirm/ }).click();
   await expect(page.getByRole('status', { name: 'Build status' })).toHaveText('Accepted');
   expect((await checkRunsFor(request, repo)).at(-1)).toMatchObject({
@@ -118,8 +118,10 @@ test('a reviewer approves a baseline, then denies and approves a changed story',
 
   await page.goto(`/builds/${prBuildId}`);
   await expect(page.getByRole('status', { name: 'Build status' })).toHaveText('Pending review');
-  await page.getByRole('link', { name: 'Red' }).click();
-  await expect(page).toHaveURL(/\/snapshots\//);
+  // The primary action opens the first (here the only) unreviewed change.
+  await page.getByRole('link', { name: 'Verify changes' }).click();
+  await expect(page).toHaveURL(/\/snapshots\/[^?]+\?filter=unreviewed$/);
+  await expect(page.getByRole('heading', { name: /Red/ })).toBeVisible();
 
   await page.getByRole('button', { name: 'Deny' }).click();
   await expect(page.getByRole('status', { name: 'Review' })).toHaveText('Denied');
@@ -146,5 +148,5 @@ test('a GitHub user outside the org cannot review', async ({ page, request }) =>
   await signInNextAs(request, 'octocat');
 
   await expect(page.getByText(/not a member/)).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Approve all' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Batch' })).toHaveCount(0);
 });

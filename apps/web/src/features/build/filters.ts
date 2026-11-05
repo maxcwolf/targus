@@ -90,10 +90,6 @@ export function filterTabs(
   }));
 }
 
-export function pendingReviewCount(snapshots: readonly Snapshot[]): number {
-  return snapshots.filter(predicates.unreviewed).length;
-}
-
 /** Storybook's component title, else the part of the story id before `--`. */
 export function componentTitle(snapshot: Snapshot): string {
   return snapshot.title ?? snapshot.storyId.split('--')[0] ?? snapshot.storyId;

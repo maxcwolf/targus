@@ -24,6 +24,29 @@ describe('ConfirmButton', () => {
 
     expect(screen.getByRole('button', { name: 'Go' })).toBeDisabled();
   });
+
+  it('is primary by default and stays outlined through both steps as secondary', () => {
+    const { unmount } = render(
+      <ConfirmButton label="Go" confirmLabel="Confirm" onConfirm={vi.fn()} />,
+    );
+    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('primary');
+    unmount();
+
+    render(
+      <ConfirmButton
+        label="Go"
+        title="Does the thing"
+        confirmLabel="Confirm"
+        variant="secondary"
+        onConfirm={vi.fn()}
+      />,
+    );
+    const first = screen.getByRole('button', { name: 'Go' });
+    expect(first).not.toHaveClass('primary');
+    expect(first).toHaveAttribute('title', 'Does the thing');
+    fireEvent.click(first);
+    expect(screen.getByRole('button', { name: 'Confirm' })).not.toHaveClass('primary');
+  });
 });
 
 describe('format', () => {

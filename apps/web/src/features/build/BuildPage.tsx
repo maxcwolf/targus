@@ -3,15 +3,10 @@ import type { ReactElement } from 'react';
 
 import { Skeleton } from '../../components/Skeleton.js';
 import { ErrorView } from '../errors/ErrorView.js';
-import { ApproveAll } from './ApproveAll.js';
+import { BuildActions } from './BuildActions.js';
 import { BuildCounters } from './BuildCounters.js';
 import { BuildHeader } from './BuildHeader.js';
-import {
-  effectiveFilter,
-  matchesFilter,
-  pendingReviewCount,
-  type SnapshotFilter,
-} from './filters.js';
+import { effectiveFilter, matchesFilter, type SnapshotFilter } from './filters.js';
 import { ReviewProgress } from './ReviewProgress.js';
 import { SnapshotTable } from './SnapshotTable.js';
 import { useBuildData } from './useBuildData.js';
@@ -48,10 +43,10 @@ export function BuildPage({ buildId, filter }: BuildPageProps): ReactElement {
               });
             }}
           />
-          <ApproveAll
+          <BuildActions
             buildId={buildId}
-            pendingCount={pendingReviewCount(snapshots)}
-            disabled={build.build.status === 'in_progress'}
+            pending={snapshots.filter((snapshot) => matchesFilter(snapshot, 'unreviewed'))}
+            uploading={build.build.status === 'in_progress'}
           />
         </div>
         <ReviewProgress snapshots={snapshots} />

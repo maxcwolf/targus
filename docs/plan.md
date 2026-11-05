@@ -130,7 +130,7 @@ GitHub integration uses one GitHub App ("targus"):
 Mirror Chromatic's review UX, trimmed to what v1 stores:
 
 - Project page: builds list with status chips (Pending review, Accepted, Denied, Passed, Failed capture), branch, PR link, commit, counts of changed/new/removed/unstable.
-- Build page: changes grouped by component title, filters for Unreviewed / Approved / Denied / New / Removed, "Approve all" with confirmation.
+- Build page: changes grouped by component title, filters for Unreviewed / Approved / Denied / New / Removed, "Verify changes" (primary; opens the first unreviewed change) and "Batch" (approve all, with confirmation).
 - Snapshot page: tabs for Side-by-side, Diff overlay (pixelmatch output tinted), Slider, and Baseline/Current toggle; zoom; Approve and Deny buttons; `j`/`k` to move between changes, `a` to approve.
 - Header shows the GitHub user and org.
 

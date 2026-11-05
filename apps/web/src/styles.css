@@ -782,11 +782,11 @@ p {
   color: var(--primary-dark);
   font-weight: 700;
 }
-.approve-all {
+.build-actions {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-left: auto;
 }
 .progress-bar {
