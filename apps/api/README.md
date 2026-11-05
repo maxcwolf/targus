@@ -97,8 +97,10 @@ openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in app.private-key.pem -
 ```
 
 In production, set secrets with `wrangler secret put ADMIN_TOKEN` (and likewise for the GitHub
-ones and `SESSION_SECRET`, e.g. `openssl rand -base64 32`), and override `PUBLIC_URL` for the
-deployed origin.
+ones and `SESSION_SECRET`, e.g. `openssl rand -base64 32`). `yarn workspace @targus/api deploy`
+builds the web app and deploys to <https://targus.targus-api.workers.dev>, passing that origin as
+`PUBLIC_URL` (the D1 database and R2 bucket in `wrangler.jsonc` were created 2026-11-05; apply
+new migrations with `wrangler d1 migrations apply targus --remote` before deploying).
 
 ### GitHub App setup
 

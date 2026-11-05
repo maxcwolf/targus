@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "WRANGLER_BUILD_CONDITIONS=development,workerd,worker,browser wrangler dev",
-    "deploy": "yarn workspace @targus/web build && wrangler deploy",
+    "deploy": "yarn workspace @targus/web build && wrangler deploy --var PUBLIC_URL:https://targus.targus-api.workers.dev",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply targus --local",
     "test": "vitest run --coverage && yarn test:drift",

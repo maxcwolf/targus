@@ -25,14 +25,15 @@
     {
       "binding": "DB",
       "database_name": "targus",
-      // Placeholder until the Cloudflare account is set up (M2). Local dev and tests never use it.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // The production database (created 2026-11-05, region ENAM). Local dev and tests never use it.
+      "database_id": "dc1a38bc-6634-4868-956e-0e3dc7a9fefd",
       "migrations_dir": "migrations",
     },
   ],
   "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "targus-images" }],
   // Plain configuration, validated by src/config.ts. PUBLIC_URL is the origin of the review UI
-  // (check-run "details" links and `reviewUrl`); override it per environment on deploy.
+  // (check-run "details" links and `reviewUrl`). The localhost value serves `yarn dev` and the e2e
+  // suite; `yarn deploy` overrides it with the workers.dev origin (see package.json).
   // DIFF_THRESHOLD is the changed-pixel ratio at or under which a snapshot is unchanged.
   //
   // Secrets are not listed here. Set them with `wrangler secret put <NAME>` in production and in
