@@ -1,0 +1,6 @@
+{
+  // Solution file: Worker code and Node-side config files need different global types
+  // (@cloudflare/workers-types and @types/node conflict), so they are separate projects.
+  "files": [],
+  "references": [{ "path": "./tsconfig.worker.json" }, { "path": "./tsconfig.node.json" }]
+}

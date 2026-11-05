@@ -1,0 +1,12 @@
+{
+  // Type-checks the plain-JS generator scripts (they run on Node without a build step).
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "allowJs": true,
+    "checkJs": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.mjs"]
+}

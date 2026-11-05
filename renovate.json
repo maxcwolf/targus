@@ -1,0 +1,56 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits", ":pinAllExceptPeerDependencies"],
+  "timezone": "Europe/London",
+  "schedule": ["* 0-6 * * 1"],
+  "prConcurrentLimit": 5,
+  "minimumReleaseAge": "3 days",
+  "lockFileMaintenance": { "enabled": true, "schedule": ["* 0-6 * * 1"] },
+  "postUpdateOptions": ["yarnDedupeHighest"],
+  "packageRules": [
+    {
+      "description": "Batch non-major updates into one weekly PR.",
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "groupName": "non-major dependencies"
+    },
+    {
+      "description": "Lint toolchain moves together.",
+      "matchPackageNames": [
+        "eslint",
+        "@eslint/js",
+        "typescript-eslint",
+        "eslint-plugin-import-x",
+        "eslint-import-resolver-typescript",
+        "@vitest/eslint-plugin",
+        "eslint-plugin-react-hooks"
+      ],
+      "groupName": "lint toolchain"
+    },
+    {
+      "description": "Test toolchain moves together; @cloudflare/vitest-plugin pins the Vitest range it supports.",
+      "matchPackageNames": [
+        "vitest",
+        "@vitest/coverage-v8",
+        "@vitest/coverage-istanbul",
+        "@cloudflare/vitest-plugin"
+      ],
+      "groupName": "vitest"
+    },
+    {
+      "description": "Cloudflare runtime pieces: bump wrangler, workers-types and compatibility_date together.",
+      "matchPackageNames": ["wrangler", "@cloudflare/workers-types"],
+      "groupName": "cloudflare"
+    },
+    {
+      "description": "typescript-eslint 8 supports TypeScript <6.1; widen when it does.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<6.1.0"
+    },
+    {
+      "description": "Engines follow .nvmrc (Node 22); @types/node stays on the same major.",
+      "matchPackageNames": ["@types/node"],
+      "allowedVersions": "<23.0.0"
+    }
+  ]
+}

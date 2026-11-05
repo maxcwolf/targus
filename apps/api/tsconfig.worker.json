@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "${configDir}/.tsbuild/worker",
+    "tsBuildInfoFile": "${configDir}/.tsbuild/worker.tsbuildinfo",
+    "types": ["@cloudflare/workers-types", "@cloudflare/vitest-plugin/types"]
+  },
+  "include": ["src", "test"],
+  "references": [{ "path": "../../packages/core/tsconfig.lib.json" }]
+}

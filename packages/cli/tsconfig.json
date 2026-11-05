@@ -1,0 +1,6 @@
+{
+  // Solution file: the library (src, emitted to dist/) and its tests plus config files (types
+  // only) are separate projects so dist/ never contains test code (ADR 0010).
+  "files": [],
+  "references": [{ "path": "./tsconfig.lib.json" }, { "path": "./tsconfig.test.json" }]
+}

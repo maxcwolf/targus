@@ -1,0 +1,12 @@
+# Guard files: loosening a guard is a visible, reviewed act (docs/engineering-standards.md 4.3).
+# @example-org/targus-maintainers is a placeholder team until the GitHub org team exists.
+
+/.dependency-cruiser.cjs     @example-org/targus-maintainers
+/tsconfig.base.json          @example-org/targus-maintainers
+/eslint.config.js            @example-org/targus-maintainers
+**/vitest.config.ts          @example-org/targus-maintainers
+/docs/adr/                   @example-org/targus-maintainers
+/AGENTS.md                   @example-org/targus-maintainers
+/lefthook.yml                @example-org/targus-maintainers
+/knip.json                   @example-org/targus-maintainers
+/.github/                    @example-org/targus-maintainers

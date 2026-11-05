@@ -1,0 +1,19 @@
+node_modules/
+spike/out/
+spike/out-*/
+*.log
+.DS_Store
+
+# targus monorepo
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+dist/
+.tsbuild/
+coverage/
+.wrangler/
+.dev.vars
+playwright-report/
+test-results/
+blob-report/
+*.tsbuildinfo

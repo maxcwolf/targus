@@ -1,0 +1,14 @@
+{
+  "name": "targus-spike",
+  "private": true,
+  "type": "module",
+  "description": "M0 spike: drive the pilot app's on-device Storybook in an iOS simulator and capture every story.",
+  "scripts": {
+    "capture": "node capture.mjs"
+  },
+  "dependencies": {
+    "pixelmatch": "^7.1.0",
+    "pngjs": "^7.0.0"
+  },
+  "packageManager": "yarn@4.12.0"
+}

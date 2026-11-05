@@ -1,0 +1,35 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "targus",
+  "main": "src/index.ts",
+  // esbuild bundles with wrangler's conditions (workerd, worker, browser), which skip the
+  // "development" export, so `wrangler deploy` bundles @targus/core from its dist/ (`yarn deploy`
+  // builds the web app first, which runs tsc for core). `yarn dev` sets WRANGLER_BUILD_CONDITIONS to add "development" and
+  // bundle core from source (ADR 0010). wrangler.jsonc has no field for build conditions.
+  // Must not be newer than the workerd bundled with wrangler and @cloudflare/vitest-plugin
+  // (both 2026-11-03 today), or local runs fall back to an older date. Bump with them.
+  "compatibility_date": "2026-11-01",
+  "observability": { "enabled": true },
+
+  // The Worker also serves the review UI. `apps/web` builds into apps/web/dist (`yarn workspace
+  // @targus/web build`); `yarn deploy` and the e2e suite build it first. Requests under /api/*
+  // always reach the Worker; everything else is a static asset, with index.html as the SPA
+  // fallback so client-side routes deep-link.
+  "assets": {
+    "directory": "../web/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "targus",
+      // Placeholder until the Cloudflare account is set up (M2). Local dev and tests never use it.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "targus-images" }],
+  "vars": { "APP_VERSION": "0.0.0" },
+}

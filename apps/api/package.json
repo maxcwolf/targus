@@ -1,0 +1,32 @@
+{
+  "name": "@targus/api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "targus service: Cloudflare Worker (Hono, D1, R2) that also serves the built web app.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "WRANGLER_BUILD_CONDITIONS=development,workerd,worker,browser wrangler dev",
+    "deploy": "yarn workspace @targus/web build && wrangler deploy",
+    "db:generate": "drizzle-kit generate",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@targus/core": "workspace:*",
+    "drizzle-orm": "0.45.4",
+    "hono": "4.13.16",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.5.1",
+    "@cloudflare/workers-types": "5.20261104.1",
+    "@vitest/coverage-istanbul": "5.1.0",
+    "drizzle-kit": "0.31.11",
+    "vite": "8.3.5",
+    "vitest": "5.1.0",
+    "wrangler": "4.157.0"
+  }
+}

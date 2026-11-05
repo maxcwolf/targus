@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/cli" },
+    { "path": "packages/react-native" },
+    { "path": "apps/api" },
+    { "path": "apps/web" },
+    { "path": "e2e" },
+    { "path": "scripts" }
+  ]
+}

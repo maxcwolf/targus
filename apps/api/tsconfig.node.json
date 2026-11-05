@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "${configDir}/.tsbuild/node",
+    "tsBuildInfoFile": "${configDir}/.tsbuild/node.tsbuildinfo",
+    "types": ["node"]
+  },
+  "include": ["vitest.config.ts", "drizzle.config.ts"]
+}

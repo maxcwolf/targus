@@ -1,0 +1,55 @@
+{
+  "name": "@targus/react-native",
+  "version": "0.0.0",
+  "description": "App-side targus helper: the withTargus Storybook decorator and parameters.targus types.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --coverage"
+  },
+  "peerDependencies": {
+    "@storybook/react-native": ">=9",
+    "react": ">=18",
+    "react-native": ">=0.74"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-test-renderer": "^19.3.1",
+    "@vitest/coverage-v8": "5.1.0",
+    "react": "^19.3.1",
+    "react-test-renderer": "^19.3.1",
+    "typescript": "6.0.3",
+    "vite": "8.3.5",
+    "vitest": "5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    },
+    "@storybook/react-native": {
+      "optional": true
+    }
+  }
+}

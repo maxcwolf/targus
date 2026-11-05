@@ -1,0 +1,5 @@
+{
+  // Solution file: browser code (DOM types) and Node-side config files are separate projects.
+  "files": [],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }]
+}

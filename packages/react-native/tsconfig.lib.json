@@ -1,0 +1,17 @@
+{
+  // Emits the published package: ESM .js, .d.ts, declaration maps and source maps in dist/.
+  // Node's own resolution rules, so dist/ runs on Node exactly as published.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "jsx": "react-jsx",
+    "emitDeclarationOnly": false,
+    "sourceMap": true,
+    "rootDir": "${configDir}/src",
+    "outDir": "${configDir}/dist",
+    "tsBuildInfoFile": "${configDir}/.tsbuild/lib.tsbuildinfo"
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}

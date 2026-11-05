@@ -1,0 +1,45 @@
+{
+  "name": "@targus/core",
+  "version": "0.0.0",
+  "description": "Pure domain logic for targus: types, zod contracts, ports and build rules. No I/O.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "pixelmatch": "^8.0.0",
+    "pngjs": "^7.0.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/pngjs": "^6.0.5",
+    "@vitest/coverage-v8": "5.1.0",
+    "fast-check": "^4.10.2",
+    "typescript": "6.0.3",
+    "vite": "8.3.5",
+    "vitest": "5.1.0"
+  }
+}

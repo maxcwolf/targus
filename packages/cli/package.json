@@ -1,0 +1,48 @@
+{
+  "name": "@targus/cli",
+  "version": "0.0.0",
+  "description": "The targus CLI: captures on-device Storybook stories and talks to the targus service.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "targus": "./dist/bin.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@targus/core": "workspace:*",
+    "commander": "15.0.0",
+    "ws": "^8.22.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/ws": "^8.18.2",
+    "@vitest/coverage-v8": "5.1.0",
+    "typescript": "6.0.3",
+    "vite": "8.3.5",
+    "vitest": "5.1.0"
+  }
+}

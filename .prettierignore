@@ -1,0 +1,15 @@
+# Prose and the M0 spike are kept as written.
+docs/
+spike/
+
+# Generated or third-party output.
+.yarn/
+yarn.lock
+**/dist/
+**/.tsbuild/
+**/coverage/
+**/.wrangler/
+**/playwright-report/
+**/test-results/
+apps/api/migrations/
+apps/api/test/assets/
