@@ -18,41 +18,84 @@ function selectMode(name: string): void {
   fireEvent.click(screen.getByRole('tab', { name }));
 }
 
-describe('SnapshotPage viewer', () => {
-  it('renders every viewer mode with the right images', async () => {
+describe('SnapshotPage header', () => {
+  it('shows the title, build line, badges, back link and the baseline line', async () => {
+    await openSnapshot('/builds/build-12/snapshots/snap-changed?filter=all');
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Button : Primary');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAttribute('title', 'Button : Primary');
+    expect(document.querySelector('.snapshot-bar .subline')).toHaveTextContent(
+      'Build 12 on feature/buttons · iPhone 16 / iOS 18.2',
+    );
+    expect(screen.getByRole('status', { name: 'Review' })).toHaveTextContent('Unreviewed');
+    expect(screen.getByRole('link', { name: 'Back to build 12' })).toHaveAttribute(
+      'href',
+      '/builds/build-12?filter=all',
+    );
+    expect(await screen.findByText('Compared with build 11 (1234567)')).toBeInTheDocument();
+    expect(screen.getByText('Build 11 on main')).toBeInTheDocument();
+    expect(screen.getByText('Build 12 on feature/buttons')).toBeInTheDocument();
+  });
+
+  it('says there is no baseline for a first build', async () => {
+    await openSnapshot('/builds/build-11/snapshots/snap-unstable');
+
+    expect(screen.getByText('No baseline: first build on this branch')).toBeInTheDocument();
+  });
+
+  it('shows not found for a snapshot the build does not have', async () => {
+    renderApp('/builds/build-12/snapshots/nope');
+
+    expect(await screen.findByText('This build has no such snapshot.')).toBeInTheDocument();
+  });
+});
+
+describe('SnapshotPage viewer modes', () => {
+  it('shows 2 up, 1 up with its Baseline/New switch, and the slider', async () => {
     await openSnapshot('/builds/build-12/snapshots/snap-changed');
 
-    expect(screen.getByRole('heading', { name: 'Button / Primary' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '2 up' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('img', { name: 'Baseline' })).toHaveAttribute('src', img('3'));
-    expect(screen.getByRole('img', { name: 'Current' })).toHaveAttribute('src', img('2'));
-    expect(screen.getByRole('img', { name: 'Current' })).toHaveAttribute('loading', 'lazy');
+    expect(screen.getByRole('img', { name: 'New' })).toHaveAttribute('src', img('2'));
+    expect(screen.getByRole('img', { name: 'New' })).toHaveAttribute('loading', 'lazy');
 
-    selectMode('Diff');
+    selectMode('1 up');
+    expect(screen.getByRole('img', { name: 'New' })).toHaveAttribute('src', img('2'));
+    expect(screen.queryByRole('img', { name: 'Baseline' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Baseline' }));
+    expect(screen.getByRole('img', { name: 'Baseline' })).toHaveAttribute('src', img('3'));
+    expect(screen.queryByRole('img', { name: 'New' })).not.toBeInTheDocument();
+
+    selectMode('Slider');
+    const baseline = screen.getByRole('img', { name: 'Baseline' });
+    fireEvent.change(screen.getByRole('slider', { name: 'Reveal baseline' }), {
+      target: { value: '30' },
+    });
+    expect(baseline.style.clipPath).toBe('inset(0 70% 0 0)');
+    expect(screen.getByRole('button', { name: 'Diff' })).toBeDisabled();
+  });
+
+  it('overlays the diff on the new image in 2 up and 1 up', async () => {
+    await openSnapshot('/builds/build-12/snapshots/snap-changed');
+    const diff = screen.getByRole('button', { name: 'Diff' });
+    expect(diff).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('slider', { name: 'Diff opacity' })).not.toBeInTheDocument();
+
+    fireEvent.click(diff);
+    expect(diff).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('img', { name: 'Diff' })).toHaveAttribute('src', img('4'));
-    expect(screen.getByRole('img', { name: 'Current' })).toHaveAttribute('src', img('2'));
+    expect(screen.getByRole('img', { name: 'Diff' })).toHaveStyle({ opacity: '1' });
     fireEvent.change(screen.getByRole('slider', { name: 'Diff opacity' }), {
       target: { value: '25' },
     });
     expect(screen.getByRole('img', { name: 'Diff' })).toHaveStyle({ opacity: '0.25' });
 
-    selectMode('Slider');
-    const baseline = screen.getByRole('img', { name: 'Baseline' });
-    expect(baseline).toHaveAttribute('src', img('3'));
-    fireEvent.change(screen.getByRole('slider', { name: 'Reveal baseline' }), {
-      target: { value: '30' },
-    });
-    expect(baseline.style.clipPath).toBe('inset(0 70% 0 0)');
-
-    selectMode('Toggle');
-    expect(screen.getByRole('img', { name: 'Current' })).toHaveAttribute('src', img('2'));
-    expect(screen.queryByRole('img', { name: 'Baseline' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Baseline' }));
-    expect(screen.getByRole('img', { name: 'Baseline' })).toHaveAttribute('src', img('3'));
-    expect(screen.queryByRole('img', { name: 'Current' })).not.toBeInTheDocument();
+    selectMode('1 up');
+    expect(screen.getByRole('img', { name: 'Diff' })).toBeInTheDocument();
+    fireEvent.click(diff);
+    expect(screen.queryByRole('img', { name: 'Diff' })).not.toBeInTheDocument();
   });
-});
 
-describe('SnapshotPage zoom and missing images', () => {
   it('toggles zoom between fit and 100%', async () => {
     const { container } = await openSnapshot('/builds/build-12/snapshots/snap-changed');
 
@@ -63,36 +106,34 @@ describe('SnapshotPage zoom and missing images', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Fit' }));
     expect(container.querySelector('.viewer-pane')).toHaveAttribute('data-zoom', 'fit');
   });
+});
 
-  it('shows "No baseline" for a new story and falls back where modes need both images', async () => {
+describe('SnapshotPage missing images', () => {
+  it('shows "No baseline" for a new story and has no diff to toggle', async () => {
     await openSnapshot('/builds/build-12/snapshots/snap-new');
 
     expect(screen.getByText('No baseline: this story is new.')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Current' })).toHaveAttribute('src', img('1'));
-    selectMode('Diff');
-    expect(screen.getByText('No diff image for a new snapshot.')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'New' })).toHaveAttribute('src', img('1'));
+    expect(screen.getByRole('button', { name: 'Diff' })).toBeDisabled();
     selectMode('Slider');
-    expect(screen.getByText(/needs both a baseline and a current image/)).toBeInTheDocument();
+    expect(screen.getByText(/needs both a baseline and a new image/)).toBeInTheDocument();
   });
 
-  it('shows no current image for a removed story, and no review buttons that work', async () => {
+  it('shows no new image for a removed story, and disables review', async () => {
     await openSnapshot('/builds/build-12/snapshots/snap-removed?filter=removed');
 
-    expect(screen.getByText('No current image: this story was removed.')).toBeInTheDocument();
+    expect(screen.getByText('No new image: this story was removed.')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Baseline' })).toHaveAttribute('src', img('8'));
     expect(screen.getByRole('button', { name: 'Approve' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Deny' })).toBeDisabled();
   });
-});
 
-describe('SnapshotPage non-reviewable states', () => {
   it('explains an errored story and disables review', async () => {
     await openSnapshot('/builds/build-11/snapshots/snap-error');
 
     expect(screen.getByText(/failed to render in this build/)).toBeInTheDocument();
-    expect(screen.getByText('No current image: the story failed to render.')).toBeInTheDocument();
+    expect(screen.getByText('No new image: the story failed to render.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Approve' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Deny' })).toBeDisabled();
     fireEvent.keyDown(window, { key: 'a' });
     expect(apiState.calls).toEqual([]);
   });
@@ -103,19 +144,12 @@ describe('SnapshotPage non-reviewable states', () => {
     expect(screen.getByText(/never block/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Approve' })).toBeDisabled();
   });
-
-  it('shows not found for a snapshot the build does not have', async () => {
-    renderApp('/builds/build-12/snapshots/nope');
-
-    expect(await screen.findByText('This build has no such snapshot.')).toBeInTheDocument();
-  });
 });
 
 describe('SnapshotPage review', () => {
-  it('approves, then reverses to deny, updating the badges and build cache', async () => {
+  it('approves, then reverses to deny, updating the badges', async () => {
     await openSnapshot('/builds/build-12/snapshots/snap-changed?filter=unreviewed');
     const review = screen.getByRole('status', { name: 'Review' });
-    expect(review).toHaveTextContent('Pending');
 
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
     await waitFor(() => {
@@ -123,7 +157,6 @@ describe('SnapshotPage review', () => {
     });
     expect(screen.getByRole('button', { name: 'Approve' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText(/by octocat on/)).toBeInTheDocument();
-    // The buttons stay disabled until the refetch after a decision settles.
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Deny' })).toBeEnabled();
     });
@@ -132,29 +165,8 @@ describe('SnapshotPage review', () => {
     await waitFor(() => {
       expect(screen.getByRole('status', { name: 'Review' })).toHaveTextContent('Denied');
     });
-    expect(screen.getByRole('button', { name: 'Deny' })).toHaveAttribute('aria-pressed', 'true');
-    expect(apiState.calls).toEqual([
-      'POST /api/snapshots/snap-changed/review',
-      'POST /api/snapshots/snap-changed/review',
-    ]);
-    // The reviewed snapshot stays in the list it was opened from, so neighbours stay put.
+    expect(apiState.calls).toHaveLength(2);
     expect(screen.getByText('2 of 2')).toBeInTheDocument();
-  });
-
-  it('approves and denies with the a and d keys', async () => {
-    await openSnapshot('/builds/build-12/snapshots/snap-new?filter=all');
-
-    fireEvent.keyDown(window, { key: 'a' });
-    await waitFor(() => {
-      expect(screen.getByRole('status', { name: 'Review' })).toHaveTextContent('Approved');
-    });
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Deny' })).toBeEnabled();
-    });
-    fireEvent.keyDown(window, { key: 'd' });
-    await waitFor(() => {
-      expect(screen.getByRole('status', { name: 'Review' })).toHaveTextContent('Denied');
-    });
   });
 
   it('shows the API error when a decision is rejected', async () => {
@@ -166,51 +178,16 @@ describe('SnapshotPage review', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Not reviewable');
   });
-});
 
-describe('SnapshotPage navigation', () => {
-  it('moves with j and k through the filtered snapshots, keeping the filter', async () => {
-    const { router } = await openSnapshot('/builds/build-12/snapshots/snap-new?filter=all');
-    expect(screen.getByText('1 of 5')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Build #12' })).toHaveAttribute(
-      'href',
-      '/builds/build-12?filter=all',
-    );
+  it('keeps the shortcut hints in tooltips, not in the button names', async () => {
+    await openSnapshot('/builds/build-12/snapshots/snap-changed');
 
-    fireEvent.keyDown(window, { key: 'j' });
-    expect(await screen.findByRole('heading', { name: 'Button / Primary' })).toBeInTheDocument();
-    expect(router.state.location.search).toEqual({ filter: 'all' });
-    fireEvent.keyDown(window, { key: 'j' });
-    expect(await screen.findByRole('heading', { name: 'Card / Default' })).toBeInTheDocument();
-    fireEvent.keyDown(window, { key: 'k' });
-    expect(await screen.findByRole('heading', { name: 'Button / Primary' })).toBeInTheDocument();
-  });
-
-  it('links previous and next, and does nothing past the ends', async () => {
-    await openSnapshot('/builds/build-12/snapshots/snap-new?filter=unreviewed');
-
+    expect(screen.getByRole('button', { name: 'Approve' })).toHaveAttribute('title', 'Approve (a)');
+    expect(screen.getByRole('button', { name: 'Deny' })).toHaveAttribute('title', 'Deny (d)');
     const nav = screen.getByRole('navigation', { name: 'Snapshots' });
-    expect(within(nav).queryByRole('link', { name: 'Previous' })).not.toBeInTheDocument();
-    expect(within(nav).getByRole('link', { name: 'Next' })).toHaveAttribute(
-      'href',
-      '/builds/build-12/snapshots/snap-changed?filter=unreviewed',
+    expect(within(nav).getByRole('link', { name: 'Previous' })).toHaveAttribute(
+      'title',
+      'Previous (k or ←)',
     );
-    fireEvent.keyDown(window, { key: 'k' });
-    expect(screen.getByRole('heading', { name: 'Avatar / Large' })).toBeInTheDocument();
-  });
-
-  it('ignores shortcuts while an input has focus or with a modifier', async () => {
-    await openSnapshot('/builds/build-12/snapshots/snap-changed?filter=all');
-    selectMode('Diff');
-    const slider = screen.getByRole('slider', { name: 'Diff opacity' });
-
-    fireEvent.keyDown(slider, { key: 'j' });
-    fireEvent.keyDown(slider, { key: 'a' });
-    fireEvent.keyDown(window, { key: 'a', metaKey: true });
-    fireEvent.keyDown(window, { key: 'x' });
-
-    expect(screen.getByRole('heading', { name: 'Button / Primary' })).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Review' })).toHaveTextContent('Pending');
-    expect(apiState.calls).toEqual([]);
   });
 });

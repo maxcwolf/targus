@@ -1,6 +1,6 @@
 import type { BuildStatusSummary } from '@targus/core';
 
-import { plural } from '../../components/format.js';
+import { plural, storyLabel } from '../../components/format.js';
 
 /** The one-line status under the build header. */
 export function summaryLine(summary: BuildStatusSummary): string {
@@ -19,8 +19,6 @@ export function summaryLine(summary: BuildStatusSummary): string {
     case 'passed':
       return 'No visual changes';
     case 'failed':
-      return errorCount === 1
-        ? '1 story failed to render; a later build must fix it'
-        : `${errorCount} stories failed to render; a later build must fix them`;
+      return `${storyLabel(errorCount)} failed to render; a later build must fix ${errorCount === 1 ? 'it' : 'them'}`;
   }
 }

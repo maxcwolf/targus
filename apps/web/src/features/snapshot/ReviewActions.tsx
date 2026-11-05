@@ -1,7 +1,7 @@
 import type { ReviewDecision, ReviewState } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { Kbd } from '../../components/Kbd.js';
+import { CheckIcon, CloseIcon } from '../../components/icons.js';
 
 export interface ReviewActionsProps {
   readonly review: ReviewState;
@@ -10,7 +10,7 @@ export interface ReviewActionsProps {
   readonly onDecide: (decision: ReviewDecision) => void;
 }
 
-/** Approve and Deny. Both stay clickable after a decision so it can be reversed. */
+/** "Deny ✕" (outline) and "Approve ✓" (primary). Both stay clickable to reverse a decision. */
 export function ReviewActions({
   review,
   disabled,
@@ -21,21 +21,9 @@ export function ReviewActions({
     <div className="button-group review-actions">
       <button
         type="button"
-        className="button approve"
-        aria-label="Approve"
-        aria-pressed={review === 'approved'}
-        aria-keyshortcuts="a"
-        disabled={disabled || busy}
-        onClick={() => {
-          onDecide('approve');
-        }}
-      >
-        Approve <Kbd>a</Kbd>
-      </button>
-      <button
-        type="button"
         className="button deny"
         aria-label="Deny"
+        title="Deny (d)"
         aria-pressed={review === 'denied'}
         aria-keyshortcuts="d"
         disabled={disabled || busy}
@@ -43,7 +31,21 @@ export function ReviewActions({
           onDecide('deny');
         }}
       >
-        Deny <Kbd>d</Kbd>
+        Deny <CloseIcon />
+      </button>
+      <button
+        type="button"
+        className="button primary approve"
+        aria-label="Approve"
+        title="Approve (a)"
+        aria-pressed={review === 'approved'}
+        aria-keyshortcuts="a"
+        disabled={disabled || busy}
+        onClick={() => {
+          onDecide('approve');
+        }}
+      >
+        Approve <CheckIcon />
       </button>
     </div>
   );

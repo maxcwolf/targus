@@ -1,14 +1,15 @@
 import { needsReview, type Snapshot } from '@targus/core';
 
-/** The build page's filter tabs, in display order. */
+/** Every `?filter=` value. */
 const snapshotFilters = [
-  'unreviewed',
+  'all',
+  'changes',
   'approved',
   'denied',
+  'unreviewed',
   'new',
   'removed',
   'changed',
-  'all',
 ] as const;
 export type SnapshotFilter = (typeof snapshotFilters)[number];
 
@@ -17,15 +18,21 @@ export interface FilterSearch {
   readonly filter?: SnapshotFilter;
 }
 
+/** Captions in the build page's counter row (Chromatic's wording). */
 const labels: Record<SnapshotFilter, string> = {
-  unreviewed: 'Unreviewed',
-  approved: 'Approved',
+  all: 'Stories',
+  changes: 'Changes',
+  approved: 'Accepted',
   denied: 'Denied',
+  unreviewed: 'Unreviewed',
   new: 'New',
   removed: 'Removed',
   changed: 'Changed',
-  all: 'All',
 };
+
+/** The big counters, and the smaller "More" filters under them. */
+export const counterFilters = ['all', 'changes', 'approved', 'denied', 'unreviewed'] as const;
+export const moreFilters = ['new', 'removed', 'changed'] as const;
 
 /** Only `changed` and `new` snapshots take a decision (ADR 0004). */
 export function isReviewable(snapshot: Snapshot): boolean {
@@ -33,6 +40,7 @@ export function isReviewable(snapshot: Snapshot): boolean {
 }
 
 const predicates: Record<SnapshotFilter, (snapshot: Snapshot) => boolean> = {
+  changes: isReviewable,
   unreviewed: (s) => isReviewable(s) && s.review === 'pending',
   approved: (s) => isReviewable(s) && s.review === 'approved',
   denied: (s) => isReviewable(s) && s.review === 'denied',
@@ -64,11 +72,18 @@ export function effectiveFilter(
   return snapshots.some(predicates.unreviewed) ? 'unreviewed' : 'all';
 }
 
+export interface FilterTab {
+  readonly id: SnapshotFilter;
+  readonly label: string;
+  readonly count: number;
+}
+
 /** Tab descriptors with how many snapshots each filter shows. */
 export function filterTabs(
   snapshots: readonly Snapshot[],
-): { id: SnapshotFilter; label: string; count: number }[] {
-  return snapshotFilters.map((id) => ({
+  ids: readonly SnapshotFilter[],
+): FilterTab[] {
+  return ids.map((id) => ({
     id,
     label: labels[id],
     count: snapshots.filter(predicates[id]).length,

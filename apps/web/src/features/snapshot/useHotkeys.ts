@@ -1,11 +1,7 @@
 import { useEffect } from 'react';
 
-export interface ReviewKeyHandlers {
-  readonly next: () => void;
-  readonly previous: () => void;
-  readonly approve: () => void;
-  readonly deny: () => void;
-}
+/** Handlers by `KeyboardEvent.key`, e.g. `{ j: next, ArrowRight: next, Escape: back }`. */
+export type Hotkeys = Readonly<Record<string, () => void>>;
 
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -13,14 +9,15 @@ function isTyping(target: EventTarget | null): boolean {
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
-/** `j` next, `k` previous, `a` approve, `d` deny; ignored while typing or with a modifier. */
-export function useReviewKeys(handlers: ReviewKeyHandlers): void {
-  const { next, previous, approve, deny } = handlers;
+/**
+ * Single-key shortcuts on the window. Ignored while an input has focus (so arrow keys still
+ * move a range slider) and when a modifier is held (so browser shortcuts keep working).
+ */
+export function useHotkeys(keys: Hotkeys): void {
   useEffect(() => {
-    const byKey: Record<string, () => void> = { j: next, k: previous, a: approve, d: deny };
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.metaKey || event.ctrlKey || event.altKey || isTyping(event.target)) return;
-      const handler = byKey[event.key];
+      const handler = keys[event.key];
       if (!handler) return;
       event.preventDefault();
       handler();
@@ -29,5 +26,5 @@ export function useReviewKeys(handlers: ReviewKeyHandlers): void {
     return () => {
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [next, previous, approve, deny]);
+  }, [keys]);
 }

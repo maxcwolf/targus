@@ -46,7 +46,7 @@ export function ConfirmButton({
       </button>
       <button
         type="button"
-        className="button"
+        className="button ghost"
         onClick={() => {
           setConfirming(false);
         }}

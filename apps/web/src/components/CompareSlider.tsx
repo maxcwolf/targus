@@ -9,19 +9,15 @@ export interface CompareSliderProps {
 
 /**
  * The current image with the baseline laid over it, clipped at the split: left of the line is
- * the baseline, right of it the current capture. An invisible range input covers the whole
+ * the baseline, right of it the new capture. An invisible range input covers the whole
  * image, so dragging anywhere and the arrow keys both move the split.
  */
 export function CompareSlider({ baselineSrc, currentSrc }: CompareSliderProps): ReactElement {
   const [position, setPosition] = useState(50);
   return (
-    <figure className="capture compare-slider">
-      <figcaption className="caption-row caption-split">
-        <span className="pill">Baseline</span>
-        <span className="pill">Current</span>
-      </figcaption>
+    <div className="compare-slider">
       <div className="frame">
-        <SnapshotImage src={currentSrc} alt="Current" />
+        <SnapshotImage src={currentSrc} alt="New" />
         <SnapshotImage
           src={baselineSrc}
           alt="Baseline"
@@ -43,6 +39,6 @@ export function CompareSlider({ baselineSrc, currentSrc }: CompareSliderProps): 
           }}
         />
       </div>
-    </figure>
+    </div>
   );
 }

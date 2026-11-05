@@ -1,20 +1,26 @@
 import type { SnapshotCounts } from '@targus/core';
 import type { ReactElement } from 'react';
 
-const shown = ['changed', 'new', 'removed', 'unstable', 'error'] as const;
+import { changeCount, plural, storyCount, storyLabel } from '../../components/format.js';
 
-/** Non-zero per-state counts as small coloured chips, then a muted unchanged count. */
+/**
+ * "6 changes · 1 new · 1 removed", where changes are changed plus new (as on the build page),
+ * with only the non-zero extras, then the story count.
+ */
 export function BuildCounts({ counts }: { readonly counts: SnapshotCounts }): ReactElement {
+  const parts = [
+    plural(changeCount(counts), 'change'),
+    counts.new > 0 ? `${counts.new} new` : null,
+    counts.removed > 0 ? `${counts.removed} removed` : null,
+    counts.unstable > 0 ? `${counts.unstable} unstable` : null,
+    counts.error > 0 ? plural(counts.error, 'error') : null,
+  ].filter((part) => part !== null);
   return (
-    <span className="counts">
-      {shown
-        .filter((state) => counts[state] > 0)
-        .map((state) => (
-          <span key={state} className={`count-chip state-${state}`}>
-            {counts[state]} {state === 'error' && counts.error > 1 ? 'errors' : state}
-          </span>
-        ))}
-      <span className="muted">{counts.unchanged} unchanged</span>
+    <span className="build-counts">
+      <span className={counts.error > 0 ? 'counts-line has-error' : 'counts-line'}>
+        {parts.join(' · ')}
+      </span>
+      <span className="lighter">{storyLabel(storyCount(counts))}</span>
     </span>
   );
 }

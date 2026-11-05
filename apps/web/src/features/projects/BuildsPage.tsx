@@ -7,6 +7,7 @@ import { listBuilds, queryKeys } from '../../api-client/index.js';
 import { commitUrl, formatDateTime, pullRequestUrl, shortSha } from '../../components/format.js';
 import { Skeleton } from '../../components/Skeleton.js';
 import { StatusChip } from '../../components/StatusChip.js';
+import { StatusCircle } from '../../components/StatusCircle.js';
 import { ErrorView, NotFound } from '../errors/ErrorView.js';
 import { BuildCounts } from './BuildCounts.js';
 import { useProjects } from './useProjects.js';
@@ -20,37 +21,43 @@ function BuildRow({
 }): ReactElement {
   const { build } = item;
   return (
-    <tr className="row-hover">
-      <td>
-        <Link className="build-link" to="/builds/$buildId" params={{ buildId: build.id }}>
-          Build #{build.number}
-        </Link>
-      </td>
-      <td>
-        <StatusChip status={item.summary.status} />
-      </td>
-      <td className="mono">{build.branch}</td>
-      <td>
-        {build.prNumber === null ? (
-          <span className="muted">—</span>
-        ) : (
-          <a href={pullRequestUrl(repo, build.prNumber)}>#{build.prNumber}</a>
-        )}
-      </td>
-      <td>
-        <a className="mono" href={commitUrl(repo, build.sha)}>
-          {shortSha(build.sha)}
-        </a>
-      </td>
-      <td>
-        <BuildCounts counts={item.counts} />
-      </td>
-      <td>{formatDateTime(build.createdAt)}</td>
-    </tr>
+    <li className="build-row">
+      <StatusCircle status={item.summary.status} size={20} />
+      <div className="build-main">
+        <div className="build-title">
+          <Link
+            className="build-link stretched-link"
+            to="/builds/$buildId"
+            params={{ buildId: build.id }}
+          >
+            Build {build.number}
+          </Link>
+          <StatusChip status={item.summary.status} />
+        </div>
+        <div className="subline">
+          <span className="mono">{build.branch}</span>
+          <span className="dot-sep">·</span>
+          <a className="mono raised" href={commitUrl(repo, build.sha)}>
+            {shortSha(build.sha)}
+          </a>
+          {build.prNumber === null ? null : (
+            <>
+              <span className="dot-sep">·</span>
+              <a className="raised" href={pullRequestUrl(repo, build.prNumber)}>
+                PR #{build.prNumber}
+              </a>
+            </>
+          )}
+          <span className="dot-sep">·</span>
+          <span>{formatDateTime(build.createdAt)}</span>
+        </div>
+      </div>
+      <BuildCounts counts={item.counts} />
+    </li>
   );
 }
 
-function BuildsTable({ project }: { readonly project: ProjectSummary }): ReactElement {
+function BuildsList({ project }: { readonly project: ProjectSummary }): ReactElement {
   const builds = useQuery({
     queryKey: queryKeys.builds(project.id),
     queryFn: () => listBuilds(project.id),
@@ -59,24 +66,11 @@ function BuildsTable({ project }: { readonly project: ProjectSummary }): ReactEl
   if (builds.isError) return <ErrorView error={builds.error} />;
   if (builds.data.builds.length === 0) return <p className="muted">No builds yet.</p>;
   return (
-    <table className="table">
-      <thead>
-        <tr>
-          <th>Build</th>
-          <th>Status</th>
-          <th>Branch</th>
-          <th>PR</th>
-          <th>Commit</th>
-          <th>Snapshots</th>
-          <th>Created</th>
-        </tr>
-      </thead>
-      <tbody>
-        {builds.data.builds.map((item) => (
-          <BuildRow key={item.build.id} item={item} repo={project.repo} />
-        ))}
-      </tbody>
-    </table>
+    <ul className="card list-card">
+      {builds.data.builds.map((item) => (
+        <BuildRow key={item.build.id} item={item} repo={project.repo} />
+      ))}
+    </ul>
   );
 }
 
@@ -89,12 +83,12 @@ export function BuildsPage({ projectId }: { readonly projectId: string }): React
   if (!project) return <NotFound message="No project with this id, or you cannot see it." />;
   return (
     <section>
-      <p className="breadcrumb">
-        <Link to="/">Projects</Link> / {project.name}
-      </p>
-      <h1>{project.name}</h1>
-      <p className="muted">{project.repo}</p>
-      <BuildsTable project={project} />
+      <header className="page-header">
+        <h1 className="page-title">{project.name}</h1>
+        <p className="mono muted">{project.repo}</p>
+      </header>
+      <p className="section-label">Builds</p>
+      <BuildsList project={project} />
     </section>
   );
 }

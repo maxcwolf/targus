@@ -1,9 +1,16 @@
-import { Link } from '@tanstack/react-router';
 import type { BuildWithSummary, ProjectSummary } from '@targus/core';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
-import { commitUrl, pullRequestUrl, shortSha } from '../../components/format.js';
+import {
+  changeCount,
+  commitUrl,
+  formatDateTime,
+  pullRequestUrl,
+  shortSha,
+  storyCount,
+} from '../../components/format.js';
 import { StatusChip } from '../../components/StatusChip.js';
+import { StatusCircle } from '../../components/StatusCircle.js';
 import { summaryLine } from './summary.js';
 
 export interface BuildHeaderProps {
@@ -11,31 +18,39 @@ export interface BuildHeaderProps {
   readonly project: ProjectSummary | undefined;
 }
 
-function PullRequest({ repo, prNumber }: { readonly repo: string; readonly prNumber: number }) {
-  return <a href={pullRequestUrl(repo, prNumber)}>PR #{prNumber}</a>;
+function Stat({ value, caption }: { readonly value: number; readonly caption: string }) {
+  return (
+    <div className="stat">
+      <span className="stat-value">{value}</span>
+      <span className="stat-caption">{caption}</span>
+    </div>
+  );
 }
 
-/** Project link, build number, status, git refs and the review summary line. */
-export function BuildHeader({ item, project }: BuildHeaderProps): ReactElement {
-  const { build, summary } = item;
+function InfoCell({ label, children }: { readonly label: string; readonly children: ReactNode }) {
+  return (
+    <div className="info-cell">
+      <span className="info-label">{label}</span>
+      <span className="info-value">{children}</span>
+    </div>
+  );
+}
+
+function InfoCard({ item, project }: BuildHeaderProps): ReactElement {
+  const { build, counts } = item;
   const repo = project?.repo;
   return (
-    <div className="build-header">
-      {project ? (
-        <p className="breadcrumb">
-          <Link to="/projects/$projectId" params={{ projectId: project.id }}>
-            {project.name}
-          </Link>
-        </p>
-      ) : null}
-      <h1>
-        Build #{build.number} <StatusChip status={summary.status} />
-      </h1>
-      <p className="meta">
-        <span className="mono">{build.branch}</span>
+    <div className="card info-card">
+      <InfoCell label="Stories">{storyCount(counts)}</InfoCell>
+      <InfoCell label="Changes">{changeCount(counts)}</InfoCell>
+      <InfoCell label="Device">{build.device}</InfoCell>
+      <InfoCell label="PR">
         {repo && build.prNumber !== null ? (
-          <PullRequest repo={repo} prNumber={build.prNumber} />
+          <a href={pullRequestUrl(repo, build.prNumber)}>PR #{build.prNumber}</a>
         ) : null}
+        <span className="mono">{build.branch}</span>
+      </InfoCell>
+      <InfoCell label="Commit">
         {repo ? (
           <a className="mono" href={commitUrl(repo, build.sha)}>
             {shortSha(build.sha)}
@@ -43,9 +58,36 @@ export function BuildHeader({ item, project }: BuildHeaderProps): ReactElement {
         ) : (
           <span className="mono">{shortSha(build.sha)}</span>
         )}
-        <span>{build.device}</span>
-      </p>
-      <p className="summary-line">{summaryLine(summary)}</p>
+      </InfoCell>
+      <InfoCell label="Baseline">
+        <span className="mono">{build.baselineBuildId?.slice(0, 8) ?? 'none'}</span>
+      </InfoCell>
     </div>
+  );
+}
+
+/** Status circle, build number, when and where it ran, the big stats, and the info card. */
+export function BuildHeader({ item, project }: BuildHeaderProps): ReactElement {
+  const { build, summary, counts } = item;
+  return (
+    <>
+      <div className="build-header">
+        <StatusCircle status={summary.status} size={44} />
+        <div className="build-heading">
+          <h1 className="build-number">
+            Build {build.number} <StatusChip status={summary.status} />
+          </h1>
+          <p className="subline">
+            Started {formatDateTime(build.createdAt)} · {build.device}
+          </p>
+          <p className="summary-line">{summaryLine(summary)}</p>
+        </div>
+        <div className="stats">
+          <Stat value={changeCount(counts)} caption="Changes" />
+          <Stat value={storyCount(counts)} caption="Stories" />
+        </div>
+      </div>
+      <InfoCard item={item} project={project} />
+    </>
   );
 }

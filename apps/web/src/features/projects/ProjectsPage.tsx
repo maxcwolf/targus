@@ -5,7 +5,7 @@ import { Skeleton } from '../../components/Skeleton.js';
 import { ErrorView } from '../errors/ErrorView.js';
 import { useProjects } from './useProjects.js';
 
-/** `/`: every project the reviewer can see. Never auto-redirects, even with one project. */
+/** `/`: every project the reviewer can see, as cards. Never auto-redirects. */
 export function ProjectsPage(): ReactElement | null {
   const projects = useProjects();
   if (projects.isPending) return <Skeleton label="Loading projects…" rows={3} />;
@@ -14,32 +14,25 @@ export function ProjectsPage(): ReactElement | null {
   const list = projects.data.projects;
   return (
     <section>
-      <h1>Projects</h1>
+      <h1 className="page-title">Projects</h1>
       {list.length === 0 ? (
         <p className="muted">No projects yet. A maintainer creates them with the admin API.</p>
       ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Project</th>
-              <th>Repository</th>
-              <th>Org</th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.map((project) => (
-              <tr key={project.id} className="row-hover">
-                <td>
-                  <Link to="/projects/$projectId" params={{ projectId: project.id }}>
-                    {project.name}
-                  </Link>
-                </td>
-                <td>{project.repo}</td>
-                <td>{project.githubOrg}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ul className="project-grid">
+          {list.map((project) => (
+            <li key={project.id} className="card project-card">
+              <Link
+                to="/projects/$projectId"
+                params={{ projectId: project.id }}
+                className="project-name stretched-link"
+              >
+                {project.name}
+              </Link>
+              <span className="mono muted">{project.repo}</span>
+              <span className="lighter">{project.githubOrg}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

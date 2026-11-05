@@ -16,7 +16,7 @@ export function StatusChip({ status }: { readonly status: BuildStatus }): ReactE
     <span
       role="status"
       aria-label="Build status"
-      className={`chip chip-${status}`}
+      className={`pill tone-${status}`}
       data-status={status}
     >
       {labels[status]}

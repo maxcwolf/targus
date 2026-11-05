@@ -9,7 +9,7 @@ import {
   storyName,
 } from '../build/filters.js';
 import { useReview } from './useReview.js';
-import { useReviewKeys } from './useReviewKeys.js';
+import { useHotkeys } from './useHotkeys.js';
 
 export interface SnapshotReviewInput {
   readonly item: BuildWithSummary;
@@ -30,26 +30,35 @@ function advanceTarget(
   return filter === 'unreviewed' ? list.slice(index + 1).find(isPending) : undefined;
 }
 
-/** j/k move, a/d decide. */
+/** j/k and ←/→ move, a/d decide, Esc goes back to the build. */
 function useShortcuts(
-  next: () => void,
-  previous: () => void,
+  move: (target: 'next' | 'previous') => void,
   decide: (decision: ReviewDecision) => void,
+  back: () => void,
 ): void {
-  useReviewKeys({
-    next,
-    previous,
-    approve: () => {
+  const next = (): void => {
+    move('next');
+  };
+  const previous = (): void => {
+    move('previous');
+  };
+  useHotkeys({
+    j: next,
+    ArrowRight: next,
+    k: previous,
+    ArrowLeft: previous,
+    a: () => {
       decide('approve');
     },
-    deny: () => {
+    d: () => {
       decide('deny');
     },
+    Escape: back,
   });
 }
 
 /**
- * The review mutation, prev/next within the filter and the j/k/a/d shortcuts for one snapshot.
+ * The review mutation, prev/next within the filter and the review shortcuts for one snapshot.
  * In the Unreviewed filter a decision moves on to the next snapshot still pending, if any.
  */
 export function useSnapshotReview({
@@ -92,13 +101,13 @@ export function useSnapshotReview({
     );
   };
   useShortcuts(
-    () => {
-      goTo(next);
-    },
-    () => {
-      goTo(previous);
+    (direction) => {
+      goTo(direction === 'next' ? next : previous);
     },
     decide,
+    () => {
+      void navigate({ to: '/builds/$buildId', params: { buildId }, search: { filter } });
+    },
   );
   return { review, list, index, previous, next, canReview, decide };
 }

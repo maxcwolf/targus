@@ -1,27 +1,22 @@
-import { Link } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import type { BuildWithSummary, ProjectSummary, Snapshot } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { ReviewBadge, StateBadge } from '../../components/Badges.js';
-import { formatDateTime } from '../../components/format.js';
+import { getBuild, queryKeys } from '../../api-client/index.js';
+import { shortSha } from '../../components/format.js';
 import { Skeleton } from '../../components/Skeleton.js';
 import { Toast } from '../../components/Toast.js';
-import {
-  componentTitle,
-  effectiveFilter,
-  isReviewable,
-  type SnapshotFilter,
-  storyName,
-} from '../build/filters.js';
+import { effectiveFilter, type SnapshotFilter } from '../build/filters.js';
 import { useBuildData } from '../build/useBuildData.js';
 import { ErrorView, NotFound } from '../errors/ErrorView.js';
 import { ReviewActions } from './ReviewActions.js';
-import { SnapshotNav } from './SnapshotNav.js';
+import { SnapshotBar } from './SnapshotBar.js';
 import { SnapshotSidebar } from './SnapshotSidebar.js';
-import { SnapshotViewer } from './SnapshotViewer.js';
+import { SnapshotViewer, type ViewerLabels } from './SnapshotViewer.js';
 import { StateNotice } from './StateNotice.js';
 import { useSnapshotReview } from './useSnapshotReview.js';
 import { useToast } from './useToast.js';
+import { useViewer, type ViewerState } from './useViewer.js';
 
 export interface SnapshotPageProps {
   readonly buildId: string;
@@ -37,35 +32,59 @@ interface DetailProps {
   readonly filter: SnapshotFilter;
 }
 
-function SnapshotHeading({ item, project, snapshot, filter }: DetailProps): ReactElement {
-  const { build } = item;
+/** The baseline build, for "Build 11 on main" and the BASELINE line. Null when there is none. */
+function useBaseline(baselineBuildId: string | null): BuildWithSummary | null | undefined {
+  const baseline = useQuery({
+    queryKey: queryKeys.build(baselineBuildId ?? ''),
+    queryFn: () => getBuild(baselineBuildId ?? ''),
+    enabled: baselineBuildId !== null,
+  });
+  return baselineBuildId === null ? null : baseline.data;
+}
+
+function BaselineSection({ baseline }: { readonly baseline: BuildWithSummary | null | undefined }) {
   return (
-    <div className="snapshot-heading">
-      <p className="breadcrumb">
-        {project ? (
-          <>
-            <Link to="/projects/$projectId" params={{ projectId: project.id }}>
-              {project.name}
-            </Link>
-            <span className="crumb-sep">›</span>
-          </>
-        ) : null}
-        <Link to="/builds/$buildId" params={{ buildId: build.id }} search={{ filter }}>
-          Build #{build.number}
-        </Link>
+    <section className="baseline-section">
+      <p className="section-label">Baseline</p>
+      <p className="muted">
+        {baseline === null
+          ? 'No baseline: first build on this branch'
+          : baseline
+            ? `Compared with build ${baseline.build.number} (${shortSha(baseline.build.sha)})`
+            : 'Compared with the baseline build'}
       </p>
-      <h1>
-        {componentTitle(snapshot)} <span className="muted">/</span> {storyName(snapshot)}
-      </h1>
-      <p className="meta">
-        <StateBadge state={snapshot.state} />
-        {isReviewable(snapshot) ? <ReviewBadge review={snapshot.review} /> : null}
-        {snapshot.reviewedBy && snapshot.reviewedAt ? (
-          <span className="muted">
-            by {snapshot.reviewedBy} on {formatDateTime(snapshot.reviewedAt)}
-          </span>
-        ) : null}
-      </p>
+    </section>
+  );
+}
+
+function viewerLabels(
+  item: BuildWithSummary,
+  baseline: BuildWithSummary | null | undefined,
+): ViewerLabels {
+  const on = (b: BuildWithSummary): string => `Build ${b.build.number} on ${b.build.branch}`;
+  return {
+    baseline: baseline ? on(baseline) : baseline === null ? 'none' : '…',
+    current: on(item),
+  };
+}
+
+function SnapshotContent(props: {
+  readonly snapshot: Snapshot;
+  readonly viewer: ViewerState;
+  readonly labels: ViewerLabels;
+  readonly baseline: BuildWithSummary | null | undefined;
+  readonly error: Error | null;
+}): ReactElement {
+  return (
+    <div className="snapshot-content">
+      {props.error ? (
+        <p role="alert" className="error-text">
+          {props.error.message}
+        </p>
+      ) : null}
+      <StateNotice state={props.snapshot.state} />
+      <SnapshotViewer snapshot={props.snapshot} viewer={props.viewer} labels={props.labels} />
+      <BaselineSection baseline={props.baseline} />
     </div>
   );
 }
@@ -73,27 +92,12 @@ function SnapshotHeading({ item, project, snapshot, filter }: DetailProps): Reac
 function SnapshotDetail(props: DetailProps): ReactElement {
   const { item, snapshot, filter } = props;
   const toast = useToast();
+  const viewer = useViewer(snapshot);
+  const baseline = useBaseline(item.build.baselineBuildId);
   const { review, list, index, previous, next, canReview, decide } = useSnapshotReview({
     ...props,
     notify: toast.show,
   });
-  const actions = (
-    <>
-      <ReviewActions
-        review={snapshot.review}
-        disabled={!canReview}
-        busy={review.isPending}
-        onDecide={decide}
-      />
-      <SnapshotNav
-        buildId={item.build.id}
-        filter={filter}
-        previous={previous}
-        next={next}
-        position={`${index + 1} of ${list.length}`}
-      />
-    </>
-  );
   return (
     <div className="snapshot-layout">
       <SnapshotSidebar
@@ -103,14 +107,30 @@ function SnapshotDetail(props: DetailProps): ReactElement {
         filter={filter}
       />
       <section className="snapshot-main">
-        <SnapshotHeading {...props} />
-        {review.isError ? (
-          <p role="alert" className="error-text">
-            {review.error.message}
-          </p>
-        ) : null}
-        <StateNotice state={snapshot.state} />
-        <SnapshotViewer snapshot={snapshot} actions={actions} />
+        <SnapshotBar
+          item={item}
+          snapshot={snapshot}
+          filter={filter}
+          viewer={viewer}
+          previous={previous}
+          next={next}
+          position={`${index + 1} of ${list.length}`}
+          actions={
+            <ReviewActions
+              review={snapshot.review}
+              disabled={!canReview}
+              busy={review.isPending}
+              onDecide={decide}
+            />
+          }
+        />
+        <SnapshotContent
+          snapshot={snapshot}
+          viewer={viewer}
+          labels={viewerLabels(item, baseline)}
+          baseline={baseline}
+          error={review.error}
+        />
       </section>
       <Toast message={toast.message} id={toast.id} />
     </div>

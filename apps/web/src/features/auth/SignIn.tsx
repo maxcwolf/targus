@@ -7,10 +7,13 @@ import { signInUrl } from '../../api-client/index.js';
 export function SignIn(): ReactElement {
   const returnTo = useRouterState({ select: (state) => state.location.href });
   return (
-    <section className="panel sign-in">
+    <section className="card sign-in">
+      <p className="wordmark wordmark-large">targus</p>
       <h1>Sign in to review</h1>
-      <p>targus uses your GitHub account to check that you belong to the project&apos;s org.</p>
-      <a className="button primary" href={signInUrl(returnTo)}>
+      <p className="muted">
+        targus uses your GitHub account to check that you belong to the project&apos;s org.
+      </p>
+      <a className="button primary large" href={signInUrl(returnTo)}>
         Sign in with GitHub
       </a>
     </section>

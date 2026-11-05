@@ -3,6 +3,7 @@ import type { Snapshot } from '@targus/core';
 import { type ReactElement, useEffect, useRef } from 'react';
 
 import { formatPercent } from '../../components/format.js';
+import { PathText } from '../../components/PathText.js';
 import { groupByTitle, isReviewable, type SnapshotFilter, storyName } from '../build/filters.js';
 
 export interface SnapshotSidebarProps {
@@ -28,7 +29,9 @@ export function SnapshotSidebar(props: SnapshotSidebarProps): ReactElement {
     <nav className="sidebar" aria-label="Build snapshots">
       {groupByTitle(snapshots).map((group) => (
         <section key={group.title} className="sidebar-group">
-          <h2>{group.title}</h2>
+          <h2>
+            <PathText text={group.title} />
+          </h2>
           <ul>
             {group.snapshots.map((snapshot) => {
               const current = snapshot.id === currentId;

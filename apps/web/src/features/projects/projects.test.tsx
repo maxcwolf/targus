@@ -6,16 +6,25 @@ import { project } from '../../test/fixtures.js';
 import { apiError, server } from '../../test/msw.js';
 import { renderApp } from '../../test/render.js';
 
+function buildRow(link: HTMLElement): HTMLElement {
+  const row = link.closest('li');
+  if (!row) throw new Error('build row missing');
+  return row;
+}
+
 describe('ProjectsPage', () => {
-  it('lists projects with repo and org, linking to the builds page', async () => {
+  it('shows project cards with repo and org, linking to the builds page', async () => {
     renderApp('/');
 
     const link = await screen.findByRole('link', { name: 'Mobile app' });
     expect(link).toHaveAttribute('href', '/projects/project-1');
-    const row = link.closest('tr');
-    expect(row).not.toBeNull();
-    expect(row).toHaveTextContent('acme/mobile');
-    expect(row).toHaveTextContent('acme');
+    const card = link.closest('li');
+    expect(card).toHaveClass('project-card');
+    expect(card).toHaveTextContent('acme/mobile');
+    expect(card).toHaveTextContent('acme');
+    const rail = screen.getByRole('navigation', { name: 'App' });
+    expect(within(rail).getByRole('link', { name: 'Projects' })).toHaveClass('active');
+    expect(within(rail).queryByRole('link', { name: 'Builds' })).not.toBeInTheDocument();
   });
 
   it('says so when there are no projects', async () => {
@@ -27,17 +36,17 @@ describe('ProjectsPage', () => {
 });
 
 describe('BuildsPage', () => {
-  it('shows each build with status chip, branch, PR and commit links, and counts', async () => {
+  it('shows each build with status, branch, sha and PR links, and the change summary', async () => {
     renderApp(`/projects/${project.id}`);
 
-    const buildLink = await screen.findByRole('link', { name: 'Build #12' });
+    expect(await screen.findByRole('heading', { name: 'Mobile app' })).toBeInTheDocument();
+    const buildLink = await screen.findByRole('link', { name: 'Build 12' });
     expect(buildLink).toHaveAttribute('href', '/builds/build-12');
-    const row = buildLink.closest('tr');
-    if (!row) throw new Error('build row missing');
+    const row = buildRow(buildLink);
     const cells = within(row);
     expect(cells.getByRole('status', { name: 'Build status' })).toHaveTextContent('Pending review');
     expect(cells.getByText('feature/buttons')).toBeInTheDocument();
-    expect(cells.getByRole('link', { name: '#34' })).toHaveAttribute(
+    expect(cells.getByRole('link', { name: 'PR #34' })).toHaveAttribute(
       'href',
       'https://github.com/acme/mobile/pull/34',
     );
@@ -45,26 +54,19 @@ describe('BuildsPage', () => {
       'href',
       'https://github.com/acme/mobile/commit/abcdef1234567890abcdef1234567890abcdef12',
     );
-    expect(row).toHaveTextContent('2 changed');
-    expect(row).toHaveTextContent('1 new');
-    expect(row).toHaveTextContent('1 removed');
-    expect(row).toHaveTextContent('1 unchanged');
-    expect(row).not.toHaveTextContent('unstable');
-    expect(row).not.toHaveTextContent('error');
+    expect(cells.getByText('3 changes · 1 new · 1 removed')).toBeInTheDocument();
+    expect(cells.getByText('4 stories')).toBeInTheDocument();
     expect(row).toHaveTextContent('2026');
   });
 
   it('shows the failed main build with its error count and no PR', async () => {
     renderApp(`/projects/${project.id}`);
 
-    const row = (await screen.findByRole('link', { name: 'Build #11' })).closest('tr');
-    if (!row) throw new Error('build row missing');
+    const row = buildRow(await screen.findByRole('link', { name: 'Build 11' }));
     expect(within(row).getByRole('status', { name: 'Build status' })).toHaveTextContent('Failed');
-    expect(row).toHaveTextContent('1 error');
-    expect(row).toHaveTextContent('1 unstable');
-    expect(row).toHaveTextContent('0 unchanged');
-    expect(row.querySelector('.state-changed')).toBeNull();
-    expect(row).toHaveTextContent('—');
+    expect(within(row).getByText('0 changes · 1 unstable · 1 error')).toHaveClass('has-error');
+    expect(within(row).getByText('2 stories')).toBeInTheDocument();
+    expect(within(row).queryByRole('link', { name: /PR/ })).not.toBeInTheDocument();
   });
 });
 

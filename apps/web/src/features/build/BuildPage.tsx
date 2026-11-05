@@ -2,19 +2,18 @@ import { useNavigate } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
 import { Skeleton } from '../../components/Skeleton.js';
-import { Tabs } from '../../components/Tabs.js';
 import { ErrorView } from '../errors/ErrorView.js';
 import { ApproveAll } from './ApproveAll.js';
+import { BuildCounters } from './BuildCounters.js';
 import { BuildHeader } from './BuildHeader.js';
-import { ReviewProgress } from './ReviewProgress.js';
 import {
   effectiveFilter,
-  filterTabs,
   matchesFilter,
   pendingReviewCount,
   type SnapshotFilter,
 } from './filters.js';
-import { SnapshotList } from './SnapshotList.js';
+import { ReviewProgress } from './ReviewProgress.js';
+import { SnapshotTable } from './SnapshotTable.js';
 import { useBuildData } from './useBuildData.js';
 
 export interface BuildPageProps {
@@ -22,7 +21,7 @@ export interface BuildPageProps {
   readonly filter: SnapshotFilter | undefined;
 }
 
-/** `/builds/$buildId`: the build's snapshots, filtered and grouped, with "Approve all". */
+/** `/builds/$buildId`: Chromatic's build screen: header, info card, counters, the table. */
 export function BuildPage({ buildId, filter }: BuildPageProps): ReactElement {
   const navigate = useNavigate();
   const data = useBuildData(buildId);
@@ -35,23 +34,29 @@ export function BuildPage({ buildId, filter }: BuildPageProps): ReactElement {
   return (
     <section>
       <BuildHeader item={build} project={project} />
-      <ReviewProgress snapshots={snapshots} />
-      <div className="toolbar">
-        <Tabs
-          label="Filter snapshots"
-          items={filterTabs(snapshots)}
-          active={active}
-          onSelect={(id) => {
-            void navigate({ to: '/builds/$buildId', params: { buildId }, search: { filter: id } });
-          }}
-        />
-        <ApproveAll
-          buildId={buildId}
-          pendingCount={pendingReviewCount(snapshots)}
-          disabled={build.build.status === 'in_progress'}
-        />
+      <p className="section-label">Snapshots</p>
+      <div className="card snapshots-card">
+        <div className="toolbar">
+          <BuildCounters
+            snapshots={snapshots}
+            active={active}
+            onSelect={(id) => {
+              void navigate({
+                to: '/builds/$buildId',
+                params: { buildId },
+                search: { filter: id },
+              });
+            }}
+          />
+          <ApproveAll
+            buildId={buildId}
+            pendingCount={pendingReviewCount(snapshots)}
+            disabled={build.build.status === 'in_progress'}
+          />
+        </div>
+        <ReviewProgress snapshots={snapshots} />
+        <SnapshotTable buildId={buildId} snapshots={shown} filter={active} />
       </div>
-      <SnapshotList buildId={buildId} snapshots={shown} filter={active} />
     </section>
   );
 }

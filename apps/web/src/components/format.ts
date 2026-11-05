@@ -27,3 +27,27 @@ export function pullRequestUrl(repo: string, prNumber: number): string {
 export function plural(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
+
+interface StateCounts {
+  readonly unchanged: number;
+  readonly changed: number;
+  readonly new: number;
+  readonly removed: number;
+  readonly unstable: number;
+  readonly error: number;
+}
+
+/** Stories captured in the build: every snapshot except the removed ones. */
+export function storyCount(counts: StateCounts): number {
+  return counts.unchanged + counts.changed + counts.new + counts.unstable + counts.error;
+}
+
+/** Visual changes a reviewer decides on: changed and new stories. */
+export function changeCount(counts: StateCounts): number {
+  return counts.changed + counts.new;
+}
+
+/** `1 story` / `355 stories`. */
+export function storyLabel(count: number): string {
+  return `${count} ${count === 1 ? 'story' : 'stories'}`;
+}

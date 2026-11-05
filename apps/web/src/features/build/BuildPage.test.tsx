@@ -6,82 +6,127 @@ import { apiError, apiState, server } from '../../test/msw.js';
 import { renderApp } from '../../test/render.js';
 
 function rowNames(): string[] {
-  return screen
-    .queryAllByRole('listitem')
-    .map((item) => within(item).getByRole('link').textContent);
+  return [...document.querySelectorAll('.story-link')].map((link) => link.textContent);
 }
 
-describe('BuildPage', () => {
-  it('shows the header with status, refs, device and the summary line', async () => {
+function counter(name: RegExp): HTMLElement {
+  return within(screen.getByRole('tablist', { name: 'Filter snapshots' })).getByRole('tab', {
+    name,
+  });
+}
+
+async function pick(name: RegExp): Promise<void> {
+  fireEvent.click(counter(name));
+  await screen.findByRole('tab', { name, selected: true });
+}
+
+describe('BuildPage header', () => {
+  it('shows the status, when and where it ran, the stats and the info card', async () => {
     renderApp('/builds/build-12');
 
-    expect(await screen.findByRole('heading', { name: /Build #12/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Build 12/ })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Build status' })).toHaveTextContent(
       /^Pending review$/,
     );
-    expect(screen.getByRole('link', { name: 'Mobile app' })).toHaveAttribute(
-      'href',
-      '/projects/project-1',
-    );
-    expect(screen.getByRole('link', { name: 'PR #34' })).toHaveAttribute(
+    expect(screen.getByText(/^Started .*2026.* · iPhone 16 \/ iOS 18\.2$/)).toBeInTheDocument();
+    expect(screen.getByText('2 changes awaiting review')).toBeInTheDocument();
+    const stats = document.querySelector('.stats');
+    expect(stats).toHaveTextContent('3Changes4Stories');
+    const info = document.querySelector('.info-card');
+    if (!(info instanceof HTMLElement)) throw new Error('info card missing');
+    expect(within(info).getByRole('link', { name: 'PR #34' })).toHaveAttribute(
       'href',
       'https://github.com/acme/mobile/pull/34',
     );
-    expect(screen.getByRole('link', { name: 'abcdef1' })).toBeInTheDocument();
-    expect(screen.getByText('iPhone 16 / iOS 18.2')).toBeInTheDocument();
-    expect(screen.getByText('2 changes awaiting review')).toBeInTheDocument();
+    expect(within(info).getByRole('link', { name: 'abcdef1' })).toBeInTheDocument();
+    expect(info).toHaveTextContent('feature/buttons');
+    expect(info).toHaveTextContent('Baselinebuild-11');
   });
 
-  it('opens on the unreviewed changes, grouped by title, linking with the filter', async () => {
+  it('puts the org / project path in the top bar and a Builds link in the rail', async () => {
     renderApp('/builds/build-12');
 
-    expect(await screen.findByRole('tab', { name: /Unreviewed/ })).toHaveAttribute(
+    const banner = await screen.findByRole('banner');
+    expect(await within(banner).findByRole('link', { name: 'Mobile app' })).toHaveAttribute(
+      'href',
+      '/projects/project-1',
+    );
+    expect(banner).toHaveTextContent('acme/Mobile app');
+    const rail = screen.getByRole('navigation', { name: 'App' });
+    expect(within(rail).getByRole('link', { name: 'Builds' })).toHaveClass('active');
+    expect(within(rail).getByRole('link', { name: 'Projects' })).toHaveAttribute('href', '/');
+  });
+});
+
+describe('BuildPage counters', () => {
+  it('opens on Unreviewed and links story rows with the filter', async () => {
+    renderApp('/builds/build-12');
+
+    expect(await screen.findByRole('tab', { name: '2 Unreviewed' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
     expect(rowNames()).toEqual(['Large', 'Primary']);
-    const group = screen.getByRole('region', { name: 'Button' });
-    const link = within(group).getByRole('link', { name: 'Primary' });
-    expect(link).toHaveAttribute(
+    const group = screen.getByRole('rowgroup', { name: 'Button' });
+    expect(within(group).getByRole('link', { name: 'Primary' })).toHaveAttribute(
       'href',
       '/builds/build-12/snapshots/snap-changed?filter=unreviewed',
     );
+    expect(within(group).getByRole('link', { name: 'Open snapshot' })).toBeInTheDocument();
     expect(within(group).getByText('1.23%')).toBeInTheDocument();
-    expect(within(group).getByRole('status', { name: 'Review' })).toHaveTextContent('Pending');
+    expect(within(group).getByText('Unreviewed')).toHaveClass('pill');
+  });
+
+  it('shows Chromatic-style counts for every filter', async () => {
+    renderApp('/builds/build-12?filter=all');
+
+    await screen.findByRole('tab', { name: '5 Stories', selected: true });
+    for (const name of [
+      '3 Changes',
+      '1 Accepted',
+      '0 Denied',
+      '2 Unreviewed',
+      '1 New',
+      '1 Removed',
+    ]) {
+      expect(screen.getByRole('tab', { name })).toBeInTheDocument();
+    }
   });
 });
 
-describe('BuildPage filters', () => {
-  it('changes the rows when a filter tab is selected', async () => {
+describe('BuildPage counter filters', () => {
+  it('filters the table when a counter is chosen', async () => {
     renderApp('/builds/build-12');
-    const tabs = await screen.findByRole('tablist', { name: 'Filter snapshots' });
-    const pick = async (name: RegExp): Promise<void> => {
-      fireEvent.click(within(tabs).getByRole('tab', { name }));
-      await screen.findByRole('tab', { name, selected: true });
-    };
+    await screen.findByRole('tab', { name: /Unreviewed/, selected: true });
 
-    await pick(/Approved/);
+    await pick(/Changes/);
+    expect(rowNames()).toEqual(['Large', 'Primary', 'Default']);
+    await pick(/Accepted/);
     expect(rowNames()).toEqual(['Default']);
+    expect(screen.getByText('Accepted', { selector: '.pill' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Reviewed by octocat' })).toHaveTextContent('O');
     await pick(/Removed/);
-    // A removed story has no name or title: it falls back to the story id and its prefix.
     expect(rowNames()).toEqual(['legacy--old']);
-    expect(screen.getByRole('heading', { name: 'legacy · 1' })).toBeInTheDocument();
+    expect(screen.getByRole('rowgroup', { name: 'legacy' })).toHaveTextContent('legacy· 1');
     await pick(/New/);
     expect(rowNames()).toEqual(['Large']);
-    await pick(/Changed/);
-    expect(rowNames()).toEqual(['Primary', 'Default']);
     await pick(/Denied/);
     expect(screen.getByText('Nothing to review')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('link', { name: 'Show all snapshots' }));
-    await screen.findByRole('tab', { name: /All/, selected: true });
+    await screen.findByRole('tab', { name: /Stories/, selected: true });
     expect(rowNames()).toHaveLength(5);
   });
 
-  it('shows filter counts on the tabs', async () => {
+  it('collapses and expands a component group', async () => {
     renderApp('/builds/build-12?filter=all');
+    const group = await screen.findByRole('rowgroup', { name: 'Button' });
+    const toggle = within(group).getByRole('button', { name: /Button/ });
 
-    expect(await screen.findByRole('tab', { name: 'Unreviewed2' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'All5' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(within(group).queryByRole('link', { name: 'Primary' })).not.toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(within(group).getByRole('link', { name: 'Primary' })).toBeInTheDocument();
   });
 });
 
@@ -93,23 +138,14 @@ describe('BuildPage approve all', () => {
     expect(apiState.calls).toEqual([]);
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Approve all' }));
-    fireEvent.click(screen.getByRole('button', { name: /^Confirm/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm: approve 2 changes' }));
 
     expect(await screen.findByText('All changes approved')).toBeInTheDocument();
     expect(apiState.calls).toEqual(['POST /api/builds/build-12/approve-all']);
     expect(screen.getByRole('status', { name: 'Build status' })).toHaveTextContent('Accepted');
-    // Nothing is unreviewed any more, so the default filter falls back to All.
-    expect(await screen.findByRole('tab', { name: 'All5', selected: true })).toBeInTheDocument();
-    const reviews = screen.getAllByRole('status', { name: 'Review' });
-    expect(reviews.map((badge) => badge.textContent)).toEqual(['Approved', 'Approved', 'Approved']);
+    expect(await screen.findByRole('tab', { name: '3 Accepted' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '3 of 3 changes reviewed' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Approve all' })).toBeDisabled();
-  });
-
-  it('names the number of changes in the confirmation', async () => {
-    renderApp('/builds/build-12');
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Approve all' }));
-    expect(screen.getByRole('button', { name: 'Confirm: approve 2 changes' })).toBeInTheDocument();
   });
 
   it('shows the API error when approve-all fails', async () => {
@@ -134,9 +170,11 @@ describe('BuildPage states', () => {
     expect(
       await screen.findByText('1 story failed to render; a later build must fix it'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /All/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /Stories/ })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('button', { name: 'Approve all' })).toBeDisabled();
     expect(screen.queryByRole('link', { name: /PR #/ })).not.toBeInTheDocument();
+    expect(document.querySelector('.info-card')).toHaveTextContent('Baselinenone');
+    expect(screen.getByText('Error', { selector: '.pill' })).toBeInTheDocument();
   });
 
   it('shows a not-found message for an unknown build', async () => {
