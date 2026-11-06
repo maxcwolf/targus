@@ -20,6 +20,10 @@ describe('readPngSize', () => {
     expect(readPngSize(padded.subarray(5))).toEqual({ width: 3, height: 2 });
   });
 
+  it('names an empty screenshot instead of calling it not a PNG', () => {
+    expect(() => readPngSize(new Uint8Array(0))).toThrow('screenshot is empty (0 bytes)');
+  });
+
   it('rejects bytes that are not a PNG', () => {
     expect(() => readPngSize(new Uint8Array(30))).toThrow('not a PNG');
     expect(() => readPngSize(encodeSolidPng(2, 2, white).subarray(0, 20))).toThrow('not a PNG');

@@ -1,5 +1,9 @@
 import type { DeviceDriver, StatusBarOverrides } from '@targus/core';
 
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
 import { z } from 'zod';
 
 import { ExecError, execFileBuffer, type Exec } from './exec.adapter.js';
@@ -14,6 +18,13 @@ const alreadyShutDown = 'Unable to shutdown device in current state: Shutdown';
 export interface SimctlDriverOptions {
   readonly udid: string;
   readonly exec?: Exec;
+  /** Where per-screenshot temp directories are made; defaults to the OS temp directory. */
+  readonly tempRoot?: string;
+}
+
+/** simctl exited 0 but left no usable image behind. */
+class EmptyScreenshotError extends Error {
+  override readonly name = 'EmptyScreenshotError';
 }
 
 /**
@@ -23,10 +34,12 @@ export interface SimctlDriverOptions {
 export class SimctlDriver implements DeviceDriver {
   readonly udid: string;
   private readonly exec: Exec;
+  private readonly tempRoot: string;
 
-  constructor({ udid, exec = execFileBuffer }: SimctlDriverOptions) {
+  constructor({ udid, exec = execFileBuffer, tempRoot = tmpdir() }: SimctlDriverOptions) {
     this.udid = udid;
     this.exec = exec;
+    this.tempRoot = tempRoot;
   }
 
   async boot(): Promise<void> {
@@ -70,10 +83,19 @@ export class SimctlDriver implements DeviceDriver {
     ]);
   }
 
-  /** `simctl io screenshot -` writes the PNG to stdout, so no temp file is needed. */
+  /**
+   * Capture into a fresh temp directory and read the file back. Not `-` for stdout: Xcode 27.2's
+   * simctl writes a file named `-` instead. The directory is removed however the capture ends.
+   */
   async screenshot(): Promise<Uint8Array> {
-    const { stdout } = await this.simctl(['io', this.udid, 'screenshot', '--type=png', '-']);
-    return new Uint8Array(stdout.buffer, stdout.byteOffset, stdout.byteLength);
+    const dir = await mkdtemp(path.join(this.tempRoot, 'targus-screenshot-'));
+    try {
+      const file = path.join(dir, 'screenshot.png');
+      const { stderr } = await this.simctl(['io', this.udid, 'screenshot', '--type=png', file]);
+      return await readScreenshot(file, stderr);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   }
 
   /** The simulator's name (e.g. "iPhone 16"), or `null` when simctl does not list the UDID. */
@@ -102,4 +124,17 @@ export class SimctlDriver implements DeviceDriver {
       throw error;
     }
   }
+}
+
+async function readScreenshot(file: string, stderr: string): Promise<Uint8Array> {
+  const bytes = await readFile(file).catch((error: unknown) => {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (bytes === null || bytes.length === 0) {
+    const what = bytes === null ? 'no screenshot file' : 'no screenshot (0 bytes)';
+    const detail = stderr.trim() === '' ? '' : `: ${stderr.trim()}`;
+    throw new EmptyScreenshotError(`simctl exited 0 but wrote ${what}${detail}`);
+  }
+  return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 }

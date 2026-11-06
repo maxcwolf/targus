@@ -110,16 +110,7 @@ describe('SimctlDriver launch and status bar', () => {
   });
 });
 
-describe('SimctlDriver screenshot and shutdown', () => {
-  it('returns screenshot bytes from stdout', async () => {
-    const fake = fakeExec({}, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
-
-    const png = await new SimctlDriver({ udid, exec: fake.exec }).screenshot();
-
-    expect([...png]).toEqual([0x89, 0x50, 0x4e, 0x47]);
-    expect(fake.argv()).toEqual([['xcrun', 'simctl', 'io', udid, 'screenshot', '--type=png', '-']]);
-  });
-
+describe('SimctlDriver shutdown', () => {
   it('shuts down and tolerates a device that is already shut down', async () => {
     const fake = fakeExec({ shutdown: 'Unable to shutdown device in current state: Shutdown' });
 

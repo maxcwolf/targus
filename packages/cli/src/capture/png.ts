@@ -12,6 +12,7 @@ export interface PngSize {
 
 /** Read width and height from a PNG's IHDR chunk without decoding it. */
 export function readPngSize(png: Uint8Array): PngSize {
+  if (png.length === 0) throw new Error('screenshot is empty (0 bytes)');
   const isPng =
     png.length >= heightOffset + 4 && pngSignature.every((byte, index) => png[index] === byte);
   if (!isPng) throw new Error('screenshot is not a PNG');
