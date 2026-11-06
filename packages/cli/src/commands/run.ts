@@ -67,10 +67,17 @@ export const defaultRunDeps: RunCommandDeps = {
 
 async function resolveDevice(options: RunCommandOptions, deps: RunCommandDeps): Promise<string> {
   if (options.deviceName !== undefined) return options.deviceName;
-  const name =
-    options.udid === undefined ? null : await deps.simulatorName(options.udid, deps.exec);
-  if (name === null) {
+  const { udid } = options;
+  if (udid === undefined) {
     throw new TargusError('bad_request', 'cannot tell the device name: pass --device-name');
+  }
+  const name = await deps.simulatorName(udid, deps.exec);
+  if (name === null) {
+    throw new TargusError(
+      'bad_request',
+      `no simulator with UDID ${udid} in \`xcrun simctl list devices\`: check --udid, ` +
+        'or pass --device-name',
+    );
   }
   return name;
 }

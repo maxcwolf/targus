@@ -1,5 +1,5 @@
 // Public surface of @targus/cli for programmatic use. The `targus` binary is src/bin.ts.
-export { debugEnabled, loadConfig, type CliConfig } from './config.ts';
+export { debugEnabled, loadConfig, type CliConfig, type ConfigOverrides } from './config.ts';
 export { createProgram, type CommandRunners, type ProgramOptions } from './program.ts';
 export {
   exitCodeFor,

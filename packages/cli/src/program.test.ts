@@ -217,8 +217,7 @@ describe('targus without configuration', () => {
   it('reports an invalid environment only when run needs it', async () => {
     const { output, error } = await run(['run', '--from-capture', 'cap'], {}, broken);
 
-    expect(output).toMatch(/^error: invalid targus environment:\n/);
-    expect(output).toContain('TARGUS_API_URL');
+    expect(output).toMatch(/^error: TARGUS_API_URL "not a url" is not a URL\n/);
     expect(output).not.toMatch(/\n\s+at /);
     expect(error?.exitCode).toBe(1);
   });
@@ -252,6 +251,21 @@ describe('loadConfig', () => {
 
   it('rejects an invalid API URL', () => {
     expect(() => loadConfig({ TARGUS_API_URL: 'not a url' })).toThrow(/TARGUS_API_URL/);
+  });
+
+  it('normalises the API URL and lets --api-url replace TARGUS_API_URL unread', () => {
+    expect(loadConfig({ TARGUS_API_URL: 'https://targus.example.com/' }).apiUrl).toBe(
+      'https://targus.example.com',
+    );
+    const overridden = loadConfig({ TARGUS_API_URL: 'not a url' }, { apiUrl: 'http://h:1/' });
+    expect(overridden.apiUrl).toBe('http://h:1');
+    expect(() => loadConfig({}, { apiUrl: 'h' })).toThrow(/^--api-url "h" has no http/);
+  });
+
+  it('rejects an empty token as unauthorized, not as a validation dump', () => {
+    expect(() => loadConfig({ TARGUS_TOKEN: '' })).toThrow(
+      new TargusError('unauthorized', 'TARGUS_TOKEN is empty: export the project token'),
+    );
   });
 });
 

@@ -4,13 +4,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { z } from 'zod';
-
 import { ExecError, execFileBuffer, type Exec } from './exec.adapter.ts';
-
-const DeviceList = z.object({
-  devices: z.record(z.string(), z.array(z.object({ udid: z.string(), name: z.string() }))),
-});
+import { parseDeviceList } from './simctl-device-list.ts';
 
 const alreadyBooted = 'Unable to boot device in current state: Booted';
 const alreadyShutDown = 'Unable to shutdown device in current state: Shutdown';
@@ -163,13 +158,15 @@ export class SimctlDriver implements DeviceDriver {
     }
   }
 
-  /** The simulator's name (e.g. "iPhone 16"), or `null` when simctl does not list the UDID. */
+  /**
+   * The simulator's name (e.g. "iPhone 16"), or `null` when simctl does not list the UDID. Output
+   * that cannot be read is a plain TargusError from `parseDeviceList`, not a parser dump.
+   */
   async deviceName(): Promise<string | null> {
     const { stdout } = await this.simctl(['list', 'devices', '--json']);
-    const { devices } = DeviceList.parse(JSON.parse(stdout.toString('utf8')));
-    const device = Object.values(devices)
-      .flat()
-      .find((entry) => entry.udid === this.udid);
+    const device = parseDeviceList(stdout.toString('utf8')).find(
+      (entry) => entry.udid === this.udid,
+    );
     return device?.name ?? null;
   }
 

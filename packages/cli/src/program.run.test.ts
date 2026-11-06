@@ -17,13 +17,13 @@ interface Parsed {
 async function parse(
   args: string[],
   runners: Partial<CommandRunners> = {},
-  config: CliConfig = loadConfig({ TARGUS_API_URL: 'https://targus.example', TARGUS_TOKEN: 't' }),
+  env: Record<string, string> = { TARGUS_API_URL: 'https://targus.example', TARGUS_TOKEN: 't' },
 ): Promise<Parsed> {
   let output = '';
   const runs: Parsed['runs'] = [];
   const fixtures: string[] = [];
   const program = createProgram({
-    loadConfig: () => config,
+    loadConfig: (overrides) => loadConfig(env, overrides),
     debug: false,
     runners: {
       run: (options, runConfig) => Promise.resolve(runs.push({ options, config: runConfig })),

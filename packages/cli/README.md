@@ -63,7 +63,7 @@ It accepts every `capture` flag above (with `--udid`, `--app` and `--out` option
 | ------------------------ | -------------------- | ------------------------------------------------------- |
 | `--from-capture <dir>`   | capture now          | skip the simulator, use a `targus capture` dir          |
 | `--out <dir>`            | a temp directory     | where the capture is written                            |
-| `--api-url <url>`        | `TARGUS_API_URL`     | targus API                                              |
+| `--api-url <url>`        | `TARGUS_API_URL`     | targus API base URL, see [Environment](#environment)    |
 | `--device-name <name>`   | the simulator's name | device the build is for; required with `--from-capture` |
 | `--base-branch <branch>` | `main`               | default branch: merge base and `main` trigger           |
 | `--branch <name>`        | CI env, then `git`   | branch of the build                                     |
@@ -145,7 +145,24 @@ stories`, or `closed its Storybook channel connection after ...` when the proces
 
 The environment is read only when `targus run` starts, so `targus --help`, `targus --version` and
 `targus <command> --help` work with nothing set; an invalid variable fails `run` with a message
-naming it.
+naming it. The variables and `--api-url` are checked before git, the simulator or the API is touched, so a typo costs a
+second, not a capture.
+
+The API URL (`--api-url`, else `TARGUS_API_URL`, else `http://localhost:8787`) must be an
+`http://` or `https://` URL with no user name or password (the token goes in `TARGUS_TOKEN`) and
+no `?query` or `#fragment`. Trailing slashes are dropped, so `https://targus.example.com/` and
+`https://targus.example.com` are the same. A path prefix is kept for an API behind a proxy:
+`https://example.com/targus` sends `https://example.com/targus/api/builds`. A URL ending in `/api`
+is rejected, since targus adds `/api` itself. A bad value fails at once, naming the flag or
+variable and suggesting a fix, with any credentials in it masked:
+
+```text
+error: --api-url "targus.example.com" has no http:// or https:// scheme
+  set --api-url or TARGUS_API_URL to the targus API's address, for example https://targus.example.com
+```
+
+`--api-url` wins over `TARGUS_API_URL`, which is then not checked. An empty `TARGUS_TOKEN` exits
+`3` like a missing one.
 
 ## Errors
 
@@ -159,7 +176,16 @@ error: POST /api/builds: cannot reach http://localhost:8787
 ```
 
 Unreachable API, missing files, commands that are not installed (`xcrun`, `git`), a port already in
-use and data that fails validation each get specific wording. Anything else is reported as
+use and data that fails validation each get specific wording. When `targus run` looks up the
+simulator's name and `xcrun simctl list devices --json` prints something it cannot read (nothing,
+a warning instead of JSON, JSON of another shape), it says what was wrong and what to try:
+
+```text
+error: could not read the simulator list: its output is not JSON (it starts with "xcrun: warning: ...")
+  run `xcrun simctl list devices --json` yourself to see what it prints, check that `xcode-select -p` points at the Xcode you expect, or pass --device-name to skip the lookup
+```
+
+`TARGUS_DEBUG=1` adds the parser's message and the start of the output. Anything else is reported as
 `error: unexpected error: <message>`, which is probably a bug in targus. There is no stack trace by
 default; set `TARGUS_DEBUG=1` to append the stack of the error and of every cause.
 

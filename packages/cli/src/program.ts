@@ -4,7 +4,7 @@ import { Command, InvalidArgumentError } from 'commander';
 import { runCapture, type CaptureCommandOptions } from './commands/capture.ts';
 import { runCompare, type CompareCommandOptions } from './commands/compare.ts';
 import { runRun, type RunCommandOptions } from './commands/run.ts';
-import { debugEnabled, loadConfig, type CliConfig } from './config.ts';
+import { debugEnabled, loadConfig, type CliConfig, type ConfigOverrides } from './config.ts';
 import { describeError } from './errors/describe-error.ts';
 import { writeFixtureCapture } from './fixtures/fixture-capture.ts';
 import { cliVersion } from './version.ts';
@@ -26,16 +26,17 @@ const defaultRunners: CommandRunners = {
 
 export interface ProgramOptions {
   /**
-   * Reads and validates the environment. Called only when `run` (the one command that needs it)
-   * runs, so `--help` and `--version` work with no environment at all. Default: `loadConfig()`.
+   * Reads and validates the environment, with the flags that override it (`--api-url`). Called
+   * only when `run` (the one command that needs it) runs, before any device work, so `--help` and
+   * `--version` work with no environment at all. Default: `loadConfig()`.
    */
-  readonly loadConfig?: () => CliConfig;
+  readonly loadConfig?: (overrides: ConfigOverrides) => CliConfig;
   /** Print stack traces with errors. Default: `TARGUS_DEBUG=1`. */
   readonly debug?: boolean;
   readonly runners?: Partial<CommandRunners>;
 }
 
-/** `run` options as Commander parses them: `--api-url` falls back to the config at run time. */
+/** `run` options as Commander parses them: `--api-url` is checked by `loadConfig` at run time. */
 type RunFlags = Omit<RunCommandOptions, 'apiUrl'> & { readonly apiUrl?: string };
 
 /** Report anything a command throws as a few plain lines on stderr and the mapped exit code. */
@@ -108,10 +109,13 @@ function addCaptureCommand(program: Command, report: Report, run: CommandRunners
   addCaptureFlags(command).action(report(run));
 }
 
-function runWithConfig(load: () => CliConfig, run: CommandRunners['run']) {
+function runWithConfig(
+  load: (overrides: ConfigOverrides) => CliConfig,
+  run: CommandRunners['run'],
+) {
   return (options: RunFlags): Promise<unknown> => {
-    const config = load();
-    return run({ ...options, apiUrl: options.apiUrl ?? config.apiUrl }, config);
+    const config = load({ apiUrl: options.apiUrl });
+    return run({ ...options, apiUrl: config.apiUrl }, config);
   };
 }
 
@@ -127,7 +131,10 @@ function addRunCommand(
     .option('--app <path>', 'path to the built simulator .app (not needed with --from-capture)')
     .option('--out <dir>', 'where to write the capture (default: a temp directory)')
     .option('--from-capture <dir>', 'skip the simulator and use a `targus capture` directory')
-    .option('--api-url <url>', 'targus API (default: env TARGUS_API_URL, else localhost:8787)')
+    .option(
+      '--api-url <url>',
+      'targus API base URL, http or https (default: env TARGUS_API_URL, else http://localhost:8787)',
+    )
     .option('--device-name <name>', 'device the build is for (default: the simulator name)')
     .option('--base-branch <branch>', 'default branch; a build on it without a PR is main', 'main')
     .option('--branch <name>', 'branch (default: from CI env, then git)')
@@ -168,7 +175,7 @@ export function createProgram(options: ProgramOptions = {}): Command {
     .version(cliVersion, '-v, --version');
   const report: Report = (action) => reportErrors(program, debug, action);
   const run = runWithConfig(
-    options.loadConfig ?? (() => loadConfig()),
+    options.loadConfig ?? ((overrides) => loadConfig(undefined, overrides)),
     runners.run ?? defaultRunners.run,
   );
 
