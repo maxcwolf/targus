@@ -182,7 +182,7 @@ export const images = sqliteTable(
 
 /**
  * Which project uploaded which image. `images` is shared by every tenant (the bytes are
- * content-addressed), so this table is what scopes it (ADR 0007): a project may read a hash, or
+ * content-addressed), so this table is what scopes it (ADR 0014): a project may read a hash, or
  * name it in its results, only after sending the bytes itself. Knowing a hash proves nothing.
  * The primary key covers the project_id foreign key and both lookups.
  */

@@ -17,3 +17,4 @@ Each ADR is a short Markdown file named `NNNN-title.md` that records one signifi
 | [0011](0011-github-login-sessions-and-org-authorization.md) | GitHub login with cookie sessions and org-membership authorization | accepted |
 | [0012](0012-personal-accounts-as-single-member-orgs.md) | Personal accounts as single-member orgs | accepted |
 | [0013](0013-guarded-single-batch-build-writes.md) | Guarded single-batch writes for build results and reviews | accepted |
+| [0014](0014-upload-record-grants-image-access.md) | An upload record, not a hash, grants a project access to an image | accepted |

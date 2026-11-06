@@ -101,7 +101,7 @@ Internals:
 - Error detection: Storybook RN's error boundary emits nothing on the channel, so the `withTargus` decorator wraps each story in its own boundary and emits `targus/storyError`. The CLI records the error instead of a snapshot and fails the build.
 - Capture hygiene: single-colour captures are flagged `blank`, and duplicate-hash groups are listed in the summary so web-only or broken stories are visible.
 - Git metadata: `sha`, `branch`, PR number (from CI env), `mergeBase` with the default branch, and the first-parent ancestor list of the merge base (`git rev-list --first-parent -n 100`) so the server can find the nearest ancestor that has a build.
-- Content addressing: every PNG is named by SHA-256. The API answers "which of these hashes do I not have" and the CLI uploads only those.
+- Content addressing: every PNG is named by SHA-256. The API answers "which of these hashes has this project not uploaded" and the CLI uploads only those (ADR 0014).
 
 ### 5.2 API (`apps/api`)
 
