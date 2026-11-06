@@ -60,7 +60,12 @@ token reads only images that project uploaded (404 otherwise, like one that does
 `POST /api/builds` lists as missing every hash the project has not uploaded itself, even when
 another project already stored it (the upload then answers `stored: false`); and
 `POST /api/builds/:id/results` answers 400 when a result names an `imageHash` or `diffHash` the
-project did not upload.
+project did not upload. A reviewer reads an image when a project of an org they belong to uploaded
+it: one query lists every org whose projects uploaded the hash, with the reviewer's cached
+membership of each, and the membership rule above decides, with no cap on how many projects or
+orgs share the hash. Baselines and diffs pass the same way: the CLI uploads every diff, a baseline
+is an earlier capture of the same project, and migration 0003 backfilled all three hashes of every
+snapshot recorded before `project_images` existed.
 
 Reviews: only `changed` and `new` snapshots of a build that has its results can be reviewed (409
 otherwise); repeating a decision is a no-op. Approving records the snapshot's hash pair in

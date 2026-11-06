@@ -1,7 +1,7 @@
 import { ImageHash, TargusError, type UploadImageResponse } from '@targus/core';
 
 import { sha256Hex } from '../lib/sha256.js';
-import { canAccessProject } from './access.service.js';
+import { canAccessOrg } from './access.service.js';
 import type { Project } from '../repositories/project.repository.js';
 import type { ServiceDeps } from './deps.js';
 import type { Principal, Reviewer } from './principal.js';
@@ -47,18 +47,27 @@ export async function uploadImage(
 
 type ReadImageDeps = Pick<
   ServiceDeps,
-  'clock' | 'github' | 'images' | 'imageStore' | 'memberships' | 'projects'
+  'clock' | 'github' | 'images' | 'imageStore' | 'memberships'
 >;
 
-/** Whether some project that references the image is one the reviewer may read. */
+/**
+ * Whether a project of an org the reviewer belongs to uploaded the image. One query finds every
+ * such org with the reviewer's cached membership. Orgs with a cached answer go first, so GitHub
+ * is usually asked only when the cache grants nothing.
+ */
 async function reviewerMayRead(
   deps: ReadImageDeps,
   reviewer: Reviewer,
   hash: string,
 ): Promise<boolean> {
-  for (const projectId of await deps.images.projectIdsReferencing(hash)) {
-    const project = await deps.projects.findById(projectId);
-    if (project !== null && (await canAccessProject(deps, reviewer, project))) return true;
+  const uploaders = await deps.images.uploaderOrgs(hash, reviewer.user.id);
+  const cachedFirst = [...uploaders].sort(
+    (a, b) => Number(a.membership === null) - Number(b.membership === null),
+  );
+  for (const org of cachedFirst) {
+    if (await canAccessOrg(deps, reviewer, org, () => Promise.resolve(org.membership))) {
+      return true;
+    }
   }
   return false;
 }
@@ -74,8 +83,8 @@ async function projectMayRead(
 
 /**
  * `GET /api/images/:hash`: the PNG bytes, or `not_found`. The CLI reads with its project token
- * (baselines) and gets only images that project uploaded; a reviewer only images of builds in
- * their orgs. An image the caller may not read answers `not_found` exactly like a missing one,
+ * (baselines) and gets only images that project uploaded; a reviewer only images a project of
+ * one of their orgs uploaded. An image the caller may not read answers `not_found` exactly like a missing one,
  * so neither a token nor a session learns that a hash exists in another tenant.
  */
 export async function getImage(

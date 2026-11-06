@@ -7,7 +7,7 @@ import { createTestDeps } from '../../test/support/in-memory.js';
 import { pngFixture } from '../../test/support/png.js';
 import type { Project } from '../repositories/project.repository.js';
 import { getImage, uploadImage } from './image.service.js';
-import type { Principal } from './principal.js';
+import type { Principal, Reviewer } from './principal.js';
 
 function projectOf(key: string): Project {
   return {
@@ -24,6 +24,10 @@ function projectOf(key: string): Project {
 const uploader = projectOf('img');
 const anyProject: Principal = { kind: 'project', project: uploader };
 const otherTenant = projectOf('elsewhere');
+
+function asReviewer(reviewer: Reviewer): Principal {
+  return { kind: 'reviewer', reviewer };
+}
 
 describe('uploadImage', () => {
   it('stores a PNG under its hash and records its size and dimensions', async () => {
@@ -128,21 +132,19 @@ describe('getImage for project tokens', () => {
 });
 
 describe('getImage for reviewers', () => {
-  it('serves an image of a project in the reviewer org and hides every other as not_found', async () => {
+  it('serves an image a project of the reviewer org uploaded and hides every other as not_found', async () => {
     const deps = createTestDeps({ github: createRecordingGitHub(['octocat']) });
     const mine = await deps.projects.create(newProject('img-mine', { installationId: 1 }));
     const theirs = await deps.projects.create(newProject('img-theirs'));
     const png = await pngFixture(2, 2, 50);
     const other = await pngFixture(2, 2, 60);
-    await uploadImage(deps, uploader, png.hash, png.bytes);
-    await uploadImage(deps, uploader, other.hash, other.bytes);
-    deps.images.references.set(png.hash, ['project-gone', theirs.id, mine.id]);
-    deps.images.references.set(other.hash, [theirs.id]);
-    const member = { kind: 'reviewer', reviewer: await signInReviewer(deps, 'octocat') } as const;
-    const outsider = {
-      kind: 'reviewer',
-      reviewer: await signInReviewer(deps, 'outsider'),
-    } as const;
+    // `uploader` has no project row, like a project that no longer exists.
+    for (const project of [uploader, theirs, mine]) {
+      await uploadImage(deps, project, png.hash, png.bytes);
+    }
+    await uploadImage(deps, theirs, other.hash, other.bytes);
+    const member = asReviewer(await signInReviewer(deps, 'octocat'));
+    const outsider = asReviewer(await signInReviewer(deps, 'outsider'));
 
     expect(await getImage(deps, member, png.hash)).toEqual(png.bytes);
     for (const [principal, hash] of [
@@ -152,5 +154,75 @@ describe('getImage for reviewers', () => {
     ] as const) {
       await expect(getImage(deps, principal, hash)).rejects.toMatchObject({ code: 'not_found' });
     }
+  });
+});
+
+describe('getImage for reviewers with many projects', () => {
+  it('finds the reviewer org among more than 20 orgs that uploaded the image', async () => {
+    const github = createRecordingGitHub({ 'org-many-mine': ['octocat'] });
+    const deps = createTestDeps({ github });
+    const png = await pngFixture(2, 2, 51);
+    for (let index = 0; index < 25; index += 1) {
+      const project = await deps.projects.create(
+        newProject(`many-${index}`, { installationId: 100 + index }),
+      );
+      await uploadImage(deps, project, png.hash, png.bytes);
+    }
+    const mine = await deps.projects.create(newProject('many-mine', { installationId: 1 }));
+    await uploadImage(deps, mine, png.hash, png.bytes);
+
+    expect(
+      await getImage(deps, asReviewer(await signInReviewer(deps, 'octocat')), png.hash),
+    ).toEqual(png.bytes);
+  });
+
+  it('serves an image of the 25th project of an org with more than 20', async () => {
+    const deps = createTestDeps({ github: createRecordingGitHub(['octocat']) });
+    const png = await pngFixture(2, 2, 52);
+    let last: Project | null = null;
+    for (let index = 0; index < 25; index += 1) {
+      last = await deps.projects.create(
+        newProject(`wide-${index}`, { githubOrg: 'wide', newOrgId: 'org-wide', installationId: 1 }),
+      );
+    }
+    if (last === null) throw new Error('no project');
+    await uploadImage(deps, last, png.hash, png.bytes);
+
+    expect(
+      await getImage(deps, asReviewer(await signInReviewer(deps, 'octocat')), png.hash),
+    ).toEqual(png.bytes);
+  });
+});
+
+describe('getImage for reviewers and the membership cache', () => {
+  it('decides from a cached membership first and asks GitHub nothing', async () => {
+    const github = createRecordingGitHub(['octocat']);
+    const deps = createTestDeps({ github });
+    const theirs = await deps.projects.create(newProject('cache-theirs', { installationId: 2 }));
+    const mine = await deps.projects.create(newProject('cache-mine', { installationId: 1 }));
+    const png = await pngFixture(2, 2, 53);
+    await uploadImage(deps, theirs, png.hash, png.bytes);
+    await uploadImage(deps, mine, png.hash, png.bytes);
+    const reviewer = await signInReviewer(deps, 'octocat');
+    await deps.memberships.set(reviewer.user.id, mine.orgId, true, deps.clock.now());
+
+    expect(await getImage(deps, asReviewer(reviewer), png.hash)).toEqual(png.bytes);
+    expect(github.membershipChecks).toEqual([]);
+  });
+
+  it('asks GitHub again once the cached membership is an hour old', async () => {
+    const github = createRecordingGitHub([]);
+    const deps = createTestDeps({ github });
+    const mine = await deps.projects.create(newProject('stale', { installationId: 1 }));
+    const png = await pngFixture(2, 2, 54);
+    await uploadImage(deps, mine, png.hash, png.bytes);
+    const reviewer = await signInReviewer(deps, 'octocat');
+    await deps.memberships.set(reviewer.user.id, mine.orgId, true, deps.clock.now());
+    deps.clock.advance(60 * 60 * 1000);
+
+    await expect(getImage(deps, asReviewer(reviewer), png.hash)).rejects.toMatchObject({
+      code: 'not_found',
+    });
+    expect(github.membershipChecks).toEqual([{ org: 'org-stale', login: 'octocat' }]);
   });
 });

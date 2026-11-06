@@ -1,4 +1,4 @@
-import { CreateBuildResponse, UploadImageResponse } from '@targus/core';
+import { CreateBuildResponse, ListSnapshotsResponse, UploadImageResponse } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import { bearer, call, createTestProject, postJson, putImage } from '../../test/support/api.js';
@@ -10,7 +10,7 @@ import {
   storyResult,
 } from '../../test/support/fixtures.js';
 import { pngFixture } from '../../test/support/png.js';
-import { getAsReviewer, projectWithBuild } from '../../test/support/review.js';
+import { getAsReviewer, postAsReviewer, projectWithBuild } from '../../test/support/review.js';
 import { signIn } from '../../test/support/session.js';
 import { maxImageBytes } from './images.js';
 
@@ -123,5 +123,58 @@ describe('GET /api/images/:hash for reviewers', () => {
     expect((await getAsReviewer(`/api/images/${png.hash}`, outsider.cookie)).status).toBe(404);
     expect((await getAsReviewer(`/api/images/${imageHash('d')}`, member.cookie)).status).toBe(404);
     expect((await getAsReviewer('/api/images/not-a-hash', member.cookie)).status).toBe(400);
+  });
+});
+
+describe('GET /api/images/:hash for reviewers of a changed story', () => {
+  it('serves its baseline, capture and diff, each uploaded by the CLI', async () => {
+    const [baseline, capture, diff] = await Promise.all([
+      pngFixture(2, 2, 81),
+      pngFixture(2, 2, 82),
+      pngFixture(2, 2, 83),
+    ]);
+    const main = await projectWithBuild([storyResult('button', { imageHash: baseline.hash })]);
+    await putImage(main.token, baseline.hash, baseline.bytes);
+    const member = await signIn('octocat');
+    const accepted = await postAsReviewer(`/api/builds/${main.buildId}/approve-all`, member.cookie);
+    expect(accepted.status).toBe(200);
+
+    const opened = await postJson(
+      '/api/builds',
+      main.token,
+      createBuildRequest(sha('b'), {
+        branch: 'feature',
+        prNumber: 7,
+        trigger: 'pr',
+        mergeBaseSha: sha('a'),
+        snapshots: [captured('button', capture.hash)],
+      }),
+    );
+    const { build, baselineBuildId } = CreateBuildResponse.parse(await opened.json());
+    expect(baselineBuildId).toBe(main.buildId);
+    await putImage(main.token, capture.hash, capture.bytes);
+    await putImage(main.token, diff.hash, diff.bytes);
+    const changed = storyResult('button', {
+      state: 'changed',
+      imageHash: capture.hash,
+      diffHash: diff.hash,
+      diffRatio: 0.5,
+    });
+    const submitted = await postJson(`/api/builds/${build.id}/results`, main.token, {
+      durationMs: 1,
+      results: [changed],
+    });
+    expect(submitted.status).toBe(200);
+    const listed = await call(`/api/builds/${build.id}/snapshots`, { headers: bearer(main.token) });
+    const { snapshots } = ListSnapshotsResponse.parse(await listed.json());
+    expect(snapshots[0]).toMatchObject({ baselineHash: baseline.hash, diffHash: diff.hash });
+
+    const outsider = await signIn('outsider');
+    for (const png of [baseline, capture, diff]) {
+      const read = await getAsReviewer(`/api/images/${png.hash}`, member.cookie);
+      expect(read.status).toBe(200);
+      expect(new Uint8Array(await read.arrayBuffer())).toEqual(png.bytes);
+      expect((await getAsReviewer(`/api/images/${png.hash}`, outsider.cookie)).status).toBe(404);
+    }
   });
 });

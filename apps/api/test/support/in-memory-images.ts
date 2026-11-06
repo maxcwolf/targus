@@ -1,21 +1,50 @@
 import type { ImageStore, StoryResult } from '@targus/core';
 
-import type { ImageRecord, ImageRepository } from '../../src/repositories/image.repository.js';
+import type {
+  ImageRecord,
+  ImageRepository,
+  UploaderOrg,
+} from '../../src/repositories/image.repository.js';
+import type { MembershipRepository } from '../../src/repositories/membership.repository.js';
+import type { ProjectRepository } from '../../src/repositories/project.repository.js';
 
 export interface InMemoryImages extends ImageRepository, ImageStore {
   readonly records: Map<string, ImageRecord & { lastReferencedAt: Date }>;
   readonly bytes: Map<string, Uint8Array>;
-  /** What `projectIdsReferencing` answers, by hash. */
-  readonly references: Map<string, string[]>;
   /** The hashes each project uploaded, by project id. */
   readonly uploads: Map<string, Set<string>>;
 }
 
+/** What `uploaderOrgs` joins: the projects and membership doubles of the same test deps. */
+export interface UploaderSources {
+  readonly projects: Pick<ProjectRepository, 'findById'>;
+  readonly memberships: Pick<MembershipRepository, 'get'>;
+}
+
+/** The orgs of the projects that uploaded `hash`, each once, like the D1 query. */
+async function uploaderOrgsOf(
+  sources: UploaderSources,
+  uploads: ReadonlyMap<string, ReadonlySet<string>>,
+  hash: string,
+  userId: string,
+): Promise<UploaderOrg[]> {
+  const found = new Map<string, UploaderOrg>();
+  for (const [projectId, hashes] of uploads) {
+    const project = hashes.has(hash) ? await sources.projects.findById(projectId) : null;
+    if (project === null || found.has(project.orgId)) continue;
+    found.set(project.orgId, {
+      orgId: project.orgId,
+      ...project.org,
+      membership: await sources.memberships.get(userId, project.orgId),
+    });
+  }
+  return [...found.values()];
+}
+
 /** The image metadata table and the R2 store in one, kept in step like the real pair. */
-export function createInMemoryImages(): InMemoryImages {
+export function createInMemoryImages(sources: UploaderSources): InMemoryImages {
   const records = new Map<string, ImageRecord & { lastReferencedAt: Date }>();
   const bytes = new Map<string, Uint8Array>();
-  const references = new Map<string, string[]>();
   const uploads = new Map<string, Set<string>>();
   return {
     records,
@@ -37,15 +66,13 @@ export function createInMemoryImages(): InMemoryImages {
       return Promise.resolve();
     },
     get: (hash) => Promise.resolve(bytes.get(hash) ?? null),
-    // The real one joins snapshots; service tests set the answer per hash.
-    projectIdsReferencing: (hash) => Promise.resolve(references.get(hash) ?? []),
-    references,
     recordUpload(projectId, hash) {
       uploads.set(projectId, (uploads.get(projectId) ?? new Set()).add(hash));
       return Promise.resolve();
     },
     notUploadedBy: (projectId, hashes) =>
       Promise.resolve(hashes.filter((hash) => uploads.get(projectId)?.has(hash) !== true)),
+    uploaderOrgs: (hash, userId) => uploaderOrgsOf(sources, uploads, hash, userId),
     uploads,
   };
 }

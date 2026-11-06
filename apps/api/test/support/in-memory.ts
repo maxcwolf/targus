@@ -113,21 +113,27 @@ export interface TestDeps extends ServiceDeps {
 }
 
 export function createTestDeps(overrides: Partial<ServiceDeps> = {}): TestDeps {
-  const images = createInMemoryImages();
   const users = createInMemoryUsers();
+  const projects = createInMemoryProjects();
+  const memberships = createInMemoryMemberships();
+  // The images double answers `uploaderOrgs` from the same projects and membership cache.
+  const images = createInMemoryImages({
+    projects: overrides.projects ?? projects,
+    memberships: overrides.memberships ?? memberships,
+  });
   return {
     config: testConfig,
     clock: createFakeClock(),
     ids: createFakeIdGenerator(),
     tokens: webCryptoTokens,
-    projects: createInMemoryProjects(),
+    projects,
     builds: createInMemoryBuilds(),
     approvals: createInMemoryApprovals(),
     images,
     imageStore: images,
     users,
     sessions: createInMemorySessions(users),
-    memberships: createInMemoryMemberships(),
+    memberships,
     github: new NoopGitHubClient(),
     oauth: createFakeOAuth(),
     ...overrides,

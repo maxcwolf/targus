@@ -29,7 +29,6 @@ async function pendingBuild(deps: TestDeps, project: Project, key: string) {
     snapshotRecord(snapshotId, buildId, { imageHash: png.hash }),
   ]);
   await uploadImage(deps, project, png.hash, png.bytes);
-  deps.images.references.set(png.hash, [project.id]);
   return { buildId, snapshotId, hash: png.hash };
 }
 
@@ -193,9 +192,28 @@ describe('an image both orgs uploaded', () => {
     const png = await pngFixture(2, 2, 70);
     await uploadImage(deps, a, png.hash, png.bytes);
     await uploadImage(deps, b, png.hash, png.bytes);
-    deps.images.references.set(png.hash, [b.id, a.id]);
     const principal = { kind: 'reviewer', reviewer: octocat } as const;
 
     expect(await getImage(deps, principal, png.hash)).toEqual(png.bytes);
+  });
+});
+
+describe('an image only the other org uploaded', () => {
+  it('stays hidden from a member of this org, even when a snapshot of this org names it', async () => {
+    const { deps, a, b, octocat } = await twoOrgs();
+    const png = await pngFixture(2, 2, 71);
+    await uploadImage(deps, b, png.hash, png.bytes);
+    await deps.builds.create(newBuild('build-named', a.id, { status: 'pending' }));
+    deps.builds.snapshots.set('build-named', [
+      snapshotRecord('snap-named', 'build-named', { imageHash: png.hash, baselineHash: png.hash }),
+    ]);
+    const hubot = await signInReviewer(deps, 'hubot');
+
+    await expect(
+      getImage(deps, { kind: 'reviewer', reviewer: octocat }, png.hash),
+    ).rejects.toMatchObject({ code: 'not_found' });
+    expect(await getImage(deps, { kind: 'reviewer', reviewer: hubot }, png.hash)).toEqual(
+      png.bytes,
+    );
   });
 });
