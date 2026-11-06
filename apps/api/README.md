@@ -16,7 +16,7 @@ src/adapters/      Clock, IdGenerator, tokens, GitHub App client (Octokit or no-
 src/composition.ts wires the real adapters for a request's bindings
 ```
 
-## Routes (M3)
+## Routes
 
 | Route                                 | Auth                     | Purpose                                                        |
 | ------------------------------------- | ------------------------ | -------------------------------------------------------------- |
@@ -213,5 +213,5 @@ committed migrations disagree.
 real local D1 and R2 bindings (with coverage), then the Node-side drift test. Route tests sign
 in with `test/support/session.ts` (`signIn(login)` creates a user and session in D1 and returns
 the signed `Cookie` value) and inject GitHub fakes with `appWith(...)` from
-`test/support/api.ts`; `src/flows/m3-flow.test.ts` runs the review flow end to end against a
+`test/support/api.ts`; `src/flows/review-flow.test.ts` runs the review flow end to end against a
 stubbed GitHub API.

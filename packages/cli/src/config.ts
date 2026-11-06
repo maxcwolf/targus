@@ -5,7 +5,7 @@ import type { CiEnv } from './run/ci-context.js';
 
 // The only file in this package allowed to read process.env (ESLint no-restricted-properties).
 const EnvSchema = z.object({
-  // Defaults to the local `wrangler dev` Worker until a hosted URL exists (M2).
+  // Defaults to the local `wrangler dev` Worker.
   TARGUS_API_URL: z.url().default('http://localhost:8787'),
   TARGUS_TOKEN: z.string().min(1).optional(),
   // CI variables `targus run` derives the branch and PR number from (run/ci-context.ts).

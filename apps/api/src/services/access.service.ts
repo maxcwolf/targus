@@ -67,7 +67,7 @@ export function canAccessProject(
 
 /**
  * Authorize a read of `project`: a reviewer outside its org gets `forbidden`; a project token
- * of another project gets `not_found`, as before M3.
+ * of another project gets `not_found`.
  */
 export async function requireProjectAccess(
   deps: AccessDeps,

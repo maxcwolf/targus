@@ -22,7 +22,7 @@ import {
 import { pngFixture } from '../../test/support/png.js';
 import { signIn, withCookie } from '../../test/support/session.js';
 
-// The M3 flow over HTTP with the real local D1 and R2 and Octokit against a stubbed GitHub:
+// The review flow over HTTP with the real local D1 and R2 and Octokit against a stubbed GitHub:
 // the CLI publishes a build with changes, a reviewer of the org approves, denies and approves
 // all from the review UI, and the targus/ios check run follows every decision.
 
@@ -183,7 +183,7 @@ async function accessStatuses(flow: Flow): Promise<Record<string, number>> {
   };
 }
 
-describe('M3 flow: review a build and follow it on the check run', () => {
+describe('review flow: review a build and follow it on the check run', () => {
   it('fails on a denial, waits for it, accepts after approval, and scopes access by org', async () => {
     const flow = await setup();
 

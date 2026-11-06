@@ -13,7 +13,7 @@ import { bearer, call, createTestProject, postJson, putImage } from '../../test/
 import { captured, createBuildRequest, sha, storyResult } from '../../test/support/fixtures.js';
 import { pngFixture } from '../../test/support/png.js';
 
-// The M2 flow over HTTP in the Workers runtime with the real local D1 and R2: what `targus run`
+// The build flow over HTTP in the Workers runtime with the real local D1 and R2: what `targus run`
 // does on CI, build after build. GitHub is the no-op client (the project has no installation).
 
 type Png = Awaited<ReturnType<typeof pngFixture>>;
@@ -44,7 +44,7 @@ async function readBuild(token: string, buildId: string): Promise<GetBuildRespon
   return GetBuildResponse.parse(await response.json());
 }
 
-/** Record an approval directly; the review route arrives in M3. */
+/** Record an approval directly, without the review route (review-flow.test.ts covers it). */
 function approve(flow: Flow, storyId: string, fromHash: string | null, toHash: string) {
   return createApprovalRepository(env.DB).create(`${flow.projectId}-${storyId}-${toHash}`, {
     projectId: flow.projectId,
@@ -147,7 +147,7 @@ async function approvedPairIsAccepted(flow: Flow, baselineId: string): Promise<G
   return readBuild(flow.token, third.build.id);
 }
 
-describe('M2 flow: create, upload, submit, compare, approve', () => {
+describe('build flow: create, upload, submit, compare, approve', () => {
   it('fails on an error, waits on a change, then auto-accepts the approved pair', async () => {
     const { token, project } = await createTestProject();
     const [button, card, cardChanged] = await Promise.all([

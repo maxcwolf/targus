@@ -83,9 +83,9 @@ export function selectStories(
 }
 
 /**
- * The capture loop from the M0 spike (docs/spike-m0.md): select each story, wait for the app to
- * commit it, settle, take two screenshots `stabilityGapMs` apart and keep the first if they
- * match. On a mismatch retry with a doubled settle up to `maxAttempts`, then mark the story
+ * The capture loop proven by the capture spike (docs/spike-m0.md): select each story, wait for
+ * the app to commit it, settle, take two screenshots `stabilityGapMs` apart and keep the first
+ * if they match. On a mismatch retry with a doubled settle up to `maxAttempts`, then mark the story
  * unstable. Channel errors and timeouts are recorded per story and never thrown.
  */
 export async function captureStories(input: CaptureStoriesInput): Promise<CaptureReport> {
