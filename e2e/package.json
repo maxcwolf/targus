@@ -2,11 +2,12 @@
   "name": "@targus/e2e",
   "version": "0.0.0",
   "private": true,
-  "description": "End-to-end suites (Playwright). Run with `yarn e2e` from the repo root; not part of `yarn check`.",
+  "description": "End-to-end suites (Playwright), run with `yarn e2e` from the repo root and not part of `yarn check`; also `yarn dev:local`, the local review UI on the GitHub stub.",
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "e2e": "yarn workspace @targus/cli build && playwright test"
+    "e2e": "yarn workspace @targus/cli build && playwright test",
+    "dev:local": "yarn workspace @targus/cli build && node --experimental-strip-types --disable-warning=ExperimentalWarning local.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",

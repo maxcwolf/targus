@@ -149,7 +149,16 @@ One GitHub App provides login, org membership and check runs (ADR 0007). The pro
 
 ## Running locally
 
-Secrets for `wrangler dev` go in `apps/api/.dev.vars`, which is gitignored:
+The quickest way is `yarn dev:local` from the repo root (see the root README): it runs this
+Worker with `wrangler dev --var` test secrets, both GitHub origins pointed at the e2e GitHub stub,
+a fresh local D1 and R2 under `e2e/.wrangler/local-<port>/` (the UI is built there too, so runs on different ports never share files), and a seeded project, and signs you in
+as the stub's `octocat`. The pieces are shared with the e2e suite (`e2e/support/local-worker.ts`,
+`e2e/support/github-stub.ts`); the command itself is `e2e/local.ts`, tested by
+`scripts/dev-local.test.mjs`. Its `PUBLIC_URL` is the Worker's own origin
+(`http://127.0.0.1:8900`); with `--public-url http://localhost:5173` it serves the Vite dev server
+instead (CSRF, above).
+
+To run the Worker by hand against real GitHub, secrets for `wrangler dev` go in `apps/api/.dev.vars`, which is gitignored:
 
 ```sh
 cat > apps/api/.dev.vars <<'EOF'

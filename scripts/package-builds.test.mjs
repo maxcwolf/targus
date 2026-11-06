@@ -3,10 +3,11 @@
 // (ADR 0010). `yarn check` runs `tsc -b` first; the build here is then an up-to-date no-op.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { createRequire } from 'node:module';
 import path from 'node:path';
 import { before, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
+
+import { buildPackages } from './lib/build-packages.mjs';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const bin = path.join(repoRoot, 'packages/cli/dist/bin.js');
@@ -18,10 +19,9 @@ function node(args) {
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
-before(() => {
-  const tsc = createRequire(import.meta.url).resolve('typescript/bin/tsc');
-  const build = node([tsc, '-b', 'packages/cli', 'packages/react-native']);
-  assert.equal(build.status, 0, build.stdout + build.stderr);
+before(async () => {
+  const build = await buildPackages(['packages/cli', 'packages/react-native']);
+  assert.equal(build.status, 0, build.output);
 });
 
 describe('built packages', () => {

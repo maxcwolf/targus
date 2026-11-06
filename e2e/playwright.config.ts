@@ -1,46 +1,22 @@
-import { generateKeyPairSync } from 'node:crypto';
 import path from 'node:path';
 
 import { defineConfig, devices } from '@playwright/test';
 
 import { e2eConfig } from './config.ts';
+import { repoRoot } from './support/cli.ts';
+import { workerDevCommand, workerEnv, workerSetupCommands } from './support/local-worker.ts';
 
-const repoRoot = path.resolve(import.meta.dirname, '..');
 const baseURL = `http://127.0.0.1:${e2eConfig.port}`;
-// Local D1 and R2 state of the e2e Worker, wiped before every start so each run begins with an
-// empty database. Gitignored by the root `.wrangler/` pattern.
-const persistTo = JSON.stringify(path.join(import.meta.dirname, '.wrangler', 'state'));
-
-// A throwaway GitHub App key for this run: the Worker signs installation-token requests with it
-// and the stub never checks the signature. Newlines travel as literal "\\n" through `--var`,
-// which apps/api/src/config.ts turns back into real ones.
-const privateKey = generateKeyPairSync('rsa', {
-  modulusLength: 2048,
-  privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-  publicKeyEncoding: { type: 'spki', format: 'pem' },
-}).privateKey.replaceAll('\n', '\\n');
-const githubStub = `http://127.0.0.1:${e2eConfig.githubStubPort}`;
-const workerVars = {
-  ADMIN_TOKEN: e2eConfig.adminToken,
-  SESSION_SECRET: e2eConfig.sessionSecret,
-  GITHUB_CLIENT_ID: e2eConfig.githubClientId,
-  GITHUB_CLIENT_SECRET: e2eConfig.githubClientSecret,
-  GITHUB_APP_ID: e2eConfig.githubAppId,
-  GITHUB_APP_PRIVATE_KEY: privateKey,
-  GITHUB_OAUTH_ORIGIN: githubStub,
-  GITHUB_API_ORIGIN: githubStub,
-  PUBLIC_URL: baseURL,
+const worker = {
+  port: e2eConfig.port,
+  githubStubPort: e2eConfig.githubStubPort,
+  publicUrl: baseURL,
+  // Wiped before every start so each run begins with an empty database.
+  persistTo: path.join(import.meta.dirname, '.wrangler', 'state'),
+  // apps/web/dist, the folder wrangler.jsonc serves.
+  webOutDir: null,
 };
-const varFlags = Object.entries(workerVars)
-  .map(([name, value]) => `--var "${name}:${value}"`)
-  .join(' ');
-
-const webServerCommand = [
-  `rm -rf ${persistTo}`,
-  `yarn workspace @targus/api db:migrate:local --persist-to ${persistTo}`,
-  'yarn workspace @targus/web build',
-  `yarn workspace @targus/api dev --ip 127.0.0.1 --port ${e2eConfig.port} --persist-to ${persistTo} ${varFlags}`,
-].join(' && ');
+const webServerCommand = [...workerSetupCommands(worker), workerDevCommand(worker)].join(' && ');
 
 export default defineConfig({
   testDir: '.',
@@ -70,7 +46,7 @@ export default defineConfig({
     url: `${baseURL}/api/health`,
     reuseExistingServer: !e2eConfig.isCI,
     timeout: 120_000,
-    env: { WRANGLER_SEND_METRICS: 'false' },
+    env: workerEnv,
     stdout: e2eConfig.isCI ? 'pipe' : 'ignore',
   },
 });

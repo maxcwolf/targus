@@ -87,3 +87,40 @@ export async function getImage(
   if (!response.ok()) throw new Error(`GET /api/images/${hash} answered ${response.status()}`);
   return { contentType: response.headers()['content-type'], body: await response.body() };
 }
+
+function redirectTarget(response: Awaited<ReturnType<APIRequestContext['get']>>): URL {
+  const location = response.headers().location;
+  if (response.status() !== 302 || location === undefined) {
+    throw new Error(`${response.url()} answered ${response.status()}, not a redirect`);
+  }
+  return new URL(location, response.url());
+}
+
+/**
+ * Sign `request` in as whoever the GitHub stub signs in next (octocat unless told otherwise),
+ * following the OAuth round trip by hand: the callback is sent to the Worker `request` talks to
+ * even when `PUBLIC_URL` (where GitHub sends the browser back) is another origin, such as a Vite
+ * dev server. The session cookie stays in `request`'s cookie jar.
+ */
+export async function signInThroughStub(request: APIRequestContext): Promise<void> {
+  const start = await request.get('/api/auth/github?returnTo=/', { maxRedirects: 0 });
+  const authorize = await request.get(redirectTarget(start).href, { maxRedirects: 0 });
+  const callback = redirectTarget(authorize);
+  const done = await request.get(`${callback.pathname}${callback.search}`, { maxRedirects: 0 });
+  redirectTarget(done);
+}
+
+/**
+ * Approve every pending change of a build as the signed-in reviewer. Session writes must carry
+ * the `Origin` of `PUBLIC_URL` (ADR 0015), as the review UI's do.
+ */
+export async function approveAll(
+  request: APIRequestContext,
+  publicUrl: string,
+  buildId: string,
+): Promise<void> {
+  const response = await request.post(`/api/builds/${buildId}/approve-all`, {
+    headers: { Origin: publicUrl },
+  });
+  await json(response);
+}

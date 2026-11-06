@@ -189,3 +189,14 @@ export function startGitHubStub(port: number): Promise<Server> {
     });
   });
 }
+
+/** Stop a stub started with `startGitHubStub`, dropping any keep-alive connections. */
+export function stopGitHubStub(server: Server): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.close((error) => {
+      if (error === undefined) resolve();
+      else reject(error);
+    });
+    server.closeAllConnections();
+  });
+}

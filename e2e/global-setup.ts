@@ -1,5 +1,5 @@
 import { e2eConfig } from './config.ts';
-import { startGitHubStub } from './support/github-stub.ts';
+import { startGitHubStub, stopGitHubStub } from './support/github-stub.ts';
 
 /**
  * Start the GitHub stub the Worker talks to (see playwright.config.ts). Playwright keeps this
@@ -7,11 +7,5 @@ import { startGitHubStub } from './support/github-stub.ts';
  */
 export default async function globalSetup(): Promise<() => Promise<void>> {
   const server = await startGitHubStub(e2eConfig.githubStubPort);
-  return () =>
-    new Promise((resolve, reject) => {
-      server.close((error) => {
-        if (error === undefined) resolve();
-        else reject(error);
-      });
-    });
+  return () => stopGitHubStub(server);
 }

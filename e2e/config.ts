@@ -1,3 +1,5 @@
+import { parseArgs } from 'node:util';
+
 import { z } from 'zod';
 
 // The only file in e2e/ that reads process.env (ESLint no-restricted-properties).
@@ -29,3 +31,43 @@ export const e2eConfig = {
   path: env.PATH,
   home: env.HOME,
 } as const;
+
+const LocalFlagsSchema = z.object({
+  port: z.coerce.number().int().positive().default(8900),
+  'github-stub-port': z.coerce.number().int().positive().default(8901),
+  'public-url': z
+    .url()
+    .optional()
+    .transform((url) => url?.replace(/\/+$/, '')),
+});
+
+export interface LocalConfig {
+  readonly port: number;
+  readonly githubStubPort: number;
+  /**
+   * `PUBLIC_URL` of the local Worker, by default the Worker itself. Set it to the origin of a
+   * Vite dev server that proxies `/api` to the Worker, or approving answers 403 (ADR 0015).
+   */
+  readonly publicUrl: string;
+}
+
+/**
+ * Settings of `yarn dev:local` (local.ts) from its flags: `--port`, `--github-stub-port`,
+ * `--public-url`. The default ports differ from the e2e ones (8787, 8788) so both can run at once.
+ */
+export function localConfigFrom(args: readonly string[]): LocalConfig {
+  const { values } = parseArgs({
+    args: [...args],
+    options: {
+      port: { type: 'string' },
+      'github-stub-port': { type: 'string' },
+      'public-url': { type: 'string' },
+    },
+  });
+  const flags = LocalFlagsSchema.parse(values);
+  return {
+    port: flags.port,
+    githubStubPort: flags['github-stub-port'],
+    publicUrl: flags['public-url'] ?? `http://127.0.0.1:${flags.port}`,
+  };
+}
