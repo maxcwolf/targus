@@ -1,5 +1,6 @@
 import type { CheckRunState, CheckRunTarget, GitHubClient } from '@targus/core';
 
+import { defaultAccountId } from './github-stub.ts';
 import { isMemberOf, type OrgMembers } from './org-members.ts';
 
 /**
@@ -8,6 +9,8 @@ import { isMemberOf, type OrgMembers } from './org-members.ts';
  */
 export interface RecordingGitHub extends GitHubClient {
   readonly membershipChecks: { readonly org: string; readonly login: string }[];
+  /** The installation ids whose account was asked for, in order. */
+  readonly accountLookups: number[];
   readonly updates: {
     readonly target: CheckRunTarget;
     readonly checkRunId: number;
@@ -24,13 +27,26 @@ export function createRecordingGitHub(
      * other installation answers false, as GitHub only lets an installation see its own org.
      */
     readonly installations?: Readonly<Record<string, number>>;
+    /**
+     * The account id of each installation, by installation id: a personal account's installation
+     * gets its owner's GitHub id. Others get `defaultAccountId`, an org no reviewer is.
+     */
+    readonly accounts?: Readonly<Record<number, number>>;
   } = {},
 ): RecordingGitHub {
   const membershipChecks: RecordingGitHub['membershipChecks'] = [];
+  const accountLookups: number[] = [];
   const updates: RecordingGitHub['updates'] = [];
   return {
     membershipChecks,
+    accountLookups,
     updates,
+    installationAccountId(installationId) {
+      accountLookups.push(installationId);
+      return Promise.resolve(
+        options.accounts?.[installationId] ?? defaultAccountId(installationId),
+      );
+    },
     createCheckRun: () => Promise.resolve({ id: 901 }),
     updateCheckRun(target, checkRunId, state) {
       if (options.failUpdates === true) return Promise.reject(new Error('GitHub is down'));

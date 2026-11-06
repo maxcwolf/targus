@@ -2,7 +2,15 @@
 
 ## Status
 
-accepted
+accepted, amended by [0024](0024-personal-account-owner-by-github-account-id.md)
+
+## Amended by
+
+The owner of a personal account is still its one member, but is no longer recognised by login.
+Access is granted when the reviewer's GitHub id equals the account id of the org's installation,
+stored on the org row and read from GitHub on first use. A renamed owner keeps access, and
+whoever registers the freed login gets none. See
+[ADR 0024](0024-personal-account-owner-by-github-account-id.md).
 
 ## Date
 

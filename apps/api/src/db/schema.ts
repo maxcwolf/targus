@@ -27,6 +27,12 @@ export const orgs = sqliteTable('orgs', {
   id: text('id').primaryKey(),
   githubOrg: text('github_org').notNull().unique(),
   installationId: integer('installation_id'),
+  /**
+   * GitHub's numeric id of the account (org or user) the installation belongs to. Unlike the
+   * login in `github_org` it never changes hands, so the personal-account rule compares it
+   * (ADR 0024). Null until read from the installation; cleared when the installation changes.
+   */
+  githubAccountId: integer('github_account_id'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 

@@ -29,4 +29,10 @@ export interface GitHubClient {
   updateCheckRun(target: CheckRunTarget, checkRunId: number, state: CheckRunState): Promise<void>;
   /** Whether `login` is a member of `org`; used to authorize review sessions. */
   isOrgMember(installationId: number, org: string, login: string): Promise<boolean>;
+  /**
+   * GitHub's numeric id of the account, org or user, that the App installation belongs to.
+   * Unlike a login it never changes hands, so it is what recognises the owner of a personal
+   * account (ADR 0024). Rejects when GitHub cannot say (installation gone, GitHub failing).
+   */
+  installationAccountId(installationId: number): Promise<number>;
 }

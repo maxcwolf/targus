@@ -89,6 +89,44 @@ describe('OctokitGitHubClient.isOrgMember (stubbed fetch)', () => {
   });
 });
 
+describe('OctokitGitHubClient.installationAccountId (stubbed fetch)', () => {
+  it("reads the installation's account id as the App, with no installation token", async () => {
+    const stub = createGitHubStub([], { 42: 583231 });
+    const client = new OctokitGitHubClient({ appId: '123', privateKey }, stub.fetch, freshTokens());
+
+    expect(await client.installationAccountId(42)).toBe(583231);
+    expect(stub.requests).toEqual([
+      expect.objectContaining({
+        method: 'GET',
+        path: '/app/installations/42',
+        authorization: expect.stringMatching(/^bearer ey/i) as unknown,
+      }),
+    ]);
+  });
+
+  it('throws when GitHub fails or the installation names no account', async () => {
+    const answering =
+      (response: () => Response): typeof fetch =>
+      () =>
+        Promise.resolve(response());
+    const gone = new OctokitGitHubClient(
+      { appId: '123', privateKey },
+      answering(() => new Response('{"message":"Not Found"}', { status: 404 })),
+      freshTokens(),
+    );
+    const accountless = new OctokitGitHubClient(
+      { appId: '123', privateKey },
+      answering(() => Response.json({ id: 42, account: null })),
+      freshTokens(),
+    );
+
+    await expect(gone.installationAccountId(42)).rejects.toMatchObject({ status: 404 });
+    await expect(accountless.installationAccountId(42)).rejects.toThrow(
+      'installation 42 names no account',
+    );
+  });
+});
+
 describe('OctokitGitHubClient baseUrl', () => {
   it('sends every request, token minting included, to the configured API origin', async () => {
     const stub = createGitHubStub();
@@ -117,5 +155,6 @@ describe('NoopGitHubClient', () => {
     expect(await client.createCheckRun(target, state, 'https://x.test')).toEqual({ id: 0 });
     await expect(client.updateCheckRun(target, 1, state)).resolves.toBeUndefined();
     expect(await client.isOrgMember(42, 'example-org', 'member')).toBe(false);
+    await expect(client.installationAccountId(42)).rejects.toThrow('not configured');
   });
 });

@@ -99,6 +99,7 @@ async function listsUploaderOrgs(harness: ImageHarness): Promise<void> {
     await projects.create(inOrg('ic-uo-y', 'ic-uo-y')),
     await projects.create(inOrg('ic-uo-z', 'ic-uo-z')),
   ];
+  await projects.setOrgAccountId('ic-uo-x', 7, 6007);
   const avatarUrl = 'https://avatars.test/9301';
   await users.upsertByGithubId({ id: 'ic-user', githubId: 9301, login: 'oc', avatarUrl, now: at });
   await memberships.set('ic-user', 'ic-uo-x', true, at);
@@ -113,9 +114,16 @@ async function listsUploaderOrgs(harness: ImageHarness): Promise<void> {
       orgId: 'ic-uo-x',
       githubOrg: 'ic-uo-x',
       installationId: 7,
+      githubAccountId: 6007,
       membership: { member: true, checkedAt: at },
     },
-    { orgId: 'ic-uo-y', githubOrg: 'ic-uo-y', installationId: null, membership: null },
+    {
+      orgId: 'ic-uo-y',
+      githubOrg: 'ic-uo-y',
+      installationId: null,
+      githubAccountId: null,
+      membership: null,
+    },
   ]);
   expect(await images.uploaderOrgs(hash, 'ic-nobody')).toHaveLength(2);
   expect(await images.uploaderOrgs(tagged('ic-uo-a3'), 'ic-user')).toEqual([]);
@@ -127,7 +135,13 @@ async function uploaderOrgsAreCurrent({ images, projects }: ImageHarness): Promi
   await images.recordUpload(first.id, hash, at);
   await projects.create(inOrg('ic-cur-2', 'ic-cur', 31));
 
-  expect(await images.uploaderOrgs(hash, 'ic-nobody')).toMatchObject([{ installationId: 31 }]);
+  expect(await images.uploaderOrgs(hash, 'ic-nobody')).toMatchObject([
+    { installationId: 31, githubAccountId: null },
+  ]);
+  await projects.setOrgAccountId(first.orgId, 31, 6031);
+  expect(await images.uploaderOrgs(hash, 'ic-nobody')).toMatchObject([
+    { installationId: 31, githubAccountId: 6031 },
+  ]);
 }
 
 async function noCapOnOrgs({ images, projects }: ImageHarness): Promise<void> {
@@ -156,7 +170,8 @@ export function describeImageContract(name: string, harness: Harness): void {
       uploadsBeyondParameterLimit(harness()));
     it('lists each org that uploaded a hash once, with the user cached membership', () =>
       listsUploaderOrgs(harness()));
-    it("gives each org's current installation id", () => uploaderOrgsAreCurrent(harness()));
+    it("gives each org's current installation and account id", () =>
+      uploaderOrgsAreCurrent(harness()));
     it('has no cap on the number of orgs', () => noCapOnOrgs(harness()));
   });
 }

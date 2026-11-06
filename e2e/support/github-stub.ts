@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
 // A stand-in for github.com and api.github.com, just enough for the review flow: the OAuth
-// login round trip, installation tokens, org membership and check runs. The Worker under test
+// login round trip, installation tokens and accounts, org membership and check runs. The Worker under test
 // is pointed at it through GITHUB_OAUTH_ORIGIN and GITHUB_API_ORIGIN (playwright.config.ts).
 // Control routes under /__ let a spec choose who signs in next and read the calls GitHub saw.
 
@@ -98,6 +98,15 @@ const routes: readonly Route[] = [
       status: 201,
       body: { token: 'installation-token', expires_at: '2099-01-01T00:00:00Z' },
     }),
+  },
+  {
+    // Every installation is on an org account no stub user is, so access goes by membership.
+    method: 'GET',
+    path: /^\/app\/installations\/(\d+)$/,
+    reply: ({ match }) => {
+      const id = Number(match[1]);
+      return { status: 200, body: { id, account: { id: 7_000_000 + id, type: 'Organization' } } };
+    },
   },
   {
     method: 'GET',

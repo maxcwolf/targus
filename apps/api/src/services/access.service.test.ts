@@ -1,9 +1,12 @@
+import type { GitHubClient } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import { createBuildRequest, newProject, sha } from '../../test/support/fixtures.ts';
 import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
+import { GitHubStatusError } from '../../test/support/unreachable-github.ts';
 import { signInReviewer } from '../../test/support/in-memory-auth.ts';
 import { createTestDeps } from '../../test/support/in-memory.ts';
+import { NoopGitHubClient } from '../adapters/github-client.adapter.ts';
 import { canAccessProject, requireBuildAccess, requireProjectAccess } from './access.service.ts';
 import { createBuild } from './build.service.ts';
 
@@ -47,30 +50,104 @@ describe('canAccessProject', () => {
   });
 });
 
-describe('canAccessProject on a personal account', () => {
-  it('treats the account owner as its one member without asking GitHub', async () => {
-    const github = createRecordingGitHub([]);
-    const deps = createTestDeps({ github });
-    const project = await deps.projects.create(
-      newProject('solo', { githubOrg: 'OctoCat', installationId: 42 }),
-    );
+// octocat's personal account (GitHub id 583231) has installation 42; GitHub knows no org members.
+const octocatId = 583231;
+const ownedBy = () => createRecordingGitHub([], { accounts: { 42: octocatId } });
 
-    expect(await canAccessProject(deps, await signInReviewer(deps, 'octocat'), project)).toBe(true);
+async function personal(github: GitHubClient) {
+  const deps = createTestDeps({ github });
+  const project = await deps.projects.create(
+    newProject('solo', { githubOrg: 'OctoCat', installationId: 42 }),
+  );
+  return { deps, project };
+}
+
+describe('canAccessProject on a personal account (ADR 0012, 0024)', () => {
+  it('treats the account owner, by GitHub id, as its one member without asking GitHub', async () => {
+    const github = ownedBy();
+    const { deps, project } = await personal(github);
+
+    expect(
+      await canAccessProject(deps, await signInReviewer(deps, 'octocat', octocatId), project),
+    ).toBe(true);
     expect(await canAccessProject(deps, await signInReviewer(deps, 'outsider'), project)).toBe(
       false,
     );
     expect(github.membershipChecks).toEqual([{ org: 'OctoCat', login: 'outsider' }]);
   });
 
+  it('keeps access for the owner after they rename their login', async () => {
+    const github = ownedBy();
+    const { deps, project } = await personal(github);
+    const renamed = await signInReviewer(deps, 'octocat-renamed', octocatId);
+
+    expect(await canAccessProject(deps, renamed, project)).toBe(true);
+    expect(github.membershipChecks).toEqual([]);
+  });
+
+  it('denies another account that took over the old login', async () => {
+    const { deps, project } = await personal(ownedBy());
+    const squatter = await signInReviewer(deps, 'OctoCat', 999_999);
+
+    expect(await canAccessProject(deps, squatter, project)).toBe(false);
+    expect(deps.log.warnings).toEqual([]);
+  });
+
+  it('reads the account id from the installation once, then keeps it on the org', async () => {
+    const github = ownedBy();
+    const { deps, project } = await personal(github);
+    const owner = await signInReviewer(deps, 'octocat', octocatId);
+    expect(project.org.githubAccountId).toBeNull();
+
+    expect(await canAccessProject(deps, owner, project)).toBe(true);
+    const stored = await deps.projects.findById(project.id);
+    expect(stored?.org.githubAccountId).toBe(octocatId);
+    expect(await canAccessProject(deps, owner, stored ?? project)).toBe(true);
+    expect(github.accountLookups).toEqual([42]);
+  });
+});
+
+describe('canAccessProject while the account id is unknown (ADR 0024)', () => {
+  it('denies everyone and logs it while the account id is unknown and cannot be read', async () => {
+    const recording = createRecordingGitHub(['octocat']);
+    const github: GitHubClient = {
+      ...recording,
+      installationAccountId: () => Promise.reject(new GitHubStatusError(403)),
+    };
+    const { deps, project } = await personal(github);
+
+    expect(
+      await canAccessProject(deps, await signInReviewer(deps, 'octocat', octocatId), project),
+    ).toBe(false);
+    expect(deps.log.warnings).toEqual([
+      { event: 'org_account_unknown', org: 'OctoCat', reason: 'github 403' },
+    ]);
+    // Nothing was stored and no membership was asked: the next check tries again.
+    expect((await deps.projects.findById(project.id))?.org.githubAccountId).toBeNull();
+    expect(recording.membershipChecks).toEqual([]);
+    expect(deps.memberships.all.size).toBe(0);
+  });
+
+  it('denies everyone with the no-op client, which knows no installation', async () => {
+    const { deps, project } = await personal(new NoopGitHubClient());
+
+    expect(
+      await canAccessProject(deps, await signInReviewer(deps, 'octocat', octocatId), project),
+    ).toBe(false);
+    expect(deps.log.warnings).toMatchObject([{ event: 'org_account_unknown', org: 'OctoCat' }]);
+  });
+
   it('still needs an installation, as every project does', async () => {
-    const deps = createTestDeps({ github: createRecordingGitHub([]) });
+    const github = ownedBy();
+    const deps = createTestDeps({ github });
     const project = await deps.projects.create(
       newProject('solo-bare', { githubOrg: 'octocat', installationId: null }),
     );
 
-    expect(await canAccessProject(deps, await signInReviewer(deps, 'octocat'), project)).toBe(
-      false,
-    );
+    expect(
+      await canAccessProject(deps, await signInReviewer(deps, 'octocat', octocatId), project),
+    ).toBe(false);
+    expect(github.accountLookups).toEqual([]);
   });
 });
 

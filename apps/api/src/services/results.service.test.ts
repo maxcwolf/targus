@@ -264,7 +264,12 @@ describe('submitResults check runs', () => {
 describe('submitResults without a check run', () => {
   it('skips the check run without an installation, and with the no-op client', async () => {
     const createCheckRun = vi.fn<GitHubClient['createCheckRun']>().mockResolvedValue({ id: 0 });
-    const github: GitHubClient = { createCheckRun, updateCheckRun: vi.fn(), isOrgMember: vi.fn() };
+    const github: GitHubClient = {
+      createCheckRun,
+      updateCheckRun: vi.fn(),
+      isOrgMember: vi.fn(),
+      installationAccountId: vi.fn(),
+    };
     const without = await setup(github, null);
     const withNoop = await setup(github, 7);
 
@@ -282,6 +287,7 @@ describe('submitResults without a check run', () => {
       createCheckRun: vi.fn().mockRejectedValue(new Error('GitHub is down')),
       updateCheckRun: vi.fn(),
       isOrgMember: vi.fn(),
+      installationAccountId: vi.fn(),
     };
     const { deps, project } = await setup(github, 7);
     const buildId = await openBuild(deps, project, sha('a'));

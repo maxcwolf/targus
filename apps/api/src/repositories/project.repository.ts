@@ -1,7 +1,15 @@
-import { asc, eq, type SQL } from 'drizzle-orm';
+import { and, asc, eq, sql, type SQL } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
 import { orgs, projects } from '../db/schema.ts';
+
+/** The fields of a project's org that check runs and access checks need. */
+export interface ProjectOrg {
+  readonly githubOrg: string;
+  readonly installationId: number | null;
+  /** The installation's account id (ADR 0024); null until read from GitHub. */
+  readonly githubAccountId: number | null;
+}
 
 /** A project with the org fields the API needs (GitHub App installation for check runs). */
 export interface Project {
@@ -11,7 +19,7 @@ export interface Project {
   readonly name: string;
   readonly defaultBranch: string;
   readonly createdAt: Date;
-  readonly org: { readonly githubOrg: string; readonly installationId: number | null };
+  readonly org: ProjectOrg;
 }
 
 /** What `ProjectRepository.create` needs; ids and timestamps come from the ports. */
@@ -31,9 +39,15 @@ export interface NewProject {
 export interface ProjectRepository {
   /**
    * Insert the project, creating its org when `githubOrg` is new. A non-null `installationId`
-   * replaces the org's stored one, so re-running with the installation set fills it in.
+   * replaces the org's stored one, so re-running with the installation set fills it in; a
+   * different one also clears the org's account id, which belonged to the old installation.
    */
   create(project: NewProject): Promise<Project>;
+  /**
+   * Store the account id read from the org's installation, unless the org has moved to another
+   * installation since it was read (then the id is left for the next check to read again).
+   */
+  setOrgAccountId(orgId: string, installationId: number, githubAccountId: number): Promise<void>;
   findById(id: string): Promise<Project | null>;
   findByRepo(repo: string): Promise<Project | null>;
   findByTokenHash(tokenHash: string): Promise<Project | null>;
@@ -41,14 +55,11 @@ export interface ProjectRepository {
   listAll(): Promise<Project[]>;
 }
 
-type Row = Omit<typeof projects.$inferSelect, 'tokenHash'> & {
-  githubOrg: string;
-  installationId: number | null;
-};
+type Row = Omit<typeof projects.$inferSelect, 'tokenHash'> & ProjectOrg;
 
 function toProject(row: Row): Project {
-  const { githubOrg, installationId, ...project } = row;
-  return { ...project, org: { githubOrg, installationId } };
+  const { githubOrg, installationId, githubAccountId, ...project } = row;
+  return { ...project, org: { githubOrg, installationId, githubAccountId } };
 }
 
 type Db = ReturnType<typeof drizzle>;
@@ -64,6 +75,7 @@ function selectProjects(db: Db) {
       createdAt: projects.createdAt,
       githubOrg: orgs.githubOrg,
       installationId: orgs.installationId,
+      githubAccountId: orgs.githubAccountId,
     })
     .from(projects)
     .innerJoin(orgs, eq(orgs.id, projects.orgId));
@@ -74,10 +86,15 @@ async function findOne(db: Db, where: SQL): Promise<Project | null> {
   return row === undefined ? null : toProject(row);
 }
 
+/** The account id stays only while the installation it was read from does. */
+function keepAccountIdIfSame(installationId: number): SQL {
+  return sql`CASE WHEN ${orgs.installationId} = ${installationId} THEN ${orgs.githubAccountId} ELSE NULL END`;
+}
+
 function upsertOrg(
   db: Db,
   project: NewProject,
-): Promise<{ id: string; installationId: number | null }> {
+): Promise<{ id: string; installationId: number | null; githubAccountId: number | null }> {
   return db
     .insert(orgs)
     .values({
@@ -92,9 +109,16 @@ function upsertOrg(
       set:
         project.installationId === null
           ? { githubOrg: project.githubOrg }
-          : { installationId: project.installationId },
+          : {
+              installationId: project.installationId,
+              githubAccountId: keepAccountIdIfSame(project.installationId),
+            },
     })
-    .returning({ id: orgs.id, installationId: orgs.installationId })
+    .returning({
+      id: orgs.id,
+      installationId: orgs.installationId,
+      githubAccountId: orgs.githubAccountId,
+    })
     .get();
 }
 
@@ -118,7 +142,14 @@ export function createProjectRepository(database: D1Database): ProjectRepository
         ...row,
         githubOrg: project.githubOrg,
         installationId: org.installationId,
+        githubAccountId: org.githubAccountId,
       });
+    },
+    async setOrgAccountId(orgId, installationId, githubAccountId) {
+      await db
+        .update(orgs)
+        .set({ githubAccountId })
+        .where(and(eq(orgs.id, orgId), eq(orgs.installationId, installationId)));
     },
     findById: (id) => findOne(db, eq(projects.id, id)),
     findByRepo: (repo) => findOne(db, eq(projects.repo, repo)),

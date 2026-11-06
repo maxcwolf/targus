@@ -154,8 +154,9 @@ describe('the membership cache', () => {
 
 describe('two personal accounts (ADR 0012)', () => {
   it('give each owner their own account and nothing of the other', async () => {
-    // GitHub says nobody is a member of anything: only ownership lets anyone in.
-    const deps = createTestDeps({ github: createRecordingGitHub({}) });
+    // GitHub says nobody is a member of anything: only ownership, by account id, lets anyone in.
+    const github = createRecordingGitHub({}, { accounts: { 11: 101, 12: 102 } });
+    const deps = createTestDeps({ github });
     const alice = await deps.projects.create(
       newProject('alice', { githubOrg: 'alice', installationId: 11 }),
     );

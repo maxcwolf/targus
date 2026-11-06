@@ -13,7 +13,13 @@ describeMembershipContract('createMembershipRepository (local D1)', () => ({
   repository: createMembershipRepository(env.DB),
   async seed(userId, orgId) {
     githubId += 1;
-    const org = { id: orgId, githubOrg: orgId, installationId: null, createdAt: at };
+    const org = {
+      id: orgId,
+      githubOrg: orgId,
+      installationId: null,
+      githubAccountId: null,
+      createdAt: at,
+    };
     await createOrgRepository(env.DB).insert(org);
     const avatarUrl = `https://avatars.test/${userId}`;
     const user = { id: userId, githubId, login: userId, avatarUrl, now: at };

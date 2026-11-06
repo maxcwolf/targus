@@ -81,6 +81,7 @@ describe('submitResults after a failure', () => {
       createCheckRun: vi.fn().mockResolvedValue({ id: 77 }),
       updateCheckRun: vi.fn(),
       isOrgMember: vi.fn(),
+      installationAccountId: vi.fn(),
     };
     const builds = createInMemoryBuilds();
     const setCheckRunId = vi.fn().mockRejectedValue(new Error('D1 is unavailable'));

@@ -47,7 +47,7 @@ export async function uploadImage(
 
 type ReadImageDeps = Pick<
   ServiceDeps,
-  'clock' | 'github' | 'images' | 'imageStore' | 'log' | 'memberships'
+  'clock' | 'github' | 'images' | 'imageStore' | 'log' | 'memberships' | 'projects'
 >;
 
 /**

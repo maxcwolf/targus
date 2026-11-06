@@ -16,7 +16,7 @@ async function findsByEveryKey(repository: ProjectRepository): Promise<void> {
     name: 'App pc-find',
     defaultBranch: 'main',
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
-    org: { githubOrg: 'org-pc-find', installationId: 77 },
+    org: { githubOrg: 'org-pc-find', installationId: 77, githubAccountId: null },
   });
   expect(await repository.findById('project-pc-find')).toEqual(created);
   expect(await repository.findByRepo('org-pc-find/app')).toEqual(created);
@@ -36,9 +36,13 @@ async function sharesTheOrg(repository: ProjectRepository): Promise<void> {
     newProject('pc-org-3', { ...org, newOrgId: 'org-unused-2', installationId: null }),
   );
 
-  expect(first.org).toEqual({ githubOrg: 'pc-shared', installationId: null });
+  expect(first.org).toEqual({
+    githubOrg: 'pc-shared',
+    installationId: null,
+    githubAccountId: null,
+  });
   expect([second.orgId, third.orgId]).toEqual(['org-pc-shared', 'org-pc-shared']);
-  expect(third.org).toEqual({ githubOrg: 'pc-shared', installationId: 9 });
+  expect(third.org).toEqual({ githubOrg: 'pc-shared', installationId: 9, githubAccountId: null });
   // The org is one row: the project created before the installation id was known sees it too.
   expect((await repository.findById(first.id))?.org.installationId).toBe(9);
   expect((await repository.findByRepo(first.repo))?.org.installationId).toBe(9);
@@ -79,6 +83,50 @@ async function listsByName(repository: ProjectRepository): Promise<void> {
   );
 }
 
+async function storesTheAccountId(repository: ProjectRepository): Promise<void> {
+  const org = { githubOrg: 'pc-account', newOrgId: 'org-pc-account', installationId: 21 };
+  const first = await repository.create(newProject('pc-acct-1', org));
+
+  // Read through another installation: the org has moved on, so the id is not stored.
+  await repository.setOrgAccountId(first.orgId, 99, 5001);
+  expect((await repository.findById(first.id))?.org.githubAccountId).toBeNull();
+
+  await repository.setOrgAccountId(first.orgId, 21, 5021);
+  const second = await repository.create(newProject('pc-acct-2', { ...org, newOrgId: 'x' }));
+  const third = await repository.create(
+    newProject('pc-acct-3', { ...org, newOrgId: 'y', installationId: null }),
+  );
+
+  expect(second.org).toEqual({
+    githubOrg: 'pc-account',
+    installationId: 21,
+    githubAccountId: 5021,
+  });
+  expect(third.org.githubAccountId).toBe(5021);
+  expect((await repository.findById(first.id))?.org.githubAccountId).toBe(5021);
+  expect(
+    (await repository.listAll()).filter((p) => p.orgId === first.orgId).map((p) => p.org),
+  ).toEqual(Array(3).fill({ githubOrg: 'pc-account', installationId: 21, githubAccountId: 5021 }));
+}
+
+async function clearsTheAccountIdOnANewInstallation(repository: ProjectRepository): Promise<void> {
+  const org = { githubOrg: 'pc-reinstall', newOrgId: 'org-pc-reinstall', installationId: 31 };
+  const first = await repository.create(newProject('pc-re-1', org));
+  await repository.setOrgAccountId(first.orgId, 31, 5031);
+
+  const moved = await repository.create(
+    newProject('pc-re-2', { ...org, newOrgId: 'z', installationId: 32 }),
+  );
+
+  // The id belonged to installation 31; it is read again from 32.
+  expect(moved.org).toEqual({
+    githubOrg: 'pc-reinstall',
+    installationId: 32,
+    githubAccountId: null,
+  });
+  expect((await repository.findByRepo(first.repo))?.org.githubAccountId).toBeNull();
+}
+
 /** The contract of `ProjectRepository`, for the D1 adapter and the in-memory double. */
 export function describeProjectContract(name: string, harness: Harness): void {
   describe(`${name} projects`, () => {
@@ -86,6 +134,10 @@ export function describeProjectContract(name: string, harness: Harness): void {
       findsByEveryKey(harness()));
     it('reuses an existing org, and every project of it sees an installation id filled in', () =>
       sharesTheOrg(harness()));
+    it("stores the org's account id for every project, only for its current installation", () =>
+      storesTheAccountId(harness()));
+    it('clears the account id when the org moves to another installation', () =>
+      clearsTheAccountIdOnANewInstallation(harness()));
     it('rejects a project whose id, repo or token hash is taken, keeping the first', () =>
       rejectsClashes(harness()));
     it('lists every project by name as SQLite compares text, then by id', () =>

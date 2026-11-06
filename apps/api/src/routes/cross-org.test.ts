@@ -25,11 +25,20 @@ const globex = uniqueOrg('globex');
 const initech = uniqueOrg('initech');
 const alice = uniqueOrg('alice');
 const bob = uniqueOrg('bob');
+const carol = uniqueOrg('carol');
+
+/** A GitHub account id no other test file uses. */
+const accountId = () => (crypto.getRandomValues(new Uint32Array(1))[0] ?? 0) + 1;
+const [aliceId, bobId, carolId] = [accountId(), accountId(), accountId()];
 
 const app = appWith({
   github: createRecordingGitHub(
     { [acme]: ['octocat'], [globex]: ['hubot'], [initech]: ['octocat'] },
-    { installations: { [acme]: 101, [globex]: 102 } },
+    {
+      installations: { [acme]: 101, [globex]: 102 },
+      // The personal accounts' installations, each on its owner's account.
+      accounts: { 201: aliceId, 202: bobId, 203: carolId },
+    },
   ),
 });
 
@@ -150,12 +159,12 @@ describe('an org with no installation', () => {
   });
 });
 
-describe('two personal accounts (ADR 0012)', () => {
+describe('two personal accounts (ADR 0012, 0024)', () => {
   it('each show their own projects to their owner only', async () => {
     const aliceProject = (await createTestProject(201, alice)).project;
     const bobProject = (await createTestProject(202, bob)).project;
-    const aliceSession = await signIn(alice);
-    const bobSession = await signIn(bob);
+    const aliceSession = await signIn(alice, { githubId: aliceId });
+    const bobSession = await signIn(bob, { githubId: bobId });
 
     const aliceSees = await listedIds(aliceSession.cookie);
     const bobSees = await listedIds(bobSession.cookie);
@@ -168,5 +177,24 @@ describe('two personal accounts (ADR 0012)', () => {
       call(`/api/projects/${id}/builds`, { headers: withCookie(cookie) }, app);
     expect((await builds(aliceProject.id, aliceSession.cookie)).status).toBe(200);
     expect((await builds(bobProject.id, aliceSession.cookie)).status).toBe(403);
+  });
+
+  it('follow the account id through a rename, not the login', async () => {
+    const { project } = await createTestProject(203, carol);
+    const builds = (cookie: string) =>
+      call(`/api/projects/${project.id}/builds`, { headers: withCookie(cookie) }, app);
+
+    // Carol renamed her account; someone else registered her old login.
+    const renamed = await signIn(`${carol}-renamed`, { githubId: carolId });
+    const squatter = await signIn(carol);
+
+    expect((await builds(renamed.cookie)).status).toBe(200);
+    expect((await builds(squatter.cookie)).status).toBe(403);
+    expect(await listedIds(squatter.cookie)).not.toContain(project.id);
+    // Read from the installation on first use and kept on the org row.
+    const row = await env.DB.prepare('SELECT github_account_id AS id FROM orgs WHERE id = ?')
+      .bind(project.orgId)
+      .first<{ id: number | null }>();
+    expect(row?.id).toBe(carolId);
   });
 });

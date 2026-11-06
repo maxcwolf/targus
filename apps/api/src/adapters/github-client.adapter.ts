@@ -154,6 +154,25 @@ export class OctokitGitHubClient implements GitHubClient {
       throw error;
     }
   }
+
+  /**
+   * The id of the account the installation is on, from `GET /app/installations/{id}`, which
+   * authenticates as the App itself (a JWT), not as the installation. Any failure is thrown.
+   */
+  async installationAccountId(installationId: number): Promise<number> {
+    const { token } = await this.auth({ type: 'app' });
+    const response = await this.request('GET /app/installations/{installation_id}', {
+      installation_id: installationId,
+      headers: { authorization: `bearer ${token}` },
+    });
+    const account: unknown = response.data.account;
+    const id =
+      typeof account === 'object' && account !== null && 'id' in account ? account.id : null;
+    if (typeof id !== 'number') {
+      throw new Error(`installation ${String(installationId)} names no account`);
+    }
+    return id;
+  }
 }
 
 /**
@@ -171,5 +190,10 @@ export class NoopGitHubClient implements GitHubClient {
 
   isOrgMember(): Promise<boolean> {
     return Promise.resolve(false);
+  }
+
+  /** There is no installation to ask, so no account is ever recognised. */
+  installationAccountId(): Promise<number> {
+    return Promise.reject(new Error('the GitHub App is not configured'));
   }
 }

@@ -17,7 +17,7 @@ function projectOf(key: string): Project {
     name: key,
     defaultBranch: 'main',
     createdAt: new Date(0),
-    org: { githubOrg: `org-${key}`, installationId: null },
+    org: { githubOrg: `org-${key}`, installationId: null, githubAccountId: null },
   };
 }
 

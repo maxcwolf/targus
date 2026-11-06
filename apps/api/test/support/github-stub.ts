@@ -39,13 +39,54 @@ function json(body: unknown, status: number): Response {
   });
 }
 
+/** The account id the stubs give installation `installationId` when a test names none. */
+export function defaultAccountId(installationId: number): number {
+  return 7_000_000 + installationId;
+}
+
+/** Who belongs to which org, and which account each installation is on. */
+interface StubWorld {
+  readonly members: OrgMembers;
+  readonly accounts: Readonly<Record<number, number>>;
+}
+
+/** `GET /app/installations/:id`, or null for any other path. */
+function installationReply(path: string, accounts: StubWorld['accounts']): Response | null {
+  const [, installation] = /^\/app\/installations\/(\d+)$/.exec(path) ?? [];
+  if (installation === undefined) return null;
+  const id = Number(installation);
+  return json({ id, account: { id: accounts[id] ?? defaultAccountId(id) } }, 200);
+}
+
+/** What api.github.com would answer for `path`. */
+function replyTo(path: string, { members, accounts }: StubWorld): Response {
+  if (path.endsWith('/access_tokens')) {
+    return json({ token: 'installation-token', expires_at: '2099-01-01T00:00:00Z' }, 201);
+  }
+  const installation = installationReply(path, accounts);
+  if (installation !== null) return installation;
+  if (path.endsWith('/check-runs')) return json({ id: 901 }, 201);
+  if (path.includes('/check-runs/')) return json({ id: 901 }, 200);
+  const [, org, login] = /\/orgs\/([^/]+)\/members\/([^/]+)$/.exec(path) ?? [];
+  if (org !== undefined && login !== undefined) {
+    return isMemberOf(members, decodeURIComponent(org), decodeURIComponent(login))
+      ? new Response(null, { status: 204 })
+      : json({ message: 'Not Found' }, 404);
+  }
+  return json({ message: 'Server Error' }, 500);
+}
+
 /**
  * A `fetch` that plays api.github.com for the calls `OctokitGitHubClient` makes: it mints an
- * installation token, creates check run 901, accepts updates, and answers
+ * installation token, creates check run 901, accepts updates, answers
  * `GET /orgs/:org/members/:login` from `members` (by default only `member`, in every org; see
- * `OrgMembers`). Every request is recorded.
+ * `OrgMembers`) and `GET /app/installations/:id` with the account in `accounts`, by
+ * installation id (`defaultAccountId` otherwise). Every request is recorded.
  */
-export function createGitHubStub(members: OrgMembers = ['member']): GitHubStub {
+export function createGitHubStub(
+  members: OrgMembers = ['member'],
+  accounts: Readonly<Record<number, number>> = {},
+): GitHubStub {
   const requests: RecordedGitHubRequest[] = [];
   const stubFetch: typeof fetch = async (input, init) => {
     const request = new Request(input, init);
@@ -57,18 +98,7 @@ export function createGitHubStub(members: OrgMembers = ['member']): GitHubStub {
       authorization: request.headers.get('authorization'),
       body: text === '' ? null : JSON.parse(text),
     });
-    if (path.endsWith('/access_tokens')) {
-      return json({ token: 'installation-token', expires_at: '2099-01-01T00:00:00Z' }, 201);
-    }
-    if (path.endsWith('/check-runs')) return json({ id: 901 }, 201);
-    if (path.includes('/check-runs/')) return json({ id: 901 }, 200);
-    const [, org, login] = /\/orgs\/([^/]+)\/members\/([^/]+)$/.exec(path) ?? [];
-    if (org !== undefined && login !== undefined) {
-      return isMemberOf(members, decodeURIComponent(org), decodeURIComponent(login))
-        ? new Response(null, { status: 204 })
-        : json({ message: 'Not Found' }, 404);
-    }
-    return json({ message: 'Server Error' }, 500);
+    return replyTo(path, { members, accounts });
   };
   return { fetch: stubFetch, requests };
 }

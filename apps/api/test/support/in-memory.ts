@@ -40,23 +40,49 @@ export { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.ts
 interface OrgRow {
   readonly orgId: string;
   readonly installationId: number | null;
+  readonly githubAccountId: number | null;
+}
+
+/** Projects read the org through a join, so every stored project of the org sees `row`. */
+function syncOrg(all: Project[], githubOrg: string, row: OrgRow): void {
+  const { installationId, githubAccountId } = row;
+  all.forEach((project, index) => {
+    if (project.orgId === row.orgId)
+      all[index] = { ...project, org: { githubOrg, installationId, githubAccountId } };
+  });
 }
 
 /**
- * As `upsertOrg` in the D1 adapter: create the org, or fill in a non-null installation id. It
- * runs before the project insert and stays when that insert fails, as in D1. Projects read the
- * org through a join, so every stored project of the org sees the new installation id.
+ * As `upsertOrg` in the D1 adapter: create the org, or fill in a non-null installation id,
+ * clearing the account id when the installation changes. It runs before the project insert
+ * and stays when that insert fails, as in D1.
  */
 function upsertOrg(orgs: Map<string, OrgRow>, all: Project[], input: NewProject): OrgRow {
   const existing = orgs.get(input.githubOrg);
   const installationId = input.installationId ?? existing?.installationId ?? null;
-  const org = { orgId: existing?.orgId ?? input.newOrgId, installationId };
+  const sameInstallation = existing?.installationId === installationId;
+  const org = {
+    orgId: existing?.orgId ?? input.newOrgId,
+    installationId,
+    githubAccountId: sameInstallation ? existing.githubAccountId : null,
+  };
   orgs.set(input.githubOrg, org);
-  all.forEach((project, index) => {
-    if (project.orgId === org.orgId)
-      all[index] = { ...project, org: { ...project.org, installationId } };
-  });
+  syncOrg(all, input.githubOrg, org);
   return org;
+}
+
+/** As the D1 update: only while the org is still on `installationId`. */
+function setAccountId(
+  orgs: Map<string, OrgRow>,
+  all: Project[],
+  [orgId, installationId, githubAccountId]: [string, number, number],
+): void {
+  for (const [githubOrg, row] of orgs) {
+    if (row.orgId !== orgId || row.installationId !== installationId) continue;
+    const updated = { ...row, githubAccountId };
+    orgs.set(githubOrg, updated);
+    syncOrg(all, githubOrg, updated);
+  }
 }
 
 export function createInMemoryProjects(): ProjectRepository & { readonly all: Project[] } {
@@ -82,11 +108,19 @@ export function createInMemoryProjects(): ProjectRepository & { readonly all: Pr
         name: input.name,
         defaultBranch: input.defaultBranch,
         createdAt: input.createdAt,
-        org: { githubOrg: input.githubOrg, installationId: org.installationId },
+        org: {
+          githubOrg: input.githubOrg,
+          installationId: org.installationId,
+          githubAccountId: org.githubAccountId,
+        },
       };
       all.push(project);
       tokenHashes.set(input.tokenHash, project.id);
       return Promise.resolve(project);
+    },
+    setOrgAccountId(...update) {
+      setAccountId(orgs, all, update);
+      return Promise.resolve();
     },
     findById: (id) => find((project) => project.id === id),
     findByRepo: (repo) => find((project) => project.repo === repo),

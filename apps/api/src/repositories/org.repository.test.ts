@@ -11,6 +11,7 @@ describe('createOrgRepository (local D1)', () => {
       id: createFakeIdGenerator('org').next(),
       githubOrg: 'example-org',
       installationId: 4242,
+      githubAccountId: 7001,
       createdAt: createFakeClock().now(),
     };
 

@@ -8,6 +8,8 @@ export interface Org {
   readonly id: string;
   readonly githubOrg: string;
   readonly installationId: number | null;
+  /** The installation's account id (ADR 0024); null until read from GitHub. */
+  readonly githubAccountId: number | null;
   readonly createdAt: Date;
 }
 

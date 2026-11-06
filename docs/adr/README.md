@@ -26,7 +26,7 @@ the same change.
 | [0009](0009-every-standard-has-a-guard.md) | Every standard has a guard | accepted |
 | [0010](0010-package-builds-and-development-condition.md) | Package builds and the development condition | accepted |
 | [0011](0011-github-login-sessions-and-org-authorization.md) | GitHub login with cookie sessions and org-membership authorization | accepted |
-| [0012](0012-personal-accounts-as-single-member-orgs.md) | Personal accounts as single-member orgs | accepted |
+| [0012](0012-personal-accounts-as-single-member-orgs.md) | Personal accounts as single-member orgs | accepted, amended by [0024](0024-personal-account-owner-by-github-account-id.md) |
 | [0013](0013-guarded-single-batch-build-writes.md) | Guarded single-batch writes for build results and reviews | accepted |
 | [0014](0014-upload-record-grants-image-access.md) | An upload record, not a hash, grants a project access to an image | accepted |
 | [0015](0015-same-origin-session-writes-and-hashed-session-ids.md) | Same-origin checks on session writes, and hashed session ids | accepted |
@@ -38,3 +38,4 @@ the same change.
 | [0021](0021-stop-the-capture-when-the-app-dies.md) | Stop the capture as soon as the app dies | accepted |
 | [0022](0022-story-parameters-reported-by-the-decorator.md) | The decorator reports `parameters.targus` over the channel | accepted |
 | [0023](0023-api-built-from-plain-dependencies.md) | The API is built from plain dependencies behind a thin Worker entry | accepted |
+| [0024](0024-personal-account-owner-by-github-account-id.md) | The owner of a personal account is recognised by GitHub account id | accepted |

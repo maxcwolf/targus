@@ -10,28 +10,46 @@ import type { Principal, Reviewer } from './principal.ts';
 /** How long a cached org membership answer is trusted (plan.md section 5.2). */
 const membershipTtlMs = 60 * 60 * 1000;
 
-type AccessDeps = Pick<ServiceDeps, 'clock' | 'github' | 'memberships'>;
-
-/**
- * Whether `login` is the account the project hangs off. A project's "org" can be a personal
- * account (ADR 0012); GitHub has no members endpoint for those, and logins are unique across
- * users and orgs and compare case-insensitively, so the owner is the one member.
- */
-function ownsAccount(githubOrg: string, login: string): boolean {
-  return githubOrg.toLowerCase() === login.toLowerCase();
-}
+type AccessDeps = Pick<ServiceDeps, 'clock' | 'github' | 'log' | 'memberships' | 'projects'>;
 
 /** The fields of an org that decide who may read its projects. */
 export interface OrgAccess {
   readonly orgId: string;
   readonly githubOrg: string;
   readonly installationId: number | null;
+  /** The installation's account id; null until read from GitHub (ADR 0024). */
+  readonly githubAccountId: number | null;
 }
 
 /**
- * Whether the reviewer belongs to the org. The owner of a personal account is its member;
- * otherwise answers come from the membership cache while it is under an hour old, else from
- * GitHub (through the org's App installation). An org without an installation cannot be
+ * The GitHub id of the account the org's installation is on: the stored one, else read from the
+ * installation and stored, which is how orgs created before migration 0006 get theirs. Never
+ * looked up by login, which can change hands. Null, with a warning on the request's log line,
+ * when GitHub cannot say; callers then grant nothing.
+ */
+async function accountIdOf(
+  deps: AccessDeps,
+  org: OrgAccess,
+  installationId: number,
+): Promise<number | null> {
+  if (org.githubAccountId !== null) return org.githubAccountId;
+  let accountId: number;
+  try {
+    accountId = await deps.github.installationAccountId(installationId);
+  } catch (error) {
+    deps.log.warn('org_account_unknown', { org: org.githubOrg, reason: failureReason(error) });
+    return null;
+  }
+  await deps.projects.setOrgAccountId(org.orgId, installationId, accountId);
+  return accountId;
+}
+
+/**
+ * Whether the reviewer belongs to the org. A project's "org" can be a personal account
+ * (ADR 0012), which GitHub has no members endpoint for: its owner is its one member, recognised
+ * by GitHub account id, never by login (ADR 0024). Otherwise answers come from the membership
+ * cache while it is under an hour old, else from GitHub (through the org's App installation).
+ * An org without an installation, or whose account id is unknown and cannot be read, cannot be
  * checked, so nobody gets in. `cached` is called only when the answer depends on the cache, so
  * a caller that already holds the cached row passes it and one that does not reads it lazily.
  */
@@ -43,8 +61,10 @@ export async function canAccessOrg(
 ): Promise<boolean> {
   const { installationId } = org;
   if (installationId === null) return false;
+  const accountId = await accountIdOf(deps, org, installationId);
+  if (accountId === null) return false;
   const { user } = reviewer;
-  if (ownsAccount(org.githubOrg, user.login)) return true;
+  if (accountId === user.githubId) return true;
   const now = deps.clock.now();
   const hit = await cached();
   if (hit !== null && now.getTime() - hit.checkedAt.getTime() < membershipTtlMs) {
@@ -103,7 +123,7 @@ export function logUnchecked(deps: Pick<ServiceDeps, 'log'>, unchecked: readonly
  * `not_found`.
  */
 export async function requireProjectAccess(
-  deps: AccessDeps & Pick<ServiceDeps, 'log'>,
+  deps: AccessDeps,
   principal: Principal,
   project: Project,
 ): Promise<void> {
@@ -124,7 +144,7 @@ export async function requireProjectAccess(
 
 /** A build the principal may read, with its project; `not_found` when there is no such build. */
 export async function requireBuildAccess(
-  deps: AccessDeps & Pick<ServiceDeps, 'builds' | 'log' | 'projects'>,
+  deps: AccessDeps & Pick<ServiceDeps, 'builds'>,
   principal: Principal,
   buildId: string,
 ): Promise<{ build: BuildRecord; project: Project }> {
