@@ -2,6 +2,7 @@ import type { Snapshot } from '@targus/core';
 import type { ReactElement, ReactNode } from 'react';
 
 import { ActualSizeIcon, DiffIcon, FitIcon } from '../../components/icons.js';
+import { releaseFocusOnPointerUp } from '../../components/releaseFocus.js';
 import type { ViewerState } from './useViewer.js';
 import { ViewerBody } from './ViewerModes.js';
 
@@ -89,23 +90,28 @@ function ColumnLabels({
   );
 }
 
+function OpacityRange({ viewer }: { readonly viewer: ViewerState }): ReactElement {
+  return (
+    <label className="toolbar-range" title="Red pixels are the changes pixelmatch found">
+      Diff opacity
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={viewer.opacity}
+        onPointerDown={releaseFocusOnPointerUp}
+        onChange={(event) => {
+          viewer.setOpacity(Number(event.target.value));
+        }}
+      />
+    </label>
+  );
+}
+
 function ViewerTools({ viewer }: { readonly viewer: ViewerState }): ReactElement {
   return (
     <div className="viewer-tools">
-      {viewer.diff ? (
-        <label className="toolbar-range" title="Red pixels are the changes pixelmatch found">
-          Diff opacity
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={viewer.opacity}
-            onChange={(event) => {
-              viewer.setOpacity(Number(event.target.value));
-            }}
-          />
-        </label>
-      ) : null}
+      {viewer.diff ? <OpacityRange viewer={viewer} /> : null}
       <ToolButton
         label="Diff"
         title="Show the diff over the new image (3). Red pixels changed."

@@ -1,5 +1,6 @@
 import { type ReactElement, useState } from 'react';
 
+import { releaseFocusOnPointerUp } from './releaseFocus.js';
 import { SnapshotImage } from './SnapshotImage.js';
 
 export interface CompareSliderProps {
@@ -10,7 +11,8 @@ export interface CompareSliderProps {
 /**
  * The current image with the baseline laid over it, clipped at the split: left of the line is
  * the baseline, right of it the new capture. An invisible range input covers the whole
- * image, so dragging anywhere and the arrow keys both move the split.
+ * image, so dragging anywhere and the arrow keys both move the split. A drag lets go of focus when
+ * it ends, so the review shortcuts work straight after it.
  */
 export function CompareSlider({ baselineSrc, currentSrc }: CompareSliderProps): ReactElement {
   const [position, setPosition] = useState(50);
@@ -34,6 +36,7 @@ export function CompareSlider({ baselineSrc, currentSrc }: CompareSliderProps): 
           max={100}
           value={position}
           aria-label="Reveal baseline"
+          onPointerDown={releaseFocusOnPointerUp}
           onChange={(event) => {
             setPosition(Number(event.target.value));
           }}

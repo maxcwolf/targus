@@ -108,21 +108,73 @@ describe('keyboard shortcuts', () => {
     press('3');
     expect(screen.queryByRole('img', { name: 'Diff' })).not.toBeInTheDocument();
   });
+});
 
-  it('ignores shortcuts while an input has focus or with a modifier', async () => {
+describe('shortcuts with the Diff opacity slider focused', () => {
+  it('leaves a focused slider its arrow keys and ignores modified or unknown keys', async () => {
     await openSnapshot('/builds/build-12/snapshots/snap-changed?filter=all');
     fireEvent.click(screen.getByRole('button', { name: 'Diff' }));
     const slider = screen.getByRole('slider', { name: 'Diff opacity' });
+    slider.focus();
 
-    fireEvent.keyDown(slider, { key: 'j' });
-    fireEvent.keyDown(slider, { key: 'ArrowRight' });
-    fireEvent.keyDown(slider, { key: 'a' });
+    // Not cancelled: the browser moves the slider instead of the page changing snapshot.
+    expect(fireEvent.keyDown(slider, { key: 'ArrowRight' })).toBe(true);
+    expect(fireEvent.keyDown(slider, { key: 'ArrowLeft' })).toBe(true);
     fireEvent.keyDown(window, { key: 'a', metaKey: true });
     fireEvent.keyDown(window, { key: 'x' });
 
     expect(heading()).toHaveTextContent('Button : Primary');
     expect(reviewBadge()).toHaveTextContent('Unreviewed');
     expect(apiState.calls).toEqual([]);
+  });
+
+  it('still takes j/k and a/d while a slider has keyboard focus', async () => {
+    await openSnapshot('/builds/build-12/snapshots/snap-changed?filter=all');
+    fireEvent.click(screen.getByRole('button', { name: 'Diff' }));
+    const slider = screen.getByRole('slider', { name: 'Diff opacity' });
+    slider.focus();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Approve' })).toBeEnabled();
+    });
+
+    fireEvent.keyDown(slider, { key: 'a' });
+
+    expect(await screen.findByText('Approved Button / Primary')).toBeInTheDocument();
+    expect(apiState.calls).toEqual(['POST /api/snapshots/snap-changed/review']);
+  });
+});
+
+describe('shortcuts after the compare slider', () => {
+  it('works again straight after the slider is dragged with the mouse', async () => {
+    await openSnapshot('/builds/build-12/snapshots/snap-changed?filter=all');
+    fireEvent.click(screen.getByRole('tab', { name: 'Slider' }));
+    const slider = screen.getByRole('slider', { name: 'Reveal baseline' });
+
+    // What a browser does for a drag: focus on press, input events, release (maybe elsewhere).
+    fireEvent.pointerDown(slider);
+    slider.focus();
+    fireEvent.change(slider, { target: { value: '20' } });
+    fireEvent.pointerUp(document.body);
+
+    expect(slider).not.toHaveFocus();
+    fireEvent.keyDown(document.activeElement ?? window, { key: 'ArrowRight' });
+    await waitFor(() => {
+      expect(heading()).toHaveTextContent('Card : Default');
+    });
+  });
+
+  it('keeps focus and the arrow keys when reached with the keyboard', async () => {
+    await openSnapshot('/builds/build-12/snapshots/snap-changed?filter=all');
+    fireEvent.click(screen.getByRole('tab', { name: 'Slider' }));
+    const slider = screen.getByRole('slider', { name: 'Reveal baseline' });
+    slider.focus();
+
+    for (const key of ['ArrowRight', 'ArrowLeft', 'Home', 'End', 'PageUp', 'PageDown']) {
+      expect(fireEvent.keyDown(slider, { key })).toBe(true);
+    }
+
+    expect(slider).toHaveFocus();
+    expect(heading()).toHaveTextContent('Button : Primary');
   });
 });
 

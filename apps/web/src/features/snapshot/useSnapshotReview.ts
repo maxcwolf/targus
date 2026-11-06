@@ -1,5 +1,6 @@
 import { useNavigate } from '@tanstack/react-router';
 import type { BuildWithSummary, ReviewDecision, Snapshot } from '@targus/core';
+import { type RefObject, useEffect, useRef } from 'react';
 
 import {
   componentTitle,
@@ -28,6 +29,18 @@ function advanceTarget(
   filter: SnapshotFilter,
 ): Snapshot | undefined {
   return filter === 'unreviewed' ? list.slice(index + 1).find(isPending) : undefined;
+}
+
+/** The id of the snapshot on screen, or null once the page has gone, for async callbacks. */
+function useShownId(snapshotId: string): RefObject<string | null> {
+  const shown = useRef<string | null>(null);
+  useEffect(() => {
+    shown.current = snapshotId;
+    return () => {
+      shown.current = null;
+    };
+  }, [snapshotId]);
+  return shown;
 }
 
 /** j/k and ←/→ move, a/d decide, Esc goes back to the build. */
@@ -71,6 +84,7 @@ export function useSnapshotReview({
   const buildId = item.build.id;
   const navigate = useNavigate();
   const review = useReview(buildId, snapshot.id);
+  const shown = useShownId(snapshot.id);
   const list = navigationList(snapshots, filter, snapshot.id);
   const index = list.findIndex((candidate) => candidate.id === snapshot.id);
   const previous = list[index - 1];
@@ -90,12 +104,13 @@ export function useSnapshotReview({
     const advanceTo = advanceTarget(list, index, filter);
     const verb = decision === 'approve' ? 'Approved' : 'Denied';
     const message = `${verb} ${componentTitle(snapshot)} / ${storyName(snapshot)}`;
-    // mutateAsync rather than callbacks passed to mutate(), which TanStack Query skips once the
-    // observer has moved on. The cache is already updated when this resolves: toast, then go.
-    review.mutateAsync(decision).then(
+    // A promise rather than callbacks passed to mutate(), which TanStack Query skips once the
+    // observer has moved on. The cache is already updated when this resolves: toast, then go,
+    // unless the reviewer has meanwhile moved to another snapshot or left the page.
+    review.decide(decision).then(
       () => {
         notify(message);
-        goTo(advanceTo);
+        if (shown.current === snapshot.id) goTo(advanceTo);
       },
       () => undefined, // the error is rendered from review.error
     );
