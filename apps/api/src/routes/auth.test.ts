@@ -1,7 +1,8 @@
 import { MeResponse } from '@targus/core';
-import { exports } from 'cloudflare:workers';
+import { env, exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
+import { sha256Hex } from '../lib/sha256.js';
 import { appWith, call } from '../../test/support/api.js';
 import { createFakeOAuth, octocat } from '../../test/support/in-memory-auth.js';
 import { signIn, withCookie } from '../../test/support/session.js';
@@ -19,6 +20,19 @@ function setCookies(response: Response): Map<string, string> {
 }
 
 const pairOf = (header: string | undefined) => header?.split(';')[0] ?? '';
+
+/** The session id inside a signed `targus_session=<id>.<signature>` Set-Cookie header. */
+function sessionIdOf(header: string | undefined): string {
+  const value = decodeURIComponent(pairOf(header).slice('targus_session='.length));
+  return value.slice(0, value.lastIndexOf('.'));
+}
+
+async function storedSessionKeys(): Promise<string[]> {
+  const { results } = await env.DB.prepare('SELECT id_hash FROM sessions').all<{
+    id_hash: string;
+  }>();
+  return results.map((row) => row.id_hash);
+}
 
 async function startLogin(returnTo: string) {
   const response = await call(`/api/auth/github?returnTo=${encodeURIComponent(returnTo)}`, {}, app);
@@ -56,6 +70,13 @@ describe('GitHub login round trip', () => {
     expect(session).toMatch(/SameSite=Lax/);
     expect(session).toMatch(/Path=\//);
     expect(session).toMatch(/Max-Age=2592000/);
+
+    // D1 holds the SHA-256 of the cookie's session id, never the id itself (ADR 0015).
+    const sessionId = sessionIdOf(session);
+    expect(sessionId).toHaveLength(48);
+    const stored = await storedSessionKeys();
+    expect(stored).toContain(await sha256Hex(sessionId));
+    expect(stored).not.toContain(sessionId);
 
     const me = await call('/api/me', { headers: withCookie(pairOf(session)) });
     expect(MeResponse.parse(await me.json()).user).toMatchObject({

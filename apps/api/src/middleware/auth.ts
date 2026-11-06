@@ -24,12 +24,26 @@ export const adminAuth = createMiddleware<AppEnv>(async (c, next) => {
   await next();
 });
 
+/**
+ * The reviewer behind the session cookie. A browser attaches the cookie to whatever request it
+ * sends, so a cookie-authenticated write must also be same-origin (ADR 0015); bearer-token
+ * requests skip this, because no other site can make a browser send that header.
+ */
 async function reviewerOf(c: Context, services: Services): Promise<Reviewer> {
   const settings = requireCookieSettings(services, 'unauthorized');
-  return services.authenticateSession(await readSessionId(c, settings));
+  const reviewer = await services.authenticateSession(await readSessionId(c, settings));
+  services.assertSameOrigin({
+    method: c.req.method,
+    origin: c.req.header('origin'),
+    secFetchSite: c.req.header('sec-fetch-site'),
+  });
+  return reviewer;
 }
 
-/** Review routes: a valid `targus_session` cookie, else 401. Puts the reviewer on the context. */
+/**
+ * Review routes: a valid `targus_session` cookie, else 401, and a same-origin request for a
+ * write, else 403. Puts the reviewer on the context.
+ */
 export const sessionAuth = createMiddleware<ReviewerEnv>(async (c, next) => {
   c.set('reviewer', await reviewerOf(c, c.var.services));
   await next();

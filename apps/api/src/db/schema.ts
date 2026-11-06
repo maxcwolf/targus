@@ -208,18 +208,21 @@ export const users = sqliteTable('users', {
   lastLoginAt: integer('last_login_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
-/** Review UI sessions; the id is the (signed) `targus_session` cookie value. */
+/**
+ * Review UI sessions. The raw session id lives only in the (signed) `targus_session` cookie;
+ * the table keeps its SHA-256, so a read of D1 yields no usable session (ADR 0015).
+ */
 export const sessions = sqliteTable(
   'sessions',
   {
-    id: text('id').primaryKey(),
+    idHash: text('id_hash').primaryKey(),
     userId: text('user_id')
       .notNull()
       .references(() => users.id),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
     expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
   },
-  // user_id covers the foreign key; expires_at is for a future cleanup of expired sessions.
+  // user_id covers the foreign key; expires_at serves the cleanup of expired sessions at sign-in.
   (table) => [
     index('sessions_user_id_idx').on(table.userId),
     index('sessions_expires_at_idx').on(table.expiresAt),

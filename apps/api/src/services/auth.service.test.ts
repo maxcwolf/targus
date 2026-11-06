@@ -57,6 +57,16 @@ describe('authenticateSession', () => {
     expect(await authenticateSession(deps, reviewer.sessionId)).toEqual(reviewer);
   });
 
+  it('looks the session up by the hash of the id, so a stored hash is not a session id', async () => {
+    const deps = createTestDeps();
+    await signInReviewer(deps, 'octocat');
+    const [storedHash = ''] = deps.sessions.all.keys();
+
+    await expect(authenticateSession(deps, storedHash)).rejects.toMatchObject({
+      code: 'unauthorized',
+    });
+  });
+
   it('rejects a missing, unknown or expired session', async () => {
     const deps = createTestDeps();
     const reviewer = await signInReviewer(deps, 'octocat');

@@ -31,7 +31,10 @@ export const imagesRoute = new Hono<AppEnv>()
   .get('/:hash', readerAuth, async (c) => {
     const bytes = await c.var.services.getImage(c.var.principal, c.req.param('hash'));
     return c.body(new Uint8Array(bytes), 200, {
+      // Fixed here, never read from R2 metadata: uploads are checked to be PNGs, and nosniff
+      // stops a browser from second-guessing the type and running the bytes as HTML or script.
       'content-type': 'image/png',
+      'x-content-type-options': 'nosniff',
       // Content-addressed: the bytes behind a hash never change.
       'cache-control': 'private, max-age=31536000, immutable',
     });

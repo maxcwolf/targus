@@ -37,6 +37,7 @@ import {
   type LoginRedirect,
   type NewLogin,
 } from './login.service.js';
+import { assertSameOrigin, type RequestOrigin } from './origin.service.js';
 import type { Principal, Reviewer } from './principal.js';
 import { createProject, listProjects } from './project.service.js';
 import { submitResults } from './results.service.js';
@@ -47,6 +48,8 @@ export interface Services {
   authenticateAdmin(token: string | null): Promise<void>;
   authenticateProjectToken(token: string | null): Promise<Project>;
   authenticateSession(sessionId: string | null): Promise<Reviewer>;
+  /** Throws `forbidden` for a cookie-authenticated write from another origin (ADR 0015). */
+  assertSameOrigin(request: RequestOrigin): void;
   /** How to sign cookies; null when `SESSION_SECRET` is not set. */
   cookieSettings(): CookieSettings | null;
   beginLogin(returnTo: string | undefined): LoginRedirect;
@@ -83,6 +86,9 @@ export function bindServices(deps: ServiceDeps): Services {
     authenticateAdmin: (token) => authenticateAdmin(deps, token),
     authenticateProjectToken: (token) => authenticateProjectToken(deps, token),
     authenticateSession: (sessionId) => authenticateSession(deps, sessionId),
+    assertSameOrigin: (request) => {
+      assertSameOrigin(deps, request);
+    },
     cookieSettings: () => cookieSettings(deps),
     beginLogin: (returnTo) => beginLogin(deps, returnTo),
     completeLogin: (callback) => completeLogin(deps, callback),

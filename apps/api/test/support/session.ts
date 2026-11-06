@@ -2,6 +2,7 @@ import { fakeClockEpoch, type ReviewerUser } from '@targus/core';
 import { env } from 'cloudflare:workers';
 import { generateSignedCookie } from 'hono/cookie';
 
+import { sha256Hex } from '../../src/lib/sha256.js';
 import { createSessionRepository } from '../../src/repositories/session.repository.js';
 import { createUserRepository } from '../../src/repositories/user.repository.js';
 import { sessionSecret } from './api.js';
@@ -19,7 +20,7 @@ function randomInt(): number {
 }
 
 /**
- * Create a user and a session in the local D1 and sign the cookie the way `sessionAuth` checks
+ * Create a user and a session (stored by the SHA-256 of its id) in the local D1 and sign the cookie the way `sessionAuth` checks
  * it. Each call is a new GitHub user (random id) unless `githubId` is given, so the membership
  * cache never carries over between tests.
  */
@@ -37,7 +38,7 @@ export async function signIn(
   });
   const sessionId = `session-${login}-${randomInt()}`;
   await createSessionRepository(env.DB).create({
-    id: sessionId,
+    idHash: await sha256Hex(sessionId),
     userId: user.id,
     createdAt: new Date(fakeClockEpoch),
     expiresAt: new Date('2099-01-01T00:00:00.000Z'),
@@ -46,7 +47,13 @@ export async function signIn(
   return { cookie: setCookie.split(';')[0] ?? '', user, sessionId };
 }
 
-/** Request headers carrying a session cookie. */
-export function withCookie(cookie: string): { cookie: string } {
-  return { cookie };
+/** The review UI's origin in the tests (`PUBLIC_URL` from wrangler.jsonc). */
+export const reviewOrigin = new URL(env.PUBLIC_URL).origin;
+
+/**
+ * Request headers carrying a session cookie, sent from the review UI's origin as a browser
+ * would, so cookie-authenticated writes pass the same-origin check (ADR 0015).
+ */
+export function withCookie(cookie: string): { cookie: string; origin: string } {
+  return { cookie, origin: reviewOrigin };
 }

@@ -92,7 +92,12 @@ type CompleteLoginDeps = Pick<
 
 /**
  * `GET /api/auth/github/callback`: check the state, exchange the code, store the user and open
- * a 30-day session. Org membership is checked per project on access, not here.
+ * a 30-day session. The browser gets the session id; D1 gets only its SHA-256 (ADR 0015). Org
+ * membership is checked per project on access, not here.
+ *
+ * Each sign-in also deletes every expired session (ADR 0015). Sessions are only created here,
+ * so an expired row lasts only until the next sign-in, and no Cron Trigger is needed; an
+ * expired row is never accepted meanwhile, since `findActive` checks the expiry.
  */
 export async function completeLogin(
   deps: CompleteLoginDeps,
@@ -112,14 +117,16 @@ export async function completeLogin(
   const user = await deps.users.upsertByGithubId({ id: deps.ids.next(), ...githubUser, now });
   const sessionId = deps.tokens.generate();
   const expiresAt = new Date(now.getTime() + sessionLifetimeSeconds * 1000);
-  await deps.sessions.create({ id: sessionId, userId: user.id, createdAt: now, expiresAt });
+  const idHash = await deps.tokens.hash(sessionId);
+  await deps.sessions.create({ idHash, userId: user.id, createdAt: now, expiresAt });
+  await deps.sessions.deleteExpired(now);
   return { sessionId, expiresAt, user };
 }
 
-/** `POST /api/auth/logout`. */
+/** `POST /api/auth/logout`: delete the session the cookie's id hashes to. */
 export async function logout(
-  deps: Pick<ServiceDeps, 'sessions'>,
+  deps: Pick<ServiceDeps, 'sessions' | 'tokens'>,
   sessionId: string,
 ): Promise<void> {
-  await deps.sessions.delete(sessionId);
+  await deps.sessions.delete(await deps.tokens.hash(sessionId));
 }

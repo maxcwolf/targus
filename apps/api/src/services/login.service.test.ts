@@ -89,7 +89,14 @@ describe('completeLogin', () => {
 
     expect(login.user).toEqual({ id: 'id-1', ...octocat });
     expect(login.expiresAt).toEqual(new Date('2026-01-31T00:00:00.000Z'));
-    const reviewer = await deps.sessions.findActive(login.sessionId, deps.clock.now());
+    // Only the SHA-256 of the session id is stored (ADR 0015).
+    const idHash = await deps.tokens.hash(login.sessionId);
+    expect([...deps.sessions.all.keys()]).toEqual([idHash]);
+    expect(deps.sessions.all.get(idHash)).toMatchObject({
+      userId: 'id-1',
+      expiresAt: login.expiresAt,
+    });
+    const reviewer = await deps.sessions.findActive(idHash, deps.clock.now());
     expect(reviewer?.user.login).toBe('octocat');
   });
 
@@ -131,6 +138,26 @@ describe('completeLogin', () => {
   });
 });
 
+describe('expired-session cleanup at sign-in', () => {
+  it('deletes the sessions that have expired, keeping the live ones', async () => {
+    const deps = createTestDeps();
+    const callback = { code: 'octocat-code', state: 's', expectedState: 's' };
+    const first = await completeLogin(deps, callback);
+    deps.clock.advance(20 * 24 * 60 * 60 * 1000);
+    const second = await completeLogin(deps, callback);
+    deps.clock.advance(10 * 24 * 60 * 60 * 1000);
+
+    // The first session expires exactly now (30 days); the second has 20 days left.
+    const third = await completeLogin(deps, callback);
+
+    const hashes = await Promise.all(
+      [second, third].map(({ sessionId }) => deps.tokens.hash(sessionId)),
+    );
+    expect([...deps.sessions.all.keys()].sort()).toEqual(hashes.sort());
+    expect(deps.sessions.all.has(await deps.tokens.hash(first.sessionId))).toBe(false);
+  });
+});
+
 describe('logout', () => {
   it('deletes the session', async () => {
     const deps = createTestDeps();
@@ -140,8 +167,10 @@ describe('logout', () => {
       expectedState: 's',
     });
 
+    expect(deps.sessions.all.size).toBe(1);
+
     await logout(deps, sessionId);
 
-    expect(await deps.sessions.findActive(sessionId, deps.clock.now())).toBeNull();
+    expect(deps.sessions.all.size).toBe(0);
   });
 });

@@ -6,9 +6,9 @@ import { z } from 'zod';
 
 import { sessionLifetimeSeconds, type CookieSettings, type Services } from '../services/index.js';
 
-// Both cookies are signed with SESSION_SECRET, HttpOnly, and SameSite=Lax. Lax is also the CSRF
-// defence for the JSON POSTs behind the session (review, approve-all, logout): a cross-site
-// form or fetch never carries the cookie, and the routes accept only JSON or no body.
+// Both cookies are signed with SESSION_SECRET, HttpOnly, and SameSite=Lax. Lax keeps the cookie
+// off cross-site POSTs; the same-origin check in middleware/auth.ts (ADR 0015) is the CSRF
+// defence that does not depend on it, since same-site is wider than same-origin.
 
 const sessionCookie = 'targus_session';
 const oauthCookie = 'targus_oauth';

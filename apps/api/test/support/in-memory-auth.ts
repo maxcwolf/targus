@@ -27,6 +27,7 @@ export function createInMemoryUsers(): UserRepository & { readonly all: Reviewer
   };
 }
 
+/** Sessions by id hash, like the D1 table: `all` never holds a raw session id. */
 export function createInMemorySessions(
   users: UserRepository,
 ): SessionRepository & { readonly all: Map<string, NewSession> } {
@@ -34,18 +35,23 @@ export function createInMemorySessions(
   return {
     all,
     create(session) {
-      all.set(session.id, session);
+      all.set(session.idHash, session);
       return Promise.resolve();
     },
-    async findActive(id, now) {
-      const session = all.get(id);
+    async findActive(idHash, now) {
+      const session = all.get(idHash);
       if (session === undefined || session.expiresAt <= now) return null;
       const user = await users.findById(session.userId);
-      return user === null ? null : { sessionId: id, expiresAt: session.expiresAt, user };
+      return user === null ? null : { expiresAt: session.expiresAt, user };
     },
-    delete(id) {
-      all.delete(id);
+    delete(idHash) {
+      all.delete(idHash);
       return Promise.resolve();
+    },
+    deleteExpired(now) {
+      const expired = [...all].filter(([, session]) => session.expiresAt <= now);
+      for (const [idHash] of expired) all.delete(idHash);
+      return Promise.resolve(expired.length);
     },
   };
 }
@@ -102,7 +108,7 @@ let reviewerCounter = 0;
 
 /** A user and an open session through the given repositories, for service tests. */
 export async function signInReviewer(
-  deps: Pick<ServiceDeps, 'clock' | 'sessions' | 'users'>,
+  deps: Pick<ServiceDeps, 'clock' | 'sessions' | 'tokens' | 'users'>,
   login: string,
   githubId = 1000 + login.length,
 ): Promise<Reviewer> {
@@ -117,6 +123,7 @@ export async function signInReviewer(
   });
   const sessionId = `session-${login}-${reviewerCounter}`;
   const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  await deps.sessions.create({ id: sessionId, userId: user.id, createdAt: now, expiresAt });
+  const idHash = await deps.tokens.hash(sessionId);
+  await deps.sessions.create({ idHash, userId: user.id, createdAt: now, expiresAt });
   return { sessionId, user };
 }

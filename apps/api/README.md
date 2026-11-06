@@ -73,10 +73,23 @@ otherwise); repeating a decision is a no-op. Approving records the snapshot's ha
 pair's approval. After each decision the build's status and tally are recomputed and its check
 run is updated (best effort: a GitHub failure is logged, the review is kept).
 
-Sessions: `targus_session` holds the session id, signed with `SESSION_SECRET`, `HttpOnly`,
-`SameSite=Lax`, `Path=/`, 30 days, `Secure` when `PUBLIC_URL` is https. `SameSite=Lax` is the
-CSRF defence for the session POSTs. The OAuth `state` travels in a signed 10-minute
-`targus_oauth` cookie.
+Sessions (ADR 0011, ADR 0015): `targus_session` holds the session id, signed with
+`SESSION_SECRET`, `HttpOnly`, `SameSite=Lax`, `Path=/`, 30 days, `Secure` when `PUBLIC_URL` is
+https. D1 stores only the SHA-256 of the id (`sessions.id_hash`), so a copy of the database
+holds no usable session. Each sign-in deletes every expired session; there is no Cron Trigger.
+The OAuth `state` travels in a signed 10-minute `targus_oauth` cookie.
+
+CSRF (ADR 0015): a POST, PUT, PATCH or DELETE authenticated by the session cookie must be
+same-origin. Its `Origin` header, when sent, must equal the origin of `PUBLIC_URL`, and its
+`Sec-Fetch-Site`, when sent, must be `same-origin`; a write with neither header, or failing
+either check, answers 403 `forbidden`. Reads are not checked, and neither is any request with an
+`Authorization` header (the CLI), since another site cannot make a browser send one. So
+`PUBLIC_URL` must be the origin the browser is on: when the review UI runs from the Vite dev
+server (`yarn workspace @targus/web dev`, which proxies `/api` to the Worker), set
+`PUBLIC_URL=http://localhost:5173` in `.dev.vars`, or approving and denying answer 403.
+
+Image responses carry `Content-Type: image/png`, set by the route rather than read from R2, and
+`X-Content-Type-Options: nosniff`.
 
 ## Configuration
 
@@ -84,7 +97,7 @@ Vars live in `wrangler.jsonc` and are validated by `src/config.ts`:
 
 | Name                     | Kind   | Default                  | Meaning                                                             |
 | ------------------------ | ------ | ------------------------ | ------------------------------------------------------------------- |
-| `PUBLIC_URL`             | var    | `http://localhost:8787`  | Origin of the review UI, used for `reviewUrl` and check-run links   |
+| `PUBLIC_URL`             | var    | `http://localhost:8787`  | Review UI origin: links, and the CSRF check on session writes       |
 | `DIFF_THRESHOLD`         | var    | `0.001`                  | Changed-pixel ratio at or under which a snapshot is unchanged       |
 | `ADMIN_TOKEN`            | secret | unset                    | Bearer token for `/api/admin/*`; admin routes answer 401 without it |
 | `GITHUB_APP_ID`          | secret | unset                    | GitHub App id                                                       |
@@ -113,7 +126,9 @@ In production, set secrets with `wrangler secret put ADMIN_TOKEN` (and likewise 
 ones and `SESSION_SECRET`, e.g. `openssl rand -base64 32`). `yarn workspace @targus/api deploy`
 builds the web app and deploys to <https://targus.targus-api.workers.dev>, passing that origin as
 `PUBLIC_URL` (the D1 database and R2 bucket in `wrangler.jsonc` were created 2026-11-05; apply
-new migrations with `wrangler d1 migrations apply targus --remote` before deploying).
+new migrations with `wrangler d1 migrations apply targus --remote` before deploying). Migration
+`0005_hashed_session_ids` drops and recreates `sessions`, so applying it signs every reviewer out
+once.
 
 ### GitHub App setup
 
@@ -211,7 +226,8 @@ committed migrations disagree.
 
 `yarn workspace @targus/api test` runs every `src/**/*.test.ts` inside workerd against the
 real local D1 and R2 bindings (with coverage), then the Node-side drift test. Route tests sign
-in with `test/support/session.ts` (`signIn(login)` creates a user and session in D1 and returns
-the signed `Cookie` value) and inject GitHub fakes with `appWith(...)` from
+in with `test/support/session.ts` (`signIn(login)` creates a user and a hashed session in D1 and
+returns the signed `Cookie` value; `withCookie(cookie)` adds the review UI's `Origin`, as a
+browser would, so writes pass the CSRF check) and inject GitHub fakes with `appWith(...)` from
 `test/support/api.ts`; `src/flows/review-flow.test.ts` runs the review flow end to end against a
 stubbed GitHub API.

@@ -4,6 +4,7 @@ import type { Project } from '../repositories/project.repository.js';
 
 /** A signed-in user of the review UI. */
 export interface Reviewer {
+  /** The raw id from the cookie; D1 holds only its SHA-256. */
   readonly sessionId: string;
   readonly user: ReviewerUser;
 }

@@ -29,4 +29,5 @@ the same change.
 | [0012](0012-personal-accounts-as-single-member-orgs.md) | Personal accounts as single-member orgs | accepted |
 | [0013](0013-guarded-single-batch-build-writes.md) | Guarded single-batch writes for build results and reviews | accepted |
 | [0014](0014-upload-record-grants-image-access.md) | An upload record, not a hash, grants a project access to an image | accepted |
+| [0015](0015-same-origin-session-writes-and-hashed-session-ids.md) | Same-origin checks on session writes, and hashed session ids | accepted |
 | [0016](0016-cli-measures-server-classifies.md) | The CLI measures the diff, the server classifies the story | accepted |

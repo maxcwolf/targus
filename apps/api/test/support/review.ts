@@ -8,6 +8,7 @@ import { createRecordingGitHub } from './github-recorder.js';
 import { appWith, bearer, call, createTestProject, postJson } from './api.js';
 import { createBuildRequest, sha } from './fixtures.js';
 import { markUploaded } from './in-memory-images.js';
+import { withCookie } from './session.js';
 
 /** The app with a GitHub client for which only `octocat` is an org member. */
 export const reviewApp = appWith({ github: createRecordingGitHub(['octocat']) });
@@ -41,7 +42,7 @@ export function postAsReviewer(path: string, cookie: string, body?: unknown): Pr
     path,
     {
       method: 'POST',
-      headers: { cookie, 'content-type': 'application/json' },
+      headers: { ...withCookie(cookie), 'content-type': 'application/json' },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     },
     reviewApp,

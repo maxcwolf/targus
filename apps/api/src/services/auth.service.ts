@@ -27,13 +27,17 @@ export async function authenticateProjectToken(
   return project;
 }
 
-/** Review routes: the session cookie's id must name a session that has not expired. */
+/**
+ * Review routes: the session cookie's id must name a session that has not expired. Sessions are
+ * stored by the SHA-256 of their id (ADR 0015), so the lookup hashes the cookie's value.
+ */
 export async function authenticateSession(
-  deps: Pick<ServiceDeps, 'clock' | 'sessions'>,
+  deps: Pick<ServiceDeps, 'clock' | 'sessions' | 'tokens'>,
   sessionId: string | null,
 ): Promise<Reviewer> {
   if (sessionId === null) throw new TargusError('unauthorized', 'sign in with GitHub first');
-  const session = await deps.sessions.findActive(sessionId, deps.clock.now());
+  const idHash = await deps.tokens.hash(sessionId);
+  const session = await deps.sessions.findActive(idHash, deps.clock.now());
   if (session === null) throw new TargusError('unauthorized', 'session expired; sign in again');
-  return { sessionId: session.sessionId, user: session.user };
+  return { sessionId, user: session.user };
 }

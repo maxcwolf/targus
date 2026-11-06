@@ -31,6 +31,7 @@ describe('PUT and GET /api/images/:hash', () => {
     });
     expect(read.status).toBe(200);
     expect(read.headers.get('content-type')).toBe('image/png');
+    expect(read.headers.get('x-content-type-options')).toBe('nosniff');
     expect(new Uint8Array(await read.arrayBuffer())).toEqual(png.bytes);
   });
 
