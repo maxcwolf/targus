@@ -49,6 +49,7 @@ export default tseslint.config(
       '.yarn/**',
       'docs/**',
       'spike/**',
+      '.claude/**',
     ],
   },
 

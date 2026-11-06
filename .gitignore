@@ -3,6 +3,7 @@ spike/out/
 spike/out-*/
 *.log
 .DS_Store
+.claude/worktrees/
 
 # targus monorepo
 .yarn/*
