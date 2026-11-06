@@ -1,3 +1,4 @@
+import { TargusError } from '@targus/core';
 import { z } from 'zod';
 
 import type { CiEnv } from './run/ci-context.js';
@@ -23,16 +24,30 @@ export interface CliConfig {
   readonly ci: CiEnv;
 }
 
-/** Validate the environment once at startup; throws a readable error when it is invalid. */
+/**
+ * Validate the environment. Called only when a command that needs it runs, so `targus --help`
+ * works anywhere; throws a `bad_request` TargusError naming the invalid variables.
+ */
 export function loadConfig(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): CliConfig {
   const result = EnvSchema.safeParse(env);
   if (!result.success) {
-    throw new Error(`Invalid targus environment:\n${z.prettifyError(result.error)}`);
+    throw new TargusError(
+      'bad_request',
+      `invalid targus environment:\n${z.prettifyError(result.error)}`,
+    );
   }
   const { TARGUS_API_URL, TARGUS_TOKEN, ...ci } = result.data;
   return { apiUrl: TARGUS_API_URL, token: TARGUS_TOKEN, ci };
+}
+
+/** `TARGUS_DEBUG=1` (or `true`) adds stack traces to error messages. Read apart from `loadConfig`. */
+export function debugEnabled(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): boolean {
+  const value = env.TARGUS_DEBUG?.trim().toLowerCase();
+  return value === '1' || value === 'true';
 }
 
 /**

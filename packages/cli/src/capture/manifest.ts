@@ -1,8 +1,10 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { TargusError } from '@targus/core';
 import { z } from 'zod';
 
+import { summarizeIssues } from '../errors/zod-summary.js';
 import type { CaptureReport, CaptureResult } from './capture-stories.js';
 
 const Ms = z.number().int().nonnegative();
@@ -135,12 +137,24 @@ export async function writeCaptureOutput(
   return manifest;
 }
 
-/** Read and validate `dir/manifest.json`. */
+function parseJson(text: string, file: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new TargusError('bad_request', `${file} is not valid JSON: is it a targus capture?`, {
+      cause: error,
+    });
+  }
+}
+
+/** Read and validate `dir/manifest.json`; a bad one is a `bad_request` naming the file. */
 export async function readCaptureManifest(dir: string): Promise<CaptureManifest> {
-  const text = await readFile(path.join(dir, manifestFileName), 'utf8');
-  const parsed = CaptureManifest.safeParse(JSON.parse(text));
+  const file = path.join(dir, manifestFileName);
+  const text = await readFile(file, 'utf8');
+  const parsed = CaptureManifest.safeParse(parseJson(text, file));
   if (!parsed.success) {
-    throw new Error(`invalid ${manifestFileName} in ${dir}:\n${z.prettifyError(parsed.error)}`);
+    const issues = summarizeIssues(parsed.error.issues);
+    throw new TargusError('bad_request', `invalid ${manifestFileName} in ${dir}:\n${issues}`);
   }
   return parsed.data;
 }

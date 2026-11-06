@@ -95,20 +95,43 @@ CircleCI checks out the PR head itself, so `HEAD` is already right there.
 
 ## Environment
 
-| Variable         | Used by      | Meaning                                       |
-| ---------------- | ------------ | --------------------------------------------- |
-| `TARGUS_TOKEN`   | `targus run` | project token (required)                      |
-| `TARGUS_API_URL` | `targus run` | API base URL, default `http://localhost:8787` |
-| CI variables     | `targus run` | branch and PR detection, see above            |
+| Variable         | Used by       | Meaning                                       |
+| ---------------- | ------------- | --------------------------------------------- |
+| `TARGUS_TOKEN`   | `targus run`  | project token (required)                      |
+| `TARGUS_API_URL` | `targus run`  | API base URL, default `http://localhost:8787` |
+| CI variables     | `targus run`  | branch and PR detection, see above            |
+| `TARGUS_DEBUG`   | every command | `1` or `true` adds stack traces to errors     |
+
+The environment is read only when `targus run` starts, so `targus --help`, `targus --version` and
+`targus <command> --help` work with nothing set; an invalid variable fails `run` with a message
+naming it.
+
+## Errors
+
+A failed command prints a few plain lines on stderr: what failed and, where the cause is known,
+what to do about it. For example:
+
+```text
+error: POST /api/builds: cannot reach http://localhost:8787
+  connection refused: 127.0.0.1:8787
+  check the API URL (TARGUS_API_URL or --api-url) and that the targus API is reachable
+```
+
+Unreachable API, missing files, commands that are not installed (`xcrun`, `git`), a port already in
+use and data that fails validation each get specific wording. Anything else is reported as
+`error: unexpected error: <message>`, which is probably a bug in targus. There is no stack trace by
+default; set `TARGUS_DEBUG=1` to append the stack of the error and of every cause.
 
 ## Exit codes
 
 | Code | Meaning                                                                                                                                                   |
 | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `0`  | the command completed. For `run` that includes builds with changes pending review: the `targus/ios` GitHub check is what gates the merge, not the CI step |
-| `1`  | the run itself failed: capture failure, invalid arguments, API or network error, bad response                                                             |
+| `1`  | the command failed: invalid arguments or environment, capture failure, API or network error, bad response, missing file or command, unexpected error      |
 | `2`  | the command is not implemented                                                                                                                            |
 | `3`  | the API rejected the project token (`TARGUS_TOKEN` missing, wrong, or not allowed)                                                                        |
+
+`--help` and `--version` exit `0`.
 
 ## CI recipe (CircleCI)
 

@@ -105,6 +105,16 @@ describe('writeCaptureOutput', () => {
   it('rejects a manifest that does not match the schema', async () => {
     await writeFile(path.join(dir, 'manifest.json'), JSON.stringify({ version: 2 }));
 
-    await expect(readCaptureManifest(dir)).rejects.toThrow('invalid manifest.json');
+    await expect(readCaptureManifest(dir)).rejects.toThrow(
+      /^invalid manifest\.json in .*:\n {2}- version: /,
+    );
+  });
+
+  it('rejects a manifest that is not JSON, naming the file', async () => {
+    await writeFile(path.join(dir, 'manifest.json'), '<html>');
+
+    await expect(readCaptureManifest(dir)).rejects.toThrow(
+      `${path.join(dir, 'manifest.json')} is not valid JSON`,
+    );
   });
 });

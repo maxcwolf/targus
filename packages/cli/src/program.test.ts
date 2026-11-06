@@ -4,14 +4,9 @@ import { describe, expect, it } from 'vitest';
 
 import type { CaptureCommandOptions } from './commands/capture.js';
 import type { CompareCommandOptions } from './commands/compare.js';
-import { loadConfig, simulatorTestTarget } from './config.js';
-import {
-  createProgram,
-  exitCodeFor,
-  notImplementedExitCode,
-  unauthorizedExitCode,
-  type CommandRunners,
-} from './program.js';
+import { debugEnabled, loadConfig, simulatorTestTarget } from './config.js';
+import { exitCodeFor, notImplementedExitCode, unauthorizedExitCode } from './errors/exit-codes.js';
+import { createProgram, type CommandRunners, type ProgramOptions } from './program.js';
 import { cliVersion } from './version.js';
 
 interface RunResult {
@@ -21,7 +16,11 @@ interface RunResult {
   readonly compared: CompareCommandOptions[];
 }
 
-async function run(args: string[], runners: Partial<CommandRunners> = {}): Promise<RunResult> {
+async function run(
+  args: string[],
+  runners: Partial<CommandRunners> = {},
+  options: Omit<ProgramOptions, 'runners'> = {},
+): Promise<RunResult> {
   let output = '';
   const captured: CaptureCommandOptions[] = [];
   const compared: CompareCommandOptions[] = [];
@@ -30,7 +29,9 @@ async function run(args: string[], runners: Partial<CommandRunners> = {}): Promi
     writeErr: (text: string) => (output += text),
   };
   const program = createProgram({
-    config: loadConfig({}),
+    loadConfig: () => loadConfig({}),
+    debug: false,
+    ...options,
     runners: {
       capture: (options) => Promise.resolve(captured.push(options)),
       compare: (options) => Promise.resolve(compared.push(options)),
@@ -143,11 +144,83 @@ describe('targus program validation', () => {
     expect(error?.exitCode).toBe(notImplementedExitCode);
     expect(error?.code).toBe('targus.not_implemented');
   });
+});
 
-  it('lets other errors propagate', async () => {
-    await expect(
-      run(captureArgs, { capture: () => Promise.reject(new Error('boom')) }),
-    ).rejects.toThrow('boom');
+describe('targus error output', () => {
+  it('reports any other error as a plain message with exit code 1 and no stack trace', async () => {
+    const { output, error } = await run(captureArgs, {
+      capture: () => Promise.reject(new Error('boom')),
+    });
+
+    expect(output).toBe(
+      'error: unexpected error: boom\n' +
+        '  this is probably a bug in targus; run again with TARGUS_DEBUG=1 for the stack trace\n',
+    );
+    expect(error?.exitCode).toBe(1);
+    expect(error?.code).toBe('targus.unexpected');
+  });
+
+  it('adds the stack trace when debug is on', async () => {
+    const { output } = await run(
+      captureArgs,
+      { capture: () => Promise.reject(new Error('boom')) },
+      { debug: true },
+    );
+
+    expect(output).toContain('error: unexpected error: boom');
+    expect(output).toMatch(/Error: boom\n\s+at /);
+  });
+
+  it('names a missing file', async () => {
+    const missing = Object.assign(new Error('ENOENT: no such file'), {
+      code: 'ENOENT',
+      syscall: 'open',
+      path: '/caps/manifest.json',
+    });
+    const { output, error } = await run(captureArgs, { capture: () => Promise.reject(missing) });
+
+    expect(output).toBe('error: file or directory not found: /caps/manifest.json\n');
+    expect(error?.exitCode).toBe(1);
+  });
+});
+
+describe('targus without configuration', () => {
+  const broken: Omit<ProgramOptions, 'runners'> = {
+    loadConfig: () => loadConfig({ TARGUS_API_URL: 'not a url' }),
+  };
+
+  it.each([['--help'], ['run', '--help'], ['capture', '--help']])(
+    'prints %s help without reading the environment',
+    async (...args) => {
+      const { output, error } = await run(args, {}, broken);
+
+      expect(error?.code).toBe('commander.helpDisplayed');
+      expect(error?.exitCode).toBe(0);
+      expect(output).toContain('Usage: targus');
+    },
+  );
+
+  it('prints the version without reading the environment', async () => {
+    const { output, error } = await run(['--version'], {}, broken);
+
+    expect(output.trim()).toBe(cliVersion);
+    expect(error?.exitCode).toBe(0);
+  });
+
+  it('runs commands that do not need the environment', async () => {
+    const { captured, error } = await run(captureArgs, {}, broken);
+
+    expect(error).toBeUndefined();
+    expect(captured).toHaveLength(1);
+  });
+
+  it('reports an invalid environment only when run needs it', async () => {
+    const { output, error } = await run(['run', '--from-capture', 'cap'], {}, broken);
+
+    expect(output).toMatch(/^error: invalid targus environment:\n/);
+    expect(output).toContain('TARGUS_API_URL');
+    expect(output).not.toMatch(/\n\s+at /);
+    expect(error?.exitCode).toBe(1);
   });
 });
 
@@ -179,6 +252,15 @@ describe('loadConfig', () => {
 
   it('rejects an invalid API URL', () => {
     expect(() => loadConfig({ TARGUS_API_URL: 'not a url' })).toThrow(/TARGUS_API_URL/);
+  });
+});
+
+describe('debugEnabled', () => {
+  it('is on for TARGUS_DEBUG=1 or true and off otherwise', () => {
+    expect(debugEnabled({ TARGUS_DEBUG: '1' })).toBe(true);
+    expect(debugEnabled({ TARGUS_DEBUG: 'TRUE' })).toBe(true);
+    expect(debugEnabled({ TARGUS_DEBUG: '0' })).toBe(false);
+    expect(debugEnabled({})).toBe(false);
   });
 });
 

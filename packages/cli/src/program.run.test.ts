@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { RunCommandOptions } from './commands/run.js';
 import { loadConfig, type CliConfig } from './config.js';
-import { createProgram, unauthorizedExitCode, type CommandRunners } from './program.js';
+import { unauthorizedExitCode } from './errors/exit-codes.js';
+import { createProgram, type CommandRunners } from './program.js';
 
 interface Parsed {
   readonly output: string;
@@ -22,7 +23,8 @@ async function parse(
   const runs: Parsed['runs'] = [];
   const fixtures: string[] = [];
   const program = createProgram({
-    config,
+    loadConfig: () => config,
+    debug: false,
     runners: {
       run: (options, runConfig) => Promise.resolve(runs.push({ options, config: runConfig })),
       fixtureCapture: (dir) => Promise.resolve(fixtures.push(dir)),

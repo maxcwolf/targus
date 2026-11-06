@@ -1,12 +1,13 @@
 // Public surface of @targus/cli for programmatic use. The `targus` binary is src/bin.ts.
-export { loadConfig, type CliConfig } from './config.js';
+export { debugEnabled, loadConfig, type CliConfig } from './config.js';
+export { createProgram, type CommandRunners, type ProgramOptions } from './program.js';
 export {
-  createProgram,
   exitCodeFor,
+  failureExitCode,
   notImplementedExitCode,
-  type CommandRunners,
-  type ProgramOptions,
-} from './program.js';
+  unauthorizedExitCode,
+} from './errors/exit-codes.js';
+export { describeError, type ErrorReport } from './errors/describe-error.js';
 export { SimctlDriver, type SimctlDriverOptions } from './adapters/simctl.adapter.js';
 export {
   WsStorybookChannel,

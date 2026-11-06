@@ -1,29 +1,13 @@
-import { GitSha, isTargusError, type TargusErrorCode } from '@targus/core';
+import { GitSha } from '@targus/core';
 import { Command, InvalidArgumentError } from 'commander';
 
 import { runCapture, type CaptureCommandOptions } from './commands/capture.js';
 import { runCompare, type CompareCommandOptions } from './commands/compare.js';
 import { runRun, type RunCommandOptions } from './commands/run.js';
-import type { CliConfig } from './config.js';
+import { debugEnabled, loadConfig, type CliConfig } from './config.js';
+import { describeError } from './errors/describe-error.js';
 import { writeFixtureCapture } from './fixtures/fixture-capture.js';
 import { cliVersion } from './version.js';
-
-/** Exit code for commands that exist in the CLI surface but are not built yet. */
-export const notImplementedExitCode = 2;
-
-/** Exit code when the API rejects the project token (missing, wrong or not allowed). */
-export const unauthorizedExitCode = 3;
-
-/** Process exit code for each TargusError code the CLI reports; any other code exits 1. */
-const exitCodes: Partial<Record<TargusErrorCode, number>> = {
-  not_implemented: notImplementedExitCode,
-  unauthorized: unauthorizedExitCode,
-  forbidden: unauthorizedExitCode,
-};
-
-export function exitCodeFor(code: TargusErrorCode): number {
-  return exitCodes[code] ?? 1;
-}
 
 /** What each command does once its options are parsed. Tests swap these out. */
 export interface CommandRunners {
@@ -41,25 +25,31 @@ const defaultRunners: CommandRunners = {
 };
 
 export interface ProgramOptions {
-  /** Validated environment: `run` reads the API URL, the token and the CI variables from it. */
-  readonly config: CliConfig;
+  /**
+   * Reads and validates the environment. Called only when `run` (the one command that needs it)
+   * runs, so `--help` and `--version` work with no environment at all. Default: `loadConfig()`.
+   */
+  readonly loadConfig?: () => CliConfig;
+  /** Print stack traces with errors. Default: `TARGUS_DEBUG=1`. */
+  readonly debug?: boolean;
   readonly runners?: Partial<CommandRunners>;
 }
 
-/** Commands throw TargusError; this reports it on stderr and exits with the mapped code. */
-function reportTargusErrors<T>(
+/** `run` options as Commander parses them: `--api-url` falls back to the config at run time. */
+type RunFlags = Omit<RunCommandOptions, 'apiUrl'> & { readonly apiUrl?: string };
+
+/** Report anything a command throws as a few plain lines on stderr and the mapped exit code. */
+function reportErrors<T>(
   program: Command,
+  debug: boolean,
   action: (options: T) => Promise<unknown>,
 ): (options: T) => Promise<void> {
   return async (options) => {
     try {
       await action(options);
     } catch (error) {
-      if (!isTargusError(error)) throw error;
-      program.error(error.message, {
-        exitCode: exitCodeFor(error.code),
-        code: `targus.${error.code}`,
-      });
+      const { message, exitCode, code } = describeError(error, { debug });
+      program.error(message, { exitCode, code });
     }
   };
 }
@@ -106,17 +96,30 @@ function addCaptureFlags(command: Command): Command {
     .option('--limit <n>', 'capture at most this many stories', integer);
 }
 
-function addCaptureCommand(program: Command, run: CommandRunners['capture']): void {
+type Report = <T>(action: (options: T) => Promise<unknown>) => (options: T) => Promise<void>;
+
+function addCaptureCommand(program: Command, report: Report, run: CommandRunners['capture']): void {
   const command = program
     .command('capture')
     .description('Capture every story to a directory with a manifest.json (works offline).')
     .requiredOption('--udid <id>', 'simulator UDID (xcrun simctl list devices)')
     .requiredOption('--app <path>', 'path to the built simulator .app')
     .requiredOption('--out <dir>', 'output directory');
-  addCaptureFlags(command).action(reportTargusErrors(program, run));
+  addCaptureFlags(command).action(report(run));
 }
 
-function addRunCommand(program: Command, config: CliConfig, run: CommandRunners['run']): void {
+function runWithConfig(load: () => CliConfig, run: CommandRunners['run']) {
+  return (options: RunFlags): Promise<unknown> => {
+    const config = load();
+    return run({ ...options, apiUrl: options.apiUrl ?? config.apiUrl }, config);
+  };
+}
+
+function addRunCommand(
+  program: Command,
+  report: Report,
+  run: (options: RunFlags) => Promise<unknown>,
+): void {
   const command = program
     .command('run')
     .description('Capture, diff against the baselines and publish a build (what CI calls).')
@@ -124,27 +127,29 @@ function addRunCommand(program: Command, config: CliConfig, run: CommandRunners[
     .option('--app <path>', 'path to the built simulator .app (not needed with --from-capture)')
     .option('--out <dir>', 'where to write the capture (default: a temp directory)')
     .option('--from-capture <dir>', 'skip the simulator and use a `targus capture` directory')
-    .option('--api-url <url>', 'targus API (env TARGUS_API_URL)', config.apiUrl)
+    .option('--api-url <url>', 'targus API (default: env TARGUS_API_URL, else localhost:8787)')
     .option('--device-name <name>', 'device the build is for (default: the simulator name)')
     .option('--base-branch <branch>', 'default branch; a build on it without a PR is main', 'main')
     .option('--branch <name>', 'branch (default: from CI env, then git)')
     .option('--pr <n>', 'pull request number (default: from CI env)', positiveInteger)
     .option('--sha <sha>', 'commit of the build (default: git rev-parse HEAD)', gitSha)
     .option('--threshold <ratio>', 'changed-pixel ratio above which a story changed', ratio, 0.001);
-  addCaptureFlags(command).action(
-    reportTargusErrors(program, (options: RunCommandOptions) => run(options, config)),
-  );
+  addCaptureFlags(command).action(report(run));
 }
 
-function addFixtureCommand(program: Command, run: CommandRunners['fixtureCapture']): void {
+function addFixtureCommand(
+  program: Command,
+  report: Report,
+  run: CommandRunners['fixtureCapture'],
+): void {
   program
     .command('fixture-capture', { hidden: true })
     .description('Write a tiny three-story capture directory for tests and the e2e suite.')
     .argument('<dir>', 'output directory')
-    .action(reportTargusErrors(program, run));
+    .action(report(run));
 }
 
-function addCompareCommand(program: Command, run: CommandRunners['compare']): void {
+function addCompareCommand(program: Command, report: Report, run: CommandRunners['compare']): void {
   program
     .command('compare')
     .description('Diff a capture against a baseline capture and write an HTML report.')
@@ -152,18 +157,24 @@ function addCompareCommand(program: Command, run: CommandRunners['compare']): vo
     .requiredOption('--baseline <dir>', 'capture directory to compare against')
     .requiredOption('--out <dir>', 'report directory')
     .option('--threshold <ratio>', 'changed-pixel ratio above which a story changed', ratio, 0.001)
-    .action(reportTargusErrors(program, run));
+    .action(report(run));
 }
 
 /** Build the `targus` command tree. `bin.ts` parses process.argv with it. */
-export function createProgram({ config, runners = {} }: ProgramOptions): Command {
+export function createProgram(options: ProgramOptions = {}): Command {
+  const { runners = {}, debug = debugEnabled() } = options;
   const program = new Command('targus')
     .description('Visual review for React Native on-device Storybook.')
     .version(cliVersion, '-v, --version');
+  const report: Report = (action) => reportErrors(program, debug, action);
+  const run = runWithConfig(
+    options.loadConfig ?? (() => loadConfig()),
+    runners.run ?? defaultRunners.run,
+  );
 
-  addCaptureCommand(program, runners.capture ?? defaultRunners.capture);
-  addCompareCommand(program, runners.compare ?? defaultRunners.compare);
-  addRunCommand(program, config, runners.run ?? defaultRunners.run);
-  addFixtureCommand(program, runners.fixtureCapture ?? defaultRunners.fixtureCapture);
+  addCaptureCommand(program, report, runners.capture ?? defaultRunners.capture);
+  addCompareCommand(program, report, runners.compare ?? defaultRunners.compare);
+  addRunCommand(program, report, run);
+  addFixtureCommand(program, report, runners.fixtureCapture ?? defaultRunners.fixtureCapture);
   return program;
 }
