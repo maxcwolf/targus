@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ConfirmButton } from './ConfirmButton.js';
+import { CrashPanel } from './CrashPanel.js';
 import { formatPercent, plural } from './format.js';
 
 describe('ConfirmButton', () => {
@@ -54,5 +55,16 @@ describe('format', () => {
     expect(formatPercent(0.0123)).toBe('1.23%');
     expect(plural(1, 'change')).toBe('1 change');
     expect(plural(3, 'change')).toBe('3 changes');
+  });
+});
+
+describe('CrashPanel', () => {
+  it('shows a plain message and reloads on request', () => {
+    const onReload = vi.fn();
+    render(<CrashPanel onReload={onReload} />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong');
+    fireEvent.click(screen.getByRole('button', { name: 'Reload page' }));
+    expect(onReload).toHaveBeenCalledOnce();
   });
 });

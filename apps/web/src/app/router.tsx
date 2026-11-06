@@ -8,7 +8,7 @@ import type { ReactElement } from 'react';
 
 import { BuildPage } from '../features/build/BuildPage.js';
 import { validateFilterSearch } from '../features/build/filters.js';
-import { NotFound } from '../features/errors/ErrorView.js';
+import { NotFound, RouteCrash } from '../features/errors/ErrorView.js';
 import { LibraryPage } from '../features/library/LibraryPage.js';
 import { validateLibrarySearch } from '../features/library/stories.js';
 import { BuildsPage } from '../features/projects/BuildsPage.js';
@@ -78,9 +78,13 @@ const routeTree = rootRoute.addChildren([
   snapshotRoute,
 ]);
 
-/** The app's router. Tests pass a memory history; the browser uses the default. */
+/**
+ * The app's router. Tests pass a memory history; the browser uses the default. A route that
+ * throws while rendering shows `RouteCrash` in its place; the layout above it stays.
+ */
 export function createAppRouter(history?: RouterHistory) {
-  return history ? createRouter({ routeTree, history }) : createRouter({ routeTree });
+  const options = { routeTree, defaultErrorComponent: RouteCrash };
+  return history ? createRouter({ ...options, history }) : createRouter(options);
 }
 
 declare module '@tanstack/react-router' {

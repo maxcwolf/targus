@@ -1,11 +1,11 @@
-import { useRouterState } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
 import { signInUrl } from '../../api-client/index.js';
+import { useReturnTo } from './useMe.js';
 
 /** Shown instead of any page while there is no session. Returns to the current page after. */
 export function SignIn(): ReactElement {
-  const returnTo = useRouterState({ select: (state) => state.location.href });
+  const returnTo = useReturnTo();
   return (
     <section className="card sign-in">
       <p className="wordmark wordmark-large">targus</p>

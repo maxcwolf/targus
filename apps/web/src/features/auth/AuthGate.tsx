@@ -1,12 +1,24 @@
 import type { ReactElement, ReactNode } from 'react';
 
 import { ErrorView } from '../errors/ErrorView.js';
-import { useMe } from './useMe.js';
+import { SessionExpired } from './SessionExpired.js';
+import { isSessionExpired, SessionExpiredContext, useMe } from './useMe.js';
 
-/** Renders the page only for a signed-in reviewer; otherwise the sign-in panel. */
+/**
+ * Renders the page only for a reviewer who has signed in; otherwise the sign-in panel. When the
+ * session expires mid-visit the page stays and a "signed out" notice sits above it.
+ */
 export function AuthGate({ children }: { readonly children: ReactNode }): ReactElement | null {
   const me = useMe();
   if (me.isPending) return null;
-  if (me.isError) return <ErrorView error={me.error} />;
-  return <>{children}</>;
+  if (me.isError && me.data === undefined) return <ErrorView error={me.error} />;
+  const expired = isSessionExpired(me);
+  // The notice's slot is always there (null or not), so the page below never remounts and
+  // keeps the state of the action that failed.
+  return (
+    <SessionExpiredContext value={expired}>
+      {expired ? <SessionExpired /> : null}
+      {children}
+    </SessionExpiredContext>
+  );
 }

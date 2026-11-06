@@ -4,7 +4,7 @@ import type { ReactElement } from 'react';
 
 import { AuthGate } from '../features/auth/AuthGate.js';
 import { UserMenu } from '../features/auth/UserMenu.js';
-import { useMe } from '../features/auth/useMe.js';
+import { isSessionExpired, useMe } from '../features/auth/useMe.js';
 import { AppRail } from '../features/shell/AppRail.js';
 import { useProjectContext } from '../features/shell/useProjectContext.js';
 
@@ -41,6 +41,7 @@ const wideRoutes = ['/builds/$buildId/snapshots/$snapshotId', '/projects/$projec
 /** Top bar, icon rail and the auth gate around every page. */
 export function RootLayout(): ReactElement {
   const me = useMe();
+  const expired = isSessionExpired(me);
   const project = useProjectContext(me.isSuccess);
   // The snapshot page and the library use the whole width for their sidebar and the captures.
   const wide = useRouterState({
@@ -49,7 +50,10 @@ export function RootLayout(): ReactElement {
   });
   return (
     <>
-      <TopBar project={project} login={me.data ? <UserMenu user={me.data.user} /> : null} />
+      <TopBar
+        project={project}
+        login={me.data && !expired ? <UserMenu user={me.data.user} /> : null}
+      />
       <div className="shell">
         {me.data ? <AppRail project={project} /> : null}
         <main className={wide ? 'page page-wide' : 'page'}>

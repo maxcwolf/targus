@@ -20,6 +20,28 @@ export class ApiRequestError extends Error {
   }
 }
 
+/**
+ * A 401: the session cookie is missing or has expired. Every API call rejects with this one
+ * type, so the app can treat "signed out" in one place (app/query-client.ts) instead of per
+ * feature. The message is what a failed action shows next to its button.
+ */
+export class SignedOutError extends ApiRequestError {
+  override readonly name: string = 'SignedOutError';
+
+  constructor(path: string, body: unknown, method: string) {
+    super(401, path, body);
+    this.message =
+      method === 'GET'
+        ? 'Your session has expired. Sign in again to continue.'
+        : 'Not saved: your session has expired. Sign in again, then retry.';
+  }
+}
+
+/** True for the signed-out outcome of any API call. */
+export function isSignedOut(error: unknown): error is SignedOutError {
+  return error instanceof SignedOutError;
+}
+
 async function readBody(response: Response): Promise<unknown> {
   const text = await response.text();
   if (text === '') return null;
@@ -40,6 +62,7 @@ async function request(path: string, init: RequestInit): Promise<unknown> {
     credentials: 'same-origin',
   });
   const body = await readBody(response);
+  if (response.status === 401) throw new SignedOutError(path, body, init.method ?? 'GET');
   if (!response.ok) throw new ApiRequestError(response.status, path, body);
   return body;
 }

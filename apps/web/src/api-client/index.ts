@@ -2,7 +2,7 @@
 // (.dependency-cruiser.cjs `web-features-use-api-client-index`).
 export { getMe, logout, signInUrl } from './auth.js';
 export { approveAll, getBuild, listSnapshots } from './builds.js';
-export { ApiRequestError } from './http.js';
+export { ApiRequestError, isSignedOut } from './http.js';
 export { imageUrl } from './images.js';
 export { getLibrary, listBuilds, listProjects } from './projects.js';
 export { queryKeys } from './query-keys.js';

@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { getJson, postJson } from './http.js';
 
-/** `GET /api/me`: the signed-in reviewer. Rejects with a 401 `ApiRequestError` when signed out. */
+/** `GET /api/me`: the signed-in reviewer. Rejects with a `SignedOutError` when signed out. */
 export function getMe(): Promise<MeResponse> {
   return getJson('/api/me', MeResponse);
 }
@@ -14,9 +14,21 @@ export async function logout(): Promise<void> {
 }
 
 /**
+ * `returnTo` as a same-origin path (path, query and hash), or `/`. A full URL, a
+ * protocol-relative `//host` or a backslash trick never reaches the login flow; the API checks
+ * again (`safeReturnTo` in apps/api), this keeps the link itself honest.
+ */
+function samePath(returnTo: string): string {
+  if (!returnTo.startsWith('/') || returnTo.startsWith('//') || returnTo.startsWith('/\\')) {
+    return '/';
+  }
+  return returnTo;
+}
+
+/**
  * Where the "Sign in with GitHub" link points. A plain navigation, not a fetch: the API
- * redirects to GitHub and back to `returnTo`.
+ * redirects to GitHub and back to `returnTo`, the page the reviewer was on.
  */
 export function signInUrl(returnTo: string): string {
-  return `/api/auth/github?${new URLSearchParams({ returnTo }).toString()}`;
+  return `/api/auth/github?${new URLSearchParams({ returnTo: samePath(returnTo) }).toString()}`;
 }
