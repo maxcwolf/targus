@@ -2,7 +2,7 @@ import { isTargusError } from '@targus/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
 
-import { WsStorybookChannel } from './ws-channel.adapter.js';
+import { WsStorybookChannel } from './ws-channel.adapter.ts';
 
 interface AppMessage {
   readonly type: string;

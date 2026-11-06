@@ -1,8 +1,8 @@
 import { isTargusError, TargusError } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import type { GitMetadata } from '../adapters/git.adapter.js';
-import { readGitInfo, shallowCloneHelp } from './git-info.js';
+import type { GitMetadata } from '../adapters/git.adapter.ts';
+import { readGitInfo, shallowCloneHelp } from './git-info.ts';
 
 const head = 'a'.repeat(40);
 const mergeBase = 'b'.repeat(40);

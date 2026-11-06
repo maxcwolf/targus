@@ -1,19 +1,19 @@
-export type { BuildRepository, NewBuild } from './build-repository.js';
-export type { Clock } from './clock.js';
-export { createFakeClock, fakeClockEpoch, type FakeClock } from './clock.fake.js';
-export type { DeviceDriver, StatusBarOverrides } from './device-driver.js';
+export type { BuildRepository, NewBuild } from './build-repository.ts';
+export type { Clock } from './clock.ts';
+export { createFakeClock, fakeClockEpoch, type FakeClock } from './clock.fake.ts';
+export type { DeviceDriver, StatusBarOverrides } from './device-driver.ts';
 export {
   createFakeDeviceDriver,
   type DeviceDriverCall,
   type FakeDeviceDriver,
-} from './device-driver.fake.js';
-export type { CheckRunState, CheckRunTarget, GitHubClient } from './github-client.js';
-export type { IdGenerator } from './id-generator.js';
-export { createFakeIdGenerator } from './id-generator.fake.js';
-export type { ImageStore } from './image-store.js';
-export type { StoryIndexEntry, StorybookChannel, StorySelection } from './storybook-channel.js';
+} from './device-driver.fake.ts';
+export type { CheckRunState, CheckRunTarget, GitHubClient } from './github-client.ts';
+export type { IdGenerator } from './id-generator.ts';
+export { createFakeIdGenerator } from './id-generator.fake.ts';
+export type { ImageStore } from './image-store.ts';
+export type { StoryIndexEntry, StorybookChannel, StorySelection } from './storybook-channel.ts';
 export {
   createFakeStorybookChannel,
   type FakeStorybookChannel,
   type FakeStoryOutcome,
-} from './storybook-channel.fake.js';
+} from './storybook-channel.fake.ts';

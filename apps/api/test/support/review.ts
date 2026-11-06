@@ -2,13 +2,13 @@ import { CreateBuildResponse, ListSnapshotsResponse, type StoryResult } from '@t
 import { env } from 'cloudflare:workers';
 import { expect } from 'vitest';
 
-import { createImageRepository } from '../../src/repositories/image.repository.js';
+import { createImageRepository } from '../../src/repositories/image.repository.ts';
 
-import { createRecordingGitHub } from './github-recorder.js';
-import { appWith, bearer, call, createTestProject, postJson } from './api.js';
-import { createBuildRequest, sha } from './fixtures.js';
-import { markUploaded } from './in-memory-images.js';
-import { withCookie } from './session.js';
+import { createRecordingGitHub } from './github-recorder.ts';
+import { appWith, bearer, call, createTestProject, postJson } from './api.ts';
+import { createBuildRequest, sha } from './fixtures.ts';
+import { markUploaded } from './in-memory-images.ts';
+import { withCookie } from './session.ts';
 
 /** The app with a GitHub client for which only `octocat` is an org member. */
 export const reviewApp = appWith({ github: createRecordingGitHub(['octocat']) });

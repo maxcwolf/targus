@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { debugEnabled } from './config.js';
-import { describeError } from './errors/describe-error.js';
-import { createProgram } from './program.js';
+import { debugEnabled } from './config.ts';
+import { describeError } from './errors/describe-error.ts';
+import { createProgram } from './program.ts';
 
 try {
   await createProgram().parseAsync(process.argv);

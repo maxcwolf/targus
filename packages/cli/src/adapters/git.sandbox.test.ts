@@ -4,10 +4,10 @@ import path from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { inheritedEnv } from '../config.js';
-import { execFileBuffer } from './exec.adapter.js';
-import { GitCli } from './git.adapter.js';
-import { isolatedGitEnv, isolatedGitExec } from './git.sandbox.js';
+import { inheritedEnv } from '../config.ts';
+import { execFileBuffer } from './exec.adapter.ts';
+import { GitCli } from './git.adapter.ts';
+import { isolatedGitEnv, isolatedGitExec } from './git.sandbox.ts';
 
 // A throwaway repository stands in for the one a git hook runs in: the hostile environment below
 // points GIT_DIR at it, the way git does for hooks, and nothing here may change it.

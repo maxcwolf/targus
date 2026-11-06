@@ -2,8 +2,8 @@ import type { Build, Snapshot, SnapshotTally } from '@targus/core';
 import { getTableColumns, sql, type Query, type SQL } from 'drizzle-orm';
 import { SQLiteAsyncDialect } from 'drizzle-orm/sqlite-core';
 
-import { builds, snapshots } from '../db/schema.js';
-import { chunkForD1 } from './d1-limits.js';
+import { builds, snapshots } from '../db/schema.ts';
+import { chunkForD1 } from './d1-limits.ts';
 
 // Row mappings of `builds` and `snapshots`, and the guarded statements their writes share.
 

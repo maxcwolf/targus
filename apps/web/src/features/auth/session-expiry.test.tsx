@@ -2,8 +2,8 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { http } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiError, apiState, server } from '../../test/msw.js';
-import { renderApp } from '../../test/render.js';
+import { apiError, apiState, server } from '../../test/msw.ts';
+import { renderApp } from '../../test/render.tsx';
 
 // The real API answers 401 on every review route once the session cookie is gone. Falling
 // through (returning nothing) hands the request to the normal handlers while signed in.

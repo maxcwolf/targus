@@ -9,12 +9,12 @@ import {
   createTestProject,
   putImage,
   uniqueOrg,
-} from '../../test/support/api.js';
-import { storyResult } from '../../test/support/fixtures.js';
-import { createRecordingGitHub } from '../../test/support/github-recorder.js';
-import { pngFixture } from '../../test/support/png.js';
-import { projectWithBuild } from '../../test/support/review.js';
-import { signIn, withCookie } from '../../test/support/session.js';
+} from '../../test/support/api.ts';
+import { storyResult } from '../../test/support/fixtures.ts';
+import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
+import { pngFixture } from '../../test/support/png.ts';
+import { projectWithBuild } from '../../test/support/review.ts';
+import { signIn, withCookie } from '../../test/support/session.ts';
 
 // The tenancy boundary (ADR 0007, 0011, 0012) through the real app on the local D1: octocat
 // belongs to acme only, hubot to globex only, and each org has its own App installation. Org

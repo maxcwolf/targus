@@ -1,9 +1,9 @@
 import type { Snapshot } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { imageUrl } from '../../api-client/index.js';
-import { SnapshotImage } from '../../components/SnapshotImage.js';
-import type { ImageKind } from './useViewer.js';
+import { imageUrl } from '../../api-client/index.ts';
+import { SnapshotImage } from '../../components/SnapshotImage.tsx';
+import type { ImageKind } from './useViewer.ts';
 
 const titles: Record<ImageKind, string> = { baseline: 'Baseline', current: 'New' };
 

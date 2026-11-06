@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { GetLibraryResponse } from '../contracts/library.js';
-import type { Snapshot } from '../contracts/snapshot.js';
-import { libraryStories } from './library-stories.js';
+import { GetLibraryResponse } from '../contracts/library.ts';
+import type { Snapshot } from '../contracts/snapshot.ts';
+import { libraryStories } from './library-stories.ts';
 
 const current = 'b'.repeat(64);
 const baseline = 'a'.repeat(64);

@@ -1,12 +1,12 @@
 import { CreateProjectResponse, ListProjectsResponse } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { newProject } from '../../test/support/fixtures.js';
-import { createRecordingGitHub } from '../../test/support/github-recorder.js';
-import { signInReviewer } from '../../test/support/in-memory-auth.js';
-import { createTestDeps } from '../../test/support/in-memory.js';
-import { authenticateProjectToken } from './auth.service.js';
-import { createProject, listProjects } from './project.service.js';
+import { newProject } from '../../test/support/fixtures.ts';
+import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
+import { signInReviewer } from '../../test/support/in-memory-auth.ts';
+import { createTestDeps } from '../../test/support/in-memory.ts';
+import { authenticateProjectToken } from './auth.service.ts';
+import { createProject, listProjects } from './project.service.ts';
 
 const request = {
   githubOrg: 'example-org',

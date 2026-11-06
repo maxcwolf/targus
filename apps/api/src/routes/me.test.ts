@@ -1,8 +1,8 @@
 import { MeResponse } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { call } from '../../test/support/api.js';
-import { signIn, withCookie } from '../../test/support/session.js';
+import { call } from '../../test/support/api.ts';
+import { signIn, withCookie } from '../../test/support/session.ts';
 
 describe('GET /api/me', () => {
   it('answers the signed-in user, matching the contract', async () => {

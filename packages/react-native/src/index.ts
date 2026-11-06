@@ -3,12 +3,12 @@ export {
   resolveTargusParameters,
   type ResolvedTargusParameters,
   type TargusParameters,
-} from './parameters.js';
+} from './parameters.ts';
 export {
   TargusErrorBoundary,
   type StoryErrorReport,
   type TargusErrorBoundaryProps,
-} from './error-boundary.js';
+} from './error-boundary.ts';
 export {
   createChannelEmit,
   createWithTargus,
@@ -21,4 +21,4 @@ export {
   type TargusEmit,
   type TargusStoryContext,
   type WithTargusOptions,
-} from './with-targus.js';
+} from './with-targus.ts';

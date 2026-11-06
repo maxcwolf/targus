@@ -1,7 +1,7 @@
 import { TargusError } from '@targus/core';
 import { z } from 'zod';
 
-import type { CiEnv } from './run/ci-context.js';
+import type { CiEnv } from './run/ci-context.ts';
 
 // The only file in this package allowed to read process.env (ESLint no-restricted-properties).
 const EnvSchema = z.object({

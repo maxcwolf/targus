@@ -12,8 +12,8 @@ import {
   type CaptureOptions,
   type CaptureProgress,
   type CompareImages,
-} from './capture-stories.js';
-import { encodeSolidPng } from './solid-png.fake.js';
+} from './capture-stories.ts';
+import { encodeSolidPng } from './solid-png.fake.ts';
 
 const index: StoryIndexEntry[] = [
   { id: 'button--primary', title: 'UI/Button', name: 'Primary' },

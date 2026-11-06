@@ -4,8 +4,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { loadCapture } from '../run/load-capture.js';
-import { fixtureCaptureReport, writeFixtureCapture } from './fixture-capture.js';
+import { loadCapture } from '../run/load-capture.ts';
+import { fixtureCaptureReport, writeFixtureCapture } from './fixture-capture.ts';
 
 let dir: string;
 

@@ -1,19 +1,19 @@
 import { tallySnapshots } from '@targus/core';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ApiBuildRepository } from '../repositories/build.repository.js';
+import type { ApiBuildRepository } from '../repositories/build.repository.ts';
 import {
   createBuildRequest,
   imageHash,
   newProject,
   sha,
   snapshotRecord,
-} from '../../test/support/fixtures.js';
-import { createRecordingGitHub } from '../../test/support/github-recorder.js';
-import { signInReviewer } from '../../test/support/in-memory-auth.js';
-import { createInMemoryBuilds, createTestDeps } from '../../test/support/in-memory.js';
-import { createBuild } from './build.service.js';
-import { approveAll, reviewSnapshot } from './review.service.js';
+} from '../../test/support/fixtures.ts';
+import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
+import { signInReviewer } from '../../test/support/in-memory-auth.ts';
+import { createInMemoryBuilds, createTestDeps } from '../../test/support/in-memory.ts';
+import { createBuild } from './build.service.ts';
+import { approveAll, reviewSnapshot } from './review.service.ts';
 
 // Two reviewers acting on one build at the same moment. Each review folds the build's tally
 // from the snapshots it read; that tally must never be written once another review has

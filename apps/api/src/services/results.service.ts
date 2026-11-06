@@ -11,11 +11,11 @@ import {
   type SubmitResultsResponse,
 } from '@targus/core';
 
-import type { SnapshotRecord } from '../repositories/build.repository.js';
-import type { Project } from '../repositories/project.repository.js';
-import { baselineEntries, requireBuild } from './build.service.js';
-import { reportCheckRun } from './check-run.js';
-import type { ServiceDeps } from './deps.js';
+import type { SnapshotRecord } from '../repositories/build.repository.ts';
+import type { Project } from '../repositories/project.repository.ts';
+import { baselineEntries, requireBuild } from './build.service.ts';
+import { reportCheckRun } from './check-run.ts';
+import type { ServiceDeps } from './deps.ts';
 
 type ResultsDeps = Pick<
   ServiceDeps,

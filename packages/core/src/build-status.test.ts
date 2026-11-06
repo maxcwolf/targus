@@ -6,7 +6,7 @@ import {
   emptyTally,
   tallySnapshots,
   type SnapshotOutcome,
-} from './build-status.js';
+} from './build-status.ts';
 
 const unchanged: SnapshotOutcome = { state: 'unchanged', review: 'pending' };
 const changedPending: SnapshotOutcome = { state: 'changed', review: 'pending' };

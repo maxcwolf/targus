@@ -1,7 +1,7 @@
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 
-import { isBlankPng } from './is-blank.js';
+import { isBlankPng } from './is-blank.ts';
 
 type Rgba = readonly [number, number, number, number];
 

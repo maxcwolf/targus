@@ -2,7 +2,7 @@ import type { ReviewerUser } from '@targus/core';
 import { and, eq, gt, lte } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
-import { sessions, users } from '../db/schema.js';
+import { sessions, users } from '../db/schema.ts';
 
 /** A session to store, keyed by the SHA-256 of its id; the raw id is never stored. */
 export interface NewSession {

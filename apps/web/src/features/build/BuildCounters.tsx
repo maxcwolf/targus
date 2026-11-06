@@ -7,7 +7,7 @@ import {
   filterTabs,
   moreFilters,
   type SnapshotFilter,
-} from './filters.js';
+} from './filters.ts';
 
 export interface BuildCountersProps {
   readonly snapshots: readonly Snapshot[];

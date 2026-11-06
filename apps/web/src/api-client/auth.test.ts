@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { signInUrl } from './auth.js';
+import { signInUrl } from './auth.ts';
 
 const returnToOf = (url: string): string | null =>
   new URLSearchParams(url.split('?')[1]).get('returnTo');

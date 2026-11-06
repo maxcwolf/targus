@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ApiRequestError, isSignedOut, SignedOutError } from './http.js';
+import { ApiRequestError, isSignedOut, SignedOutError } from './http.ts';
 
 describe('SignedOutError', () => {
   it('is the one 401 outcome, still an ApiRequestError, worded for reads and for writes', () => {

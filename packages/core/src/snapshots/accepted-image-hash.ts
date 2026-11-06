@@ -1,4 +1,4 @@
-import type { ImageHash, Snapshot } from '../contracts/snapshot.js';
+import type { ImageHash, Snapshot } from '../contracts/snapshot.ts';
 
 /**
  * The image the next build compares this story against (plan.md section 6, rule 5): the

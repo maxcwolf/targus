@@ -1,7 +1,7 @@
 import { TargusError } from '@targus/core';
 
-import type { GitMetadata } from '../adapters/git.adapter.js';
-import { maxAncestors, type RunGitInfo } from './run-build.js';
+import type { GitMetadata } from '../adapters/git.adapter.ts';
+import { maxAncestors, type RunGitInfo } from './run-build.ts';
 
 /** Shown when the checkout is shallow; exported so tests and docs can match it. */
 export const shallowCloneHelp = [

@@ -1,8 +1,8 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { newProject } from '../../test/support/fixtures.js';
-import { createProjectRepository } from './project.repository.js';
+import { newProject } from '../../test/support/fixtures.ts';
+import { createProjectRepository } from './project.repository.ts';
 
 describe('createProjectRepository (local D1)', () => {
   const repository = createProjectRepository(env.DB);

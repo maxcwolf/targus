@@ -1,7 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { BuildWithSummary } from '@targus/core';
 
-import { queryKeys } from '../../api-client/index.js';
+import { queryKeys } from '../../api-client/index.ts';
 
 /**
  * After a review decision: store the build the API answered with (synchronously, so the page

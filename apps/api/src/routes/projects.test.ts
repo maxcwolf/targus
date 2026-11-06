@@ -6,10 +6,10 @@ import {
 } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { call, postJson } from '../../test/support/api.js';
-import { createBuildRequest, sha, storyResult } from '../../test/support/fixtures.js';
-import { getAsReviewer, postAsReviewer, projectWithBuild } from '../../test/support/review.js';
-import { signIn } from '../../test/support/session.js';
+import { call, postJson } from '../../test/support/api.ts';
+import { createBuildRequest, sha, storyResult } from '../../test/support/fixtures.ts';
+import { getAsReviewer, postAsReviewer, projectWithBuild } from '../../test/support/review.ts';
+import { signIn } from '../../test/support/session.ts';
 
 describe('GET /api/projects', () => {
   it('lists the projects of the reviewer orgs only', async () => {

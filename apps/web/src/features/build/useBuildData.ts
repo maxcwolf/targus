@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import type { BuildWithSummary, ProjectSummary, Snapshot } from '@targus/core';
 
-import { getBuild, listSnapshots, queryKeys } from '../../api-client/index.js';
-import { useProjects } from '../projects/useProjects.js';
+import { getBuild, listSnapshots, queryKeys } from '../../api-client/index.ts';
+import { useProjects } from '../projects/useProjects.ts';
 
 export type BuildData =
   | { readonly status: 'pending' }

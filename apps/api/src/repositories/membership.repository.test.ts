@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { createMembershipRepository } from './membership.repository.js';
-import { createOrgRepository } from './org.repository.js';
-import { createUserRepository } from './user.repository.js';
+import { createMembershipRepository } from './membership.repository.ts';
+import { createOrgRepository } from './org.repository.ts';
+import { createUserRepository } from './user.repository.ts';
 
 const at = new Date('2026-01-01T00:00:00.000Z');
 

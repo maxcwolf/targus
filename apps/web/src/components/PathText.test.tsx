@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { PathText } from './PathText.js';
+import { PathText } from './PathText.tsx';
 
 describe('PathText', () => {
   it('offers a line break after each path separator only', () => {

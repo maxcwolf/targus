@@ -1,6 +1,6 @@
 import { MutationCache, QueryCache, QueryClient, type QueryKey } from '@tanstack/react-query';
 
-import { ApiRequestError, isSignedOut, queryKeys } from '../api-client/index.js';
+import { ApiRequestError, isSignedOut, queryKeys } from '../api-client/index.ts';
 
 /** 4xx answers are final (signed out, no access, not found); only retry other failures. */
 function shouldRetry(failureCount: number, error: Error): boolean {

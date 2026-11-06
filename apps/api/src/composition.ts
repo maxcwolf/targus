@@ -1,20 +1,20 @@
-import { cryptoIdGenerator } from './adapters/crypto-id.adapter.js';
-import { NoopGitHubClient, OctokitGitHubClient } from './adapters/github-client.adapter.js';
-import { GitHubAppOAuth } from './adapters/github-oauth.adapter.js';
-import { systemClock } from './adapters/system-clock.adapter.js';
-import { webCryptoTokens } from './adapters/token.adapter.js';
-import type { Bindings } from './bindings.js';
-import { loadConfig } from './config.js';
-import { createApprovalRepository } from './repositories/approval.repository.js';
-import { D1BuildRepository } from './repositories/build.repository.js';
-import { createImageRepository } from './repositories/image.repository.js';
-import { createMembershipRepository } from './repositories/membership.repository.js';
-import { createProjectRepository } from './repositories/project.repository.js';
-import { createSessionRepository } from './repositories/session.repository.js';
-import { createUserRepository } from './repositories/user.repository.js';
-import type { ServiceDeps } from './services/deps.js';
-import { bindServices, type Services } from './services/index.js';
-import { R2ImageStore } from './storage/r2-image-store.js';
+import { cryptoIdGenerator } from './adapters/crypto-id.adapter.ts';
+import { NoopGitHubClient, OctokitGitHubClient } from './adapters/github-client.adapter.ts';
+import { GitHubAppOAuth } from './adapters/github-oauth.adapter.ts';
+import { systemClock } from './adapters/system-clock.adapter.ts';
+import { webCryptoTokens } from './adapters/token.adapter.ts';
+import type { Bindings } from './bindings.ts';
+import { loadConfig } from './config.ts';
+import { createApprovalRepository } from './repositories/approval.repository.ts';
+import { D1BuildRepository } from './repositories/build.repository.ts';
+import { createImageRepository } from './repositories/image.repository.ts';
+import { createMembershipRepository } from './repositories/membership.repository.ts';
+import { createProjectRepository } from './repositories/project.repository.ts';
+import { createSessionRepository } from './repositories/session.repository.ts';
+import { createUserRepository } from './repositories/user.repository.ts';
+import type { ServiceDeps } from './services/deps.ts';
+import { bindServices, type Services } from './services/index.ts';
+import { R2ImageStore } from './storage/r2-image-store.ts';
 
 /** Composition root: the real adapters for one request's bindings. */
 export function createDeps(bindings: Bindings): ServiceDeps {

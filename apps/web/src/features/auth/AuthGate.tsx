@@ -1,8 +1,8 @@
 import type { ReactElement, ReactNode } from 'react';
 
-import { ErrorView } from '../errors/ErrorView.js';
-import { SessionExpired } from './SessionExpired.js';
-import { isSessionExpired, SessionExpiredContext, useMe } from './useMe.js';
+import { ErrorView } from '../errors/ErrorView.tsx';
+import { SessionExpired } from './SessionExpired.tsx';
+import { isSessionExpired, SessionExpiredContext, useMe } from './useMe.ts';
 
 /**
  * Renders the page only for a reviewer who has signed in; otherwise the sign-in panel. When the

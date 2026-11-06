@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ImageHash, SnapshotState } from './snapshot.js';
+import { ImageHash, SnapshotState } from './snapshot.ts';
 
 /**
  * One story's outcome as computed by the CLI on the CI runner (ADR 0003). A story whose render

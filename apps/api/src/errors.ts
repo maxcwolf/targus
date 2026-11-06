@@ -3,7 +3,7 @@ import type { Context, ErrorHandler, NotFoundHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
-import type { AppEnv } from './app-env.js';
+import type { AppEnv } from './app-env.ts';
 
 /** The one place a `TargusError` code becomes an HTTP status. */
 const statusByCode = {

@@ -9,7 +9,7 @@ import {
 import { WebSocket, WebSocketServer, type RawData } from 'ws';
 import { z } from 'zod';
 
-import { formatDuration } from '../duration.js';
+import { formatDuration } from '../duration.ts';
 
 /** One message on the Storybook channel: plain JSON `{ type, args }` (ADR 0008). */
 const ChannelEvent = z.object({ type: z.string(), args: z.array(z.unknown()).default([]) });

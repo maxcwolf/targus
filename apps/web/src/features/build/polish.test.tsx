@@ -2,8 +2,8 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import { delay, http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { apiState, server } from '../../test/msw.js';
-import { renderApp } from '../../test/render.js';
+import { apiState, server } from '../../test/msw.ts';
+import { renderApp } from '../../test/render.tsx';
 
 describe('build page progress', () => {
   it('draws accepted, denied and unreviewed segments', async () => {

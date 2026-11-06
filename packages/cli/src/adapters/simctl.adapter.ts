@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import { z } from 'zod';
 
-import { ExecError, execFileBuffer, type Exec } from './exec.adapter.js';
+import { ExecError, execFileBuffer, type Exec } from './exec.adapter.ts';
 
 const DeviceList = z.object({
   devices: z.record(z.string(), z.array(z.object({ udid: z.string(), name: z.string() }))),

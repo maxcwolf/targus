@@ -1,9 +1,9 @@
 import type { BuildStatusSummary } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { initialSnapshots } from '../../test/fixtures.js';
-import { componentTitle, effectiveFilter, groupByTitle, validateFilterSearch } from './filters.js';
-import { summaryLine } from './summary.js';
+import { initialSnapshots } from '../../test/fixtures.ts';
+import { componentTitle, effectiveFilter, groupByTitle, validateFilterSearch } from './filters.ts';
+import { summaryLine } from './summary.ts';
 
 const summary = (fields: Partial<BuildStatusSummary>): BuildStatusSummary => ({
   status: 'pending',

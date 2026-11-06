@@ -2,8 +2,8 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { apiError, apiState, server } from '../../test/msw.js';
-import { renderApp } from '../../test/render.js';
+import { apiError, apiState, server } from '../../test/msw.ts';
+import { renderApp } from '../../test/render.tsx';
 
 async function openSnapshot(path: string): Promise<ReturnType<typeof renderApp>> {
   const app = renderApp(path);

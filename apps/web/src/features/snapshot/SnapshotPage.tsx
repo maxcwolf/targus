@@ -2,21 +2,21 @@ import { useQuery } from '@tanstack/react-query';
 import type { BuildWithSummary, ProjectSummary, Snapshot } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { getBuild, queryKeys } from '../../api-client/index.js';
-import { shortSha } from '../../components/format.js';
-import { Skeleton } from '../../components/Skeleton.js';
-import { Toast } from '../../components/Toast.js';
-import { effectiveFilter, type SnapshotFilter } from '../build/filters.js';
-import { useBuildData } from '../build/useBuildData.js';
-import { ErrorView, NotFound } from '../errors/ErrorView.js';
-import { ReviewActions } from './ReviewActions.js';
-import { SnapshotBar } from './SnapshotBar.js';
-import { SnapshotSidebar } from './SnapshotSidebar.js';
-import { SnapshotViewer, type ViewerLabels } from './SnapshotViewer.js';
-import { StateNotice } from './StateNotice.js';
-import { useSnapshotReview } from './useSnapshotReview.js';
-import { useToast } from './useToast.js';
-import { useViewer, type ViewerState } from './useViewer.js';
+import { getBuild, queryKeys } from '../../api-client/index.ts';
+import { shortSha } from '../../components/format.ts';
+import { Skeleton } from '../../components/Skeleton.tsx';
+import { Toast } from '../../components/Toast.tsx';
+import { effectiveFilter, type SnapshotFilter } from '../build/filters.ts';
+import { useBuildData } from '../build/useBuildData.ts';
+import { ErrorView, NotFound } from '../errors/ErrorView.tsx';
+import { ReviewActions } from './ReviewActions.tsx';
+import { SnapshotBar } from './SnapshotBar.tsx';
+import { SnapshotSidebar } from './SnapshotSidebar.tsx';
+import { SnapshotViewer, type ViewerLabels } from './SnapshotViewer.tsx';
+import { StateNotice } from './StateNotice.tsx';
+import { useSnapshotReview } from './useSnapshotReview.ts';
+import { useToast } from './useToast.ts';
+import { useViewer, type ViewerState } from './useViewer.ts';
 
 export interface SnapshotPageProps {
   readonly buildId: string;

@@ -2,10 +2,10 @@ import { baselineResolutionCases, baselineShaOrder, emptyTally } from '@targus/c
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { newBuild, newProject, sha, snapshotRecord } from '../../test/support/fixtures.js';
-import { completion } from '../../test/support/in-memory.js';
-import { D1BuildRepository } from './build.repository.js';
-import { createProjectRepository } from './project.repository.js';
+import { newBuild, newProject, sha, snapshotRecord } from '../../test/support/fixtures.ts';
+import { completion } from '../../test/support/in-memory.ts';
+import { D1BuildRepository } from './build.repository.ts';
+import { createProjectRepository } from './project.repository.ts';
 
 const repository = new D1BuildRepository(env.DB);
 const done = completion('pending', new Date('2026-01-02T00:00:00.000Z'));

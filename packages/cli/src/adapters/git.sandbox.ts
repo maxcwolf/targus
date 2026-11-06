@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 
-import { inheritedEnv } from '../config.js';
-import { ExecError, type Exec } from './exec.adapter.js';
+import { inheritedEnv } from '../config.ts';
+import { ExecError, type Exec } from './exec.adapter.ts';
 
 type Env = Readonly<Record<string, string | undefined>>;
 

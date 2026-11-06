@@ -5,9 +5,9 @@ import {
   type ListProjectsResponse,
 } from '@targus/core';
 
-import { canAccessProject } from './access.service.js';
-import type { ServiceDeps } from './deps.js';
-import type { Reviewer } from './principal.js';
+import { canAccessProject } from './access.service.ts';
+import type { ServiceDeps } from './deps.ts';
+import type { Reviewer } from './principal.ts';
 
 /**
  * Create a project (and its org when new) and return its token. The token is shown exactly once;

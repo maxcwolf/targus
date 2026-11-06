@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { BuildTrigger, GitSha } from './build.js';
-import { ImageHash } from './snapshot.js';
+import { BuildTrigger, GitSha } from './build.ts';
+import { ImageHash } from './snapshot.ts';
 
 /** One captured story the CLI reports when it opens a build. */
 export const CapturedSnapshot = z.object({

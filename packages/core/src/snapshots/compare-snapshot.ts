@@ -1,7 +1,7 @@
-import type { Approval } from '../contracts/approval.js';
-import type { ImageHash, ReviewState, SnapshotState } from '../contracts/snapshot.js';
-import { TargusError } from '../errors.js';
-import type { SnapshotOutcome } from '../build-status.js';
+import type { Approval } from '../contracts/approval.ts';
+import type { ImageHash, ReviewState, SnapshotState } from '../contracts/snapshot.ts';
+import { TargusError } from '../errors.ts';
+import type { SnapshotOutcome } from '../build-status.ts';
 
 /** The approval fields `compareSnapshot` matches on, already scoped to the story and variant. */
 export type ApprovalPair = Pick<Approval, 'fromHash' | 'toHash'>;

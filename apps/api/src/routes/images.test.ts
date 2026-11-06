@@ -1,18 +1,18 @@
 import { CreateBuildResponse, ListSnapshotsResponse, UploadImageResponse } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { bearer, call, createTestProject, postJson, putImage } from '../../test/support/api.js';
+import { bearer, call, createTestProject, postJson, putImage } from '../../test/support/api.ts';
 import {
   captured,
   createBuildRequest,
   imageHash,
   sha,
   storyResult,
-} from '../../test/support/fixtures.js';
-import { pngFixture } from '../../test/support/png.js';
-import { getAsReviewer, postAsReviewer, projectWithBuild } from '../../test/support/review.js';
-import { signIn } from '../../test/support/session.js';
-import { maxImageBytes } from './images.js';
+} from '../../test/support/fixtures.ts';
+import { pngFixture } from '../../test/support/png.ts';
+import { getAsReviewer, postAsReviewer, projectWithBuild } from '../../test/support/review.ts';
+import { signIn } from '../../test/support/session.ts';
+import { maxImageBytes } from './images.ts';
 
 describe('PUT and GET /api/images/:hash', () => {
   it('uploads a PNG once and serves it back', async () => {

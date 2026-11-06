@@ -1,13 +1,13 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { imageHash, newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.js';
-import { completion } from '../../test/support/in-memory.js';
-import { D1BuildRepository } from './build.repository.js';
-import { createImageRepository } from './image.repository.js';
-import { createMembershipRepository } from './membership.repository.js';
-import { createProjectRepository } from './project.repository.js';
-import { createUserRepository } from './user.repository.js';
+import { imageHash, newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.ts';
+import { completion } from '../../test/support/in-memory.ts';
+import { D1BuildRepository } from './build.repository.ts';
+import { createImageRepository } from './image.repository.ts';
+import { createMembershipRepository } from './membership.repository.ts';
+import { createProjectRepository } from './project.repository.ts';
+import { createUserRepository } from './user.repository.ts';
 
 const at = new Date('2026-01-01T00:00:00.000Z');
 

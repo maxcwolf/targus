@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-import { Build } from './build.js';
-import { BuildStatusSummary, SnapshotCounts } from './build-summary.js';
-import { RepoFullName } from './project.js';
-import { Snapshot } from './snapshot.js';
+import { Build } from './build.ts';
+import { BuildStatusSummary, SnapshotCounts } from './build-summary.ts';
+import { RepoFullName } from './project.ts';
+import { Snapshot } from './snapshot.ts';
 
 /** A reviewer, as GitHub login identified them. */
 export const ReviewerUser = z.object({

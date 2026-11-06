@@ -1,4 +1,4 @@
-import type { IdGenerator } from './id-generator.js';
+import type { IdGenerator } from './id-generator.ts';
 
 /** An `IdGenerator` that yields `<prefix>-1`, `<prefix>-2`, ... in order. */
 export function createFakeIdGenerator(prefix = 'id'): IdGenerator {

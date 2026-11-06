@@ -1,5 +1,5 @@
-import type { Build } from '../contracts/build.js';
-import type { Snapshot } from '../contracts/snapshot.js';
+import type { Build } from '../contracts/build.ts';
+import type { Snapshot } from '../contracts/snapshot.ts';
 
 /** Fields the caller supplies when a build is opened; the repository assigns `number`. */
 export type NewBuild = Omit<Build, 'number'>;

@@ -2,8 +2,8 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { apiError, apiState, server } from '../../test/msw.js';
-import { renderApp } from '../../test/render.js';
+import { apiError, apiState, server } from '../../test/msw.ts';
+import { renderApp } from '../../test/render.tsx';
 
 function rowNames(): string[] {
   return [...document.querySelectorAll('.story-link')].map((link) => link.textContent);

@@ -3,15 +3,15 @@ import { Link } from '@tanstack/react-router';
 import type { Build, GetLibraryResponse, ProjectSummary } from '@targus/core';
 import { type ReactElement, useState } from 'react';
 
-import { getLibrary, queryKeys } from '../../api-client/index.js';
-import { commitUrl, formatDateTime, shortSha, storyLabel } from '../../components/format.js';
-import { Skeleton } from '../../components/Skeleton.js';
-import { ErrorView, NotFound } from '../errors/ErrorView.js';
-import { useProjects } from '../projects/useProjects.js';
-import { LibrarySidebar } from './LibrarySidebar.js';
-import { matchesQuery, storyKey } from './stories.js';
-import { StoryCanvas } from './StoryCanvas.js';
-import { StoryGrid } from './StoryGrid.js';
+import { getLibrary, queryKeys } from '../../api-client/index.ts';
+import { commitUrl, formatDateTime, shortSha, storyLabel } from '../../components/format.ts';
+import { Skeleton } from '../../components/Skeleton.tsx';
+import { ErrorView, NotFound } from '../errors/ErrorView.tsx';
+import { useProjects } from '../projects/useProjects.ts';
+import { LibrarySidebar } from './LibrarySidebar.tsx';
+import { matchesQuery, storyKey } from './stories.ts';
+import { StoryCanvas } from './StoryCanvas.tsx';
+import { StoryGrid } from './StoryGrid.tsx';
 
 export interface LibraryPageProps {
   readonly projectId: string;

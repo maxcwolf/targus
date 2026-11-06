@@ -1,8 +1,8 @@
 import { TargusError } from '@targus/core';
 
-import type { Project } from '../repositories/project.repository.js';
-import type { ServiceDeps } from './deps.js';
-import type { Reviewer } from './principal.js';
+import type { Project } from '../repositories/project.repository.ts';
+import type { ServiceDeps } from './deps.ts';
+import type { Reviewer } from './principal.ts';
 
 /** Admin routes: the presented bearer token must equal `ADMIN_TOKEN`, which must be set. */
 export async function authenticateAdmin(

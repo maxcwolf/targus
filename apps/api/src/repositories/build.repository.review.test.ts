@@ -2,10 +2,10 @@ import { tallySnapshots } from '@targus/core';
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.js';
-import type { ReviewCommit, SnapshotRecord } from './build.repository.js';
-import { D1BuildRepository } from './build.repository.js';
-import { createProjectRepository } from './project.repository.js';
+import { newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.ts';
+import type { ReviewCommit, SnapshotRecord } from './build.repository.ts';
+import { D1BuildRepository } from './build.repository.ts';
+import { createProjectRepository } from './project.repository.ts';
 
 // `commitReview` is the one write of a reviewer's decision. These tests pin down that it lands
 // only on the snapshots it was computed from, and that the build's tally comes with it.

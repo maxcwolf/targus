@@ -5,7 +5,7 @@ import path from 'node:path';
 import { isTargusError } from '@targus/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createExecFileBuffer, ExecError, execFileBuffer } from './exec.adapter.js';
+import { createExecFileBuffer, ExecError, execFileBuffer } from './exec.adapter.ts';
 
 const node = process.execPath;
 

@@ -1,6 +1,6 @@
 import { ApproveAllResponse, GetBuildResponse, ListSnapshotsResponse } from '@targus/core';
 
-import { getJson, postJson } from './http.js';
+import { getJson, postJson } from './http.ts';
 
 function buildPath(buildId: string): string {
   return `/api/builds/${encodeURIComponent(buildId)}`;

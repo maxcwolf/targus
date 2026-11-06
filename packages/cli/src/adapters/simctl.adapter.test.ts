@@ -1,8 +1,8 @@
 import { TargusError } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { ExecError, type Exec, type ExecOptions } from './exec.adapter.js';
-import { SimctlDriver, simctlTimeoutsMs } from './simctl.adapter.js';
+import { ExecError, type Exec, type ExecOptions } from './exec.adapter.ts';
+import { SimctlDriver, simctlTimeoutsMs } from './simctl.adapter.ts';
 
 const udid = 'SIM-UDID';
 

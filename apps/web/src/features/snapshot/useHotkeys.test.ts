@@ -1,7 +1,7 @@
 import { fireEvent, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { useHotkeys } from './useHotkeys.js';
+import { useHotkeys } from './useHotkeys.ts';
 
 function setup(): { j: () => void; arrow: () => void } {
   const keys = { j: vi.fn(), ArrowRight: vi.fn() };

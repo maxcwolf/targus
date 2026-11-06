@@ -1,8 +1,8 @@
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 
-import { decodePng } from './decode-png.js';
-import { diffImages } from './diff-images.js';
+import { decodePng } from './decode-png.ts';
+import { diffImages } from './diff-images.ts';
 
 type Rgba = readonly [number, number, number, number];
 

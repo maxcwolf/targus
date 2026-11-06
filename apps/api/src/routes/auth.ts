@@ -1,14 +1,14 @@
 import { Hono } from 'hono';
 
-import type { AppEnv } from '../app-env.js';
-import { sessionAuth } from '../middleware/auth.js';
+import type { AppEnv } from '../app-env.ts';
+import { sessionAuth } from '../middleware/auth.ts';
 import {
   clearSessionCookie,
   requireCookieSettings,
   takeOAuthState,
   writeOAuthState,
   writeSessionCookie,
-} from '../middleware/session-cookie.js';
+} from '../middleware/session-cookie.ts';
 
 /**
  * `/api/auth/*`: GitHub login through the targus App's OAuth flow (plan.md section 5.2). The

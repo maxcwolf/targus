@@ -4,10 +4,10 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { readCaptureManifest } from '../capture/manifest.js';
-import { readPngSize } from '../capture/png.js';
-import { simulatorTestTarget } from '../config.js';
-import { defaultCaptureDeps, runCapture } from './capture.js';
+import { readCaptureManifest } from '../capture/manifest.ts';
+import { readPngSize } from '../capture/png.ts';
+import { simulatorTestTarget } from '../config.ts';
+import { defaultCaptureDeps, runCapture } from './capture.ts';
 
 // Opt-in: runs against a real booted-or-bootable simulator and a Storybook app built with the
 // websocket channel enabled. Set TARGUS_SIMULATOR_UDID and TARGUS_APP to run it.

@@ -16,7 +16,7 @@ import {
   SubmitResultsRequest,
   SubmitResultsResponse,
   UploadImageResponse,
-} from './index.js';
+} from './index.ts';
 
 const sha = 'a'.repeat(40);
 const hash = 'b'.repeat(64);

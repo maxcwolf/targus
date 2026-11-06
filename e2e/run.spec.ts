@@ -5,9 +5,9 @@ import path from 'node:path';
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { writeFixtureCapture } from '@targus/cli';
 
-import { e2eConfig } from './config.js';
-import { createProject, getBuild, getImage, listSnapshots } from './support/api.js';
-import { headSha, targusRun } from './support/cli.js';
+import { e2eConfig } from './config.ts';
+import { createProject, getBuild, getImage, listSnapshots } from './support/api.ts';
+import { headSha, targusRun } from './support/cli.ts';
 
 const apiUrl = `http://127.0.0.1:${e2eConfig.port}`;
 const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);

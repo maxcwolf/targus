@@ -4,14 +4,14 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { CaptureReport, CaptureResult } from './capture-stories.js';
+import type { CaptureReport, CaptureResult } from './capture-stories.ts';
 import {
   buildManifest,
   perStoryStats,
   readCaptureManifest,
   writeCaptureOutput,
   type CaptureRunInfo,
-} from './manifest.js';
+} from './manifest.ts';
 
 const run: CaptureRunInfo = {
   udid: 'SIM',

@@ -1,4 +1,4 @@
-import type { StoryIndexEntry, StorybookChannel, StorySelection } from './storybook-channel.js';
+import type { StoryIndexEntry, StorybookChannel, StorySelection } from './storybook-channel.ts';
 
 /** What selecting a story does in a `FakeStorybookChannel`: a selection result or a timeout. */
 export type FakeStoryOutcome = StorySelection | { readonly kind: 'timeout' };

@@ -1,10 +1,10 @@
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
-import { ApiRequestError, isSignedOut } from '../../api-client/index.js';
-import { CrashPanel } from '../../components/CrashPanel.js';
-import { SignIn } from '../auth/SignIn.js';
-import { useSessionExpired } from '../auth/useMe.js';
+import { ApiRequestError, isSignedOut } from '../../api-client/index.ts';
+import { CrashPanel } from '../../components/CrashPanel.tsx';
+import { SignIn } from '../auth/SignIn.tsx';
+import { useSessionExpired } from '../auth/useMe.ts';
 
 /** A page-level "this does not exist" message. */
 export function NotFound({ message }: { readonly message?: string }): ReactElement {

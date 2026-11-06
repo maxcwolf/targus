@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { compareWithCore } from './compare-images.js';
-import { readPngSize, sha256Hex } from './png.js';
-import { encodeSolidPng } from './solid-png.fake.js';
+import { compareWithCore } from './compare-images.ts';
+import { readPngSize, sha256Hex } from './png.ts';
+import { encodeSolidPng } from './solid-png.fake.ts';
 
 const white = [255, 255, 255, 255] as const;
 const black = [0, 0, 0, 255] as const;

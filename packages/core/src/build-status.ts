@@ -1,5 +1,5 @@
-import type { SnapshotCounts } from './contracts/build-summary.js';
-import type { ReviewState, SnapshotState } from './contracts/snapshot.js';
+import type { SnapshotCounts } from './contracts/build-summary.ts';
+import type { ReviewState, SnapshotState } from './contracts/snapshot.ts';
 
 /** The two snapshot fields `buildStatus` folds over. */
 export interface SnapshotOutcome {

@@ -2,10 +2,10 @@ import { MeResponse } from '@targus/core';
 import { env, exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { sha256Hex } from '../lib/sha256.js';
-import { appWith, call } from '../../test/support/api.js';
-import { createFakeOAuth, octocat } from '../../test/support/in-memory-auth.js';
-import { signIn, withCookie } from '../../test/support/session.js';
+import { sha256Hex } from '../lib/sha256.ts';
+import { appWith, call } from '../../test/support/api.ts';
+import { createFakeOAuth, octocat } from '../../test/support/in-memory-auth.ts';
+import { signIn, withCookie } from '../../test/support/session.ts';
 
 const app = appWith({ oauth: createFakeOAuth() });
 

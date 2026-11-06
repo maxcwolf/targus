@@ -1,7 +1,7 @@
 import { type ReactElement, useState } from 'react';
 
-import { releaseFocusOnPointerUp } from './releaseFocus.js';
-import { SnapshotImage } from './SnapshotImage.js';
+import { releaseFocusOnPointerUp } from './releaseFocus.ts';
+import { SnapshotImage } from './SnapshotImage.tsx';
 
 export interface CompareSliderProps {
   readonly baselineSrc: string;

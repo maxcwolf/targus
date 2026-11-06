@@ -5,9 +5,9 @@ import path from 'node:path';
 import { isTargusError, TargusError } from '@targus/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { ExecError, type Exec } from './exec.adapter.js';
-import { GitCli } from './git.adapter.js';
-import { isolatedGitExec } from './git.sandbox.js';
+import { ExecError, type Exec } from './exec.adapter.ts';
+import { GitCli } from './git.adapter.ts';
+import { isolatedGitExec } from './git.sandbox.ts';
 
 const sha = 'a'.repeat(40);
 const parent = 'b'.repeat(40);

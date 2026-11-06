@@ -1,8 +1,8 @@
 import { isTargusError, type CreateBuildRequest } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { TargusApiClient, type Fetch } from './api-client.adapter.js';
-import { errorCodeForStatus } from './api-errors.js';
+import { TargusApiClient, type Fetch } from './api-client.adapter.ts';
+import { errorCodeForStatus } from './api-errors.ts';
 
 const sha = 'a'.repeat(40);
 const hash = 'b'.repeat(64);

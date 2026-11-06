@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ReviewerUser } from '@targus/core';
 import { type ReactElement, useState } from 'react';
 
-import { logout } from '../../api-client/index.js';
+import { logout } from '../../api-client/index.ts';
 
 /** The GitHub avatar, or a circle with the login's first letter when the image fails. */
 function Avatar({ user }: { readonly user: ReviewerUser }): ReactElement {

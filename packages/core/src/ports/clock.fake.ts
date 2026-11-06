@@ -1,4 +1,4 @@
-import type { Clock } from './clock.js';
+import type { Clock } from './clock.ts';
 
 /** A `Clock` that only moves when told to. */
 export interface FakeClock extends Clock {

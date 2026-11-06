@@ -2,9 +2,9 @@ import { Link } from '@tanstack/react-router';
 import type { LibraryStory } from '@targus/core';
 import { type ReactElement, useEffect, useRef } from 'react';
 
-import { PathText } from '../../components/PathText.js';
-import { storyName } from '../build/filters.js';
-import { groupStories, storyKey } from './stories.js';
+import { PathText } from '../../components/PathText.tsx';
+import { storyName } from '../build/filters.ts';
+import { groupStories, storyKey } from './stories.ts';
 
 export interface LibrarySidebarProps {
   readonly projectId: string;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ReviewState, SnapshotState } from '../contracts/snapshot.js';
-import { acceptedImageHash } from './accepted-image-hash.js';
+import type { ReviewState, SnapshotState } from '../contracts/snapshot.ts';
+import { acceptedImageHash } from './accepted-image-hash.ts';
 
 const current = 'b'.repeat(64);
 const baseline = 'a'.repeat(64);

@@ -1,8 +1,8 @@
 import type { APIRequestContext } from '@playwright/test';
 import { z } from 'zod';
 
-import { e2eConfig } from '../config.js';
-import type { RecordedCheckRun } from './github-stub.js';
+import { e2eConfig } from '../config.ts';
+import type { RecordedCheckRun } from './github-stub.ts';
 
 // Control helpers for the GitHub stub (support/github-stub.ts) a spec drives.
 

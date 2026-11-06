@@ -1,4 +1,4 @@
-import { baselineBuildStatuses, type Build, type BuildStatus } from '../contracts/build.js';
+import { baselineBuildStatuses, type Build, type BuildStatus } from '../contracts/build.ts';
 
 /** The build fields baseline resolution reads. */
 export type BaselineCandidate = Pick<Build, 'id' | 'sha' | 'status' | 'createdAt'>;

@@ -7,25 +7,25 @@ import {
   type FakeClock,
 } from '@targus/core';
 
-import { NoopGitHubClient } from '../../src/adapters/github-client.adapter.js';
-import { webCryptoTokens } from '../../src/adapters/token.adapter.js';
-import type { ApiConfig } from '../../src/config.js';
-import type { ApprovalRepository } from '../../src/repositories/approval.repository.js';
-import type { BuildCompletion } from '../../src/repositories/build.repository.js';
-import type { Project, ProjectRepository } from '../../src/repositories/project.repository.js';
-import type { ServiceDeps } from '../../src/services/deps.js';
-import type { Principal } from '../../src/services/principal.js';
+import { NoopGitHubClient } from '../../src/adapters/github-client.adapter.ts';
+import { webCryptoTokens } from '../../src/adapters/token.adapter.ts';
+import type { ApiConfig } from '../../src/config.ts';
+import type { ApprovalRepository } from '../../src/repositories/approval.repository.ts';
+import type { BuildCompletion } from '../../src/repositories/build.repository.ts';
+import type { Project, ProjectRepository } from '../../src/repositories/project.repository.ts';
+import type { ServiceDeps } from '../../src/services/deps.ts';
+import type { Principal } from '../../src/services/principal.ts';
 import {
   createFakeOAuth,
   createInMemoryMemberships,
   createInMemorySessions,
   createInMemoryUsers,
   type FakeOAuth,
-} from './in-memory-auth.js';
-import { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.js';
-import { createInMemoryImages, type InMemoryImages } from './in-memory-images.js';
+} from './in-memory-auth.ts';
+import { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.ts';
+import { createInMemoryImages, type InMemoryImages } from './in-memory-images.ts';
 
-export { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.js';
+export { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.ts';
 
 // In-memory doubles of the API's repositories, for service unit tests. The D1 adapters are
 // tested against the same behaviour in src/repositories/*.test.ts.

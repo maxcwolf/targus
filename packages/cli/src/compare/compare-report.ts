@@ -1,4 +1,4 @@
-import type { CaptureComparison } from './compare-captures.js';
+import type { CaptureComparison } from './compare-captures.ts';
 
 /** Paths in the report are relative to the report directory so it can be moved as a whole. */
 export interface ReportPaths {

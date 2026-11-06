@@ -1,5 +1,5 @@
-import type { Bindings } from './bindings.js';
-import type { Principal, Project, Reviewer, Services } from './services/index.js';
+import type { Bindings } from './bindings.ts';
+import type { Principal, Project, Reviewer, Services } from './services/index.ts';
 
 /** Hono environment shared by every route: bindings plus the request's bound services. */
 export interface AppEnv {

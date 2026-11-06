@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ApiBuildRepository, BuildPage } from '../../src/repositories/build.repository.js';
-import { newBuild } from './fixtures.js';
+import type { ApiBuildRepository, BuildPage } from '../../src/repositories/build.repository.ts';
+import { newBuild } from './fixtures.ts';
 
 /** A builds repository to page through, and how to make a project its builds may belong to. */
 export interface BuildPagingHarness {

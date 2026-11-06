@@ -1,8 +1,8 @@
 import { and, eq, exists, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
-import { images, orgMemberships, orgs, projectImages, projects } from '../db/schema.js';
-import type { CachedMembership } from './membership.repository.js';
+import { images, orgMemberships, orgs, projectImages, projects } from '../db/schema.ts';
+import type { CachedMembership } from './membership.repository.ts';
 
 /** What the API knows about one stored PNG. */
 export interface ImageRecord {

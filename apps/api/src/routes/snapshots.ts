@@ -1,9 +1,9 @@
 import { ReviewRequest } from '@targus/core';
 import { Hono } from 'hono';
 
-import type { AppEnv } from '../app-env.js';
-import { sessionAuth } from '../middleware/auth.js';
-import { jsonBody } from '../middleware/json-body.js';
+import type { AppEnv } from '../app-env.ts';
+import { sessionAuth } from '../middleware/auth.ts';
+import { jsonBody } from '../middleware/json-body.ts';
 
 /** `/api/snapshots/*`: a reviewer's decision on one snapshot. */
 export const snapshotsRoute = new Hono<AppEnv>().post('/:id/review', sessionAuth, async (c) => {

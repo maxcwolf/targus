@@ -1,5 +1,5 @@
-export { Approval } from './approval.js';
-export { baselineBuildStatuses, Build, BuildStatus, BuildTrigger, GitSha } from './build.js';
+export { Approval } from './approval.ts';
+export { baselineBuildStatuses, Build, BuildStatus, BuildTrigger, GitSha } from './build.ts';
 export {
   BuildStatusSummary,
   BuildWithSummary,
@@ -12,16 +12,16 @@ export {
   SnapshotCounts,
   SubmitResultsResponse,
   UploadImageResponse,
-} from './build-summary.js';
-export { CreateProjectRequest, CreateProjectResponse, RepoFullName } from './project.js';
+} from './build-summary.ts';
+export { CreateProjectRequest, CreateProjectResponse, RepoFullName } from './project.ts';
 export {
   BaselineEntry,
   CapturedSnapshot,
   CreateBuildRequest,
   CreateBuildResponse,
-} from './create-build.js';
-export { HealthResponse } from './health.js';
-export { GetLibraryResponse, LibraryStory } from './library.js';
+} from './create-build.ts';
+export { HealthResponse } from './health.ts';
+export { GetLibraryResponse, LibraryStory } from './library.ts';
 export {
   ApproveAllResponse,
   ListProjectsResponse,
@@ -31,6 +31,6 @@ export {
   ReviewerUser,
   ReviewRequest,
   ReviewSnapshotResponse,
-} from './review.js';
-export { ImageHash, ReviewState, Snapshot, SnapshotState } from './snapshot.js';
-export { StoryResult, SubmitResultsRequest } from './submit-results.js';
+} from './review.ts';
+export { ImageHash, ReviewState, Snapshot, SnapshotState } from './snapshot.ts';
+export { StoryResult, SubmitResultsRequest } from './submit-results.ts';

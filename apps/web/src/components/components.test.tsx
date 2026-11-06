@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ConfirmButton } from './ConfirmButton.js';
-import { CrashPanel } from './CrashPanel.js';
-import { formatPercent, plural } from './format.js';
+import { ConfirmButton } from './ConfirmButton.tsx';
+import { CrashPanel } from './CrashPanel.tsx';
+import { formatPercent, plural } from './format.ts';
 
 describe('ConfirmButton', () => {
   it('needs a second click and can be cancelled', () => {

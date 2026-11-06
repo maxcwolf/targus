@@ -3,10 +3,10 @@ import { Link } from '@tanstack/react-router';
 import type { Snapshot } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { approveAll } from '../../api-client/index.js';
-import { ConfirmButton } from '../../components/ConfirmButton.js';
-import { plural } from '../../components/format.js';
-import { applyBuildUpdate } from './cache.js';
+import { approveAll } from '../../api-client/index.ts';
+import { ConfirmButton } from '../../components/ConfirmButton.tsx';
+import { plural } from '../../components/format.ts';
+import { applyBuildUpdate } from './cache.ts';
 
 export interface BuildActionsProps {
   readonly buildId: string;

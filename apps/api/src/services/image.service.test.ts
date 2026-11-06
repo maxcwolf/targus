@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { imageHash, newProject } from '../../test/support/fixtures.js';
-import { createRecordingGitHub } from '../../test/support/github-recorder.js';
-import { signInReviewer } from '../../test/support/in-memory-auth.js';
-import { createTestDeps } from '../../test/support/in-memory.js';
-import { pngFixture } from '../../test/support/png.js';
-import type { Project } from '../repositories/project.repository.js';
-import { getImage, uploadImage } from './image.service.js';
-import type { Principal, Reviewer } from './principal.js';
+import { imageHash, newProject } from '../../test/support/fixtures.ts';
+import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
+import { signInReviewer } from '../../test/support/in-memory-auth.ts';
+import { createTestDeps } from '../../test/support/in-memory.ts';
+import { pngFixture } from '../../test/support/png.ts';
+import type { Project } from '../repositories/project.repository.ts';
+import { getImage, uploadImage } from './image.service.ts';
+import type { Principal, Reviewer } from './principal.ts';
 
 function projectOf(key: string): Project {
   return {

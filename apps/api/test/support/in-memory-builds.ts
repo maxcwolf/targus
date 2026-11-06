@@ -4,12 +4,12 @@ import type {
   ApiBuildRepository,
   BuildRecord,
   SnapshotRecord,
-} from '../../src/repositories/build.repository.js';
+} from '../../src/repositories/build.repository.ts';
 import {
   checkBuildPageLimit,
   decodeBuildCursor,
   toBuildPage,
-} from '../../src/repositories/build-page.js';
+} from '../../src/repositories/build-page.ts';
 
 // The in-memory double of the builds repository, for service unit tests. The D1 adapter is
 // tested against the same behaviour in src/repositories/build.repository*.test.ts. Each write

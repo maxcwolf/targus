@@ -17,16 +17,16 @@ import type {
   UploadImageResponse,
 } from '@targus/core';
 
-import type { Project } from '../repositories/project.repository.js';
+import type { Project } from '../repositories/project.repository.ts';
 import {
   authenticateAdmin,
   authenticateProjectToken,
   authenticateSession,
-} from './auth.service.js';
-import { createBuild, getBuild, listBuilds, listSnapshots } from './build.service.js';
-import type { ServiceDeps } from './deps.js';
-import { getImage, uploadImage } from './image.service.js';
-import { getLibrary } from './library.service.js';
+} from './auth.service.ts';
+import { createBuild, getBuild, listBuilds, listSnapshots } from './build.service.ts';
+import type { ServiceDeps } from './deps.ts';
+import { getImage, uploadImage } from './image.service.ts';
+import { getLibrary } from './library.service.ts';
 import {
   beginLogin,
   completeLogin,
@@ -36,12 +36,12 @@ import {
   type LoginCallback,
   type LoginRedirect,
   type NewLogin,
-} from './login.service.js';
-import { assertSameOrigin, type RequestOrigin } from './origin.service.js';
-import type { Principal, Reviewer } from './principal.js';
-import { createProject, listProjects } from './project.service.js';
-import { submitResults } from './results.service.js';
-import { approveAll, reviewSnapshot } from './review.service.js';
+} from './login.service.ts';
+import { assertSameOrigin, type RequestOrigin } from './origin.service.ts';
+import type { Principal, Reviewer } from './principal.ts';
+import { createProject, listProjects } from './project.service.ts';
+import { submitResults } from './results.service.ts';
+import { approveAll, reviewSnapshot } from './review.service.ts';
 
 /** The use-cases with their dependencies bound: what routes and middleware call. */
 export interface Services {
@@ -109,7 +109,7 @@ export function bindServices(deps: ServiceDeps): Services {
   };
 }
 
-export type { Project } from '../repositories/project.repository.js';
-export type { CookieSettings } from './login.service.js';
-export { sessionLifetimeSeconds } from './login.service.js';
-export type { Principal, Reviewer } from './principal.js';
+export type { Project } from '../repositories/project.repository.ts';
+export type { CookieSettings } from './login.service.ts';
+export { sessionLifetimeSeconds } from './login.service.ts';
+export type { Principal, Reviewer } from './principal.ts';

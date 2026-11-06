@@ -5,7 +5,7 @@ import {
   ListProjectsResponse,
 } from '@targus/core';
 
-import { getJson } from './http.js';
+import { getJson } from './http.ts';
 
 /** `GET /api/projects`: the projects of every org the reviewer belongs to. */
 export function listProjects(): Promise<ListProjectsResponse> {

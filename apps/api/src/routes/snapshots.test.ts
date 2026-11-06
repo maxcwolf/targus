@@ -1,10 +1,10 @@
 import { ReviewSnapshotResponse } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { bearer, call, postJson } from '../../test/support/api.js';
-import { storyResult } from '../../test/support/fixtures.js';
-import { postAsReviewer, projectWithBuild } from '../../test/support/review.js';
-import { signIn } from '../../test/support/session.js';
+import { bearer, call, postJson } from '../../test/support/api.ts';
+import { storyResult } from '../../test/support/fixtures.ts';
+import { postAsReviewer, projectWithBuild } from '../../test/support/review.ts';
+import { signIn } from '../../test/support/session.ts';
 
 describe('POST /api/snapshots/:id/review', () => {
   it('approves a snapshot for a member, matching the contract', async () => {

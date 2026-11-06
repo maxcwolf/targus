@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
-import { newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.js';
-import { createRecordingGitHub } from '../../test/support/github-recorder.js';
-import { signInReviewer } from '../../test/support/in-memory-auth.js';
-import { createTestDeps, type TestDeps } from '../../test/support/in-memory.js';
-import { pngFixture } from '../../test/support/png.js';
-import type { Project } from '../repositories/project.repository.js';
-import { canAccessProject } from './access.service.js';
-import { getBuild, listBuilds, listSnapshots } from './build.service.js';
-import { getImage, uploadImage } from './image.service.js';
-import { getLibrary } from './library.service.js';
-import type { Reviewer } from './principal.js';
-import { listProjects } from './project.service.js';
-import { approveAll, reviewSnapshot } from './review.service.js';
+import { newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.ts';
+import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
+import { signInReviewer } from '../../test/support/in-memory-auth.ts';
+import { createTestDeps, type TestDeps } from '../../test/support/in-memory.ts';
+import { pngFixture } from '../../test/support/png.ts';
+import type { Project } from '../repositories/project.repository.ts';
+import { canAccessProject } from './access.service.ts';
+import { getBuild, listBuilds, listSnapshots } from './build.service.ts';
+import { getImage, uploadImage } from './image.service.ts';
+import { getLibrary } from './library.service.ts';
+import type { Reviewer } from './principal.ts';
+import { listProjects } from './project.service.ts';
+import { approveAll, reviewSnapshot } from './review.service.ts';
 
 // The tenancy boundary (ADR 0007, 0011, 0012) between two GitHub orgs: octocat belongs to
 // `acme` only, hubot to `globex` only, and each org has its own App installation.

@@ -3,7 +3,7 @@ import { useRouterState } from '@tanstack/react-router';
 import type { MeResponse } from '@targus/core';
 import { createContext, useContext } from 'react';
 
-import { getMe, isSignedOut, queryKeys } from '../../api-client/index.js';
+import { getMe, isSignedOut, queryKeys } from '../../api-client/index.ts';
 
 /** The signed-in reviewer; the query errors with a `SignedOutError` when signed out. */
 export function useMe(): UseQueryResult<MeResponse> {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { GitHubAppOAuth } from './github-oauth.adapter.js';
+import { GitHubAppOAuth } from './github-oauth.adapter.ts';
 
 interface Recorded {
   readonly url: string;

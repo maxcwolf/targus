@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { defaultTargusParameters, resolveTargusParameters } from './parameters.js';
+import { defaultTargusParameters, resolveTargusParameters } from './parameters.ts';
 
 describe('resolveTargusParameters', () => {
   it('applies the defaults when a story sets nothing', () => {

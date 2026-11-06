@@ -1,7 +1,7 @@
 import type { Build, BuildStatusSummary, CheckRunState } from '@targus/core';
 
-import type { Project } from '../repositories/project.repository.js';
-import type { ServiceDeps } from './deps.js';
+import type { Project } from '../repositories/project.repository.ts';
+import type { ServiceDeps } from './deps.ts';
 
 function count(n: number, singular: string, plural: string): string {
   return `${n} ${n === 1 ? singular : plural}`;

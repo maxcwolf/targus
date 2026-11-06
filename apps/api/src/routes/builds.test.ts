@@ -7,11 +7,11 @@ import {
 } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { bearer, call, createTestProject, postJson, putImage } from '../../test/support/api.js';
-import { captured, createBuildRequest, sha, storyResult } from '../../test/support/fixtures.js';
-import { pngFixture } from '../../test/support/png.js';
-import { getAsReviewer, postAsReviewer, projectWithBuild } from '../../test/support/review.js';
-import { signIn } from '../../test/support/session.js';
+import { bearer, call, createTestProject, postJson, putImage } from '../../test/support/api.ts';
+import { captured, createBuildRequest, sha, storyResult } from '../../test/support/fixtures.ts';
+import { pngFixture } from '../../test/support/png.ts';
+import { getAsReviewer, postAsReviewer, projectWithBuild } from '../../test/support/review.ts';
+import { signIn } from '../../test/support/session.ts';
 
 describe('/api/builds', () => {
   it('creates a build, accepts results and reads both back, each matching its contract', async () => {

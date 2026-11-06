@@ -1,9 +1,9 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { baselineBuildStatuses, BuildStatus } from '../contracts/build.js';
-import { baselineResolutionCases } from './baseline-resolution-cases.js';
-import { baselineShaOrder, resolveBaseline, type BaselineCandidate } from './resolve-baseline.js';
+import { baselineBuildStatuses, BuildStatus } from '../contracts/build.ts';
+import { baselineResolutionCases } from './baseline-resolution-cases.ts';
+import { baselineShaOrder, resolveBaseline, type BaselineCandidate } from './resolve-baseline.ts';
 
 const a = 'a'.repeat(40);
 const b = 'b'.repeat(40);

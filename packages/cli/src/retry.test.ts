@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { retryDelayMs, withRetry } from './retry.js';
+import { retryDelayMs, withRetry } from './retry.ts';
 
 const policy = { attempts: 3, initialDelayMs: 100 };
 

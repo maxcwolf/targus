@@ -3,14 +3,14 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { isBlankPng, type Clock, type DeviceDriver, type StorybookChannel } from '@targus/core';
 
-import { execFileBuffer, type Exec } from '../adapters/exec.adapter.js';
-import { SimctlDriver } from '../adapters/simctl.adapter.js';
-import { systemClock } from '../adapters/system-clock.adapter.js';
-import { WsStorybookChannel } from '../adapters/ws-channel.adapter.js';
-import { captureStories, type CaptureProgress } from '../capture/capture-stories.js';
-import { compareWithCore } from '../capture/compare-images.js';
-import { writeCaptureOutput, type CaptureManifest } from '../capture/manifest.js';
-import { sha256Hex } from '../capture/png.js';
+import { execFileBuffer, type Exec } from '../adapters/exec.adapter.ts';
+import { SimctlDriver } from '../adapters/simctl.adapter.ts';
+import { systemClock } from '../adapters/system-clock.adapter.ts';
+import { WsStorybookChannel } from '../adapters/ws-channel.adapter.ts';
+import { captureStories, type CaptureProgress } from '../capture/capture-stories.ts';
+import { compareWithCore } from '../capture/compare-images.ts';
+import { writeCaptureOutput, type CaptureManifest } from '../capture/manifest.ts';
+import { sha256Hex } from '../capture/png.ts';
 
 export interface CaptureCommandOptions {
   readonly udid: string;

@@ -1,7 +1,7 @@
 import { isTargusError, type CreateBuildRequest } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { TargusApiClient, type Fetch, type TargusApiClientOptions } from './api-client.adapter.js';
+import { TargusApiClient, type Fetch, type TargusApiClientOptions } from './api-client.adapter.ts';
 
 const hash = 'b'.repeat(64);
 const png = new Uint8Array([1, 2, 3]);

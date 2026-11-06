@@ -1,4 +1,4 @@
-import type { BaselineCandidate } from './resolve-baseline.js';
+import type { BaselineCandidate } from './resolve-baseline.ts';
 
 /**
  * One row of the shared baseline-resolution table. `resolveBaseline` is tested against it here,

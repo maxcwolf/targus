@@ -1,15 +1,15 @@
 import type { Clock, GitHubClient, IdGenerator, ImageStore } from '@targus/core';
 
-import type { GitHubOAuth } from '../adapters/github-oauth.adapter.js';
-import type { Tokens } from '../adapters/token.adapter.js';
-import type { ApiConfig } from '../config.js';
-import type { ApprovalRepository } from '../repositories/approval.repository.js';
-import type { ApiBuildRepository } from '../repositories/build.repository.js';
-import type { ImageRepository } from '../repositories/image.repository.js';
-import type { MembershipRepository } from '../repositories/membership.repository.js';
-import type { ProjectRepository } from '../repositories/project.repository.js';
-import type { SessionRepository } from '../repositories/session.repository.js';
-import type { UserRepository } from '../repositories/user.repository.js';
+import type { GitHubOAuth } from '../adapters/github-oauth.adapter.ts';
+import type { Tokens } from '../adapters/token.adapter.ts';
+import type { ApiConfig } from '../config.ts';
+import type { ApprovalRepository } from '../repositories/approval.repository.ts';
+import type { ApiBuildRepository } from '../repositories/build.repository.ts';
+import type { ImageRepository } from '../repositories/image.repository.ts';
+import type { MembershipRepository } from '../repositories/membership.repository.ts';
+import type { ProjectRepository } from '../repositories/project.repository.ts';
+import type { SessionRepository } from '../repositories/session.repository.ts';
+import type { UserRepository } from '../repositories/user.repository.ts';
 
 /** Everything a use-case may touch, as ports. `composition.ts` wires the real adapters. */
 export interface ServiceDeps {

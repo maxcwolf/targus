@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { Build } from './build.js';
-import { ImageHash } from './snapshot.js';
+import { Build } from './build.ts';
+import { ImageHash } from './snapshot.ts';
 
 /** One story of a project's library: its accepted image on the default branch. */
 export const LibraryStory = z.object({

@@ -11,6 +11,10 @@
     "moduleDetection": "force",
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
+    // Relative imports name the real file (`./x.ts`). Projects that emit JavaScript (each
+    // package's tsconfig.lib.json) also set rewriteRelativeImportExtensions, so `dist/` gets
+    // `.js` paths and stays valid for Node (ADR 0017).
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
 
     "strict": true,

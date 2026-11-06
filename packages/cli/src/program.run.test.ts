@@ -2,10 +2,10 @@ import { TargusError } from '@targus/core';
 import { CommanderError } from 'commander';
 import { describe, expect, it } from 'vitest';
 
-import type { RunCommandOptions } from './commands/run.js';
-import { loadConfig, type CliConfig } from './config.js';
-import { unauthorizedExitCode } from './errors/exit-codes.js';
-import { createProgram, type CommandRunners } from './program.js';
+import type { RunCommandOptions } from './commands/run.ts';
+import { loadConfig, type CliConfig } from './config.ts';
+import { unauthorizedExitCode } from './errors/exit-codes.ts';
+import { createProgram, type CommandRunners } from './program.ts';
 
 interface Parsed {
   readonly output: string;

@@ -5,7 +5,7 @@ import { act, createElement, type ReactElement } from 'react';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TargusErrorBoundary, type StoryErrorReport } from './error-boundary.js';
+import { TargusErrorBoundary, type StoryErrorReport } from './error-boundary.ts';
 import {
   createChannelEmit,
   createWithTargus,
@@ -13,7 +13,7 @@ import {
   storyErrorEvent,
   withTargus,
   type TargusChannel,
-} from './with-targus.js';
+} from './with-targus.ts';
 
 const addonsStoreKey = '__STORYBOOK_ADDONS_PREVIEW';
 

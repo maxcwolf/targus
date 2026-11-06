@@ -11,8 +11,8 @@ function templates(name) {
   const source = `import { TargusError } from '@targus/core';
 import { Hono } from 'hono';
 
-import type { AppEnv } from '../app-env.js';
-import { sessionAuth } from '../middleware/auth.js';
+import type { AppEnv } from '../app-env.ts';
+import { sessionAuth } from '../middleware/auth.ts';
 
 /**
  * \`/api/${name}/*\`, behind the session.
@@ -28,8 +28,8 @@ export const ${route} = new Hono<AppEnv>().get('/', sessionAuth, (c) => {
 `;
   const test = `import { describe, expect, it } from 'vitest';
 
-import { call } from '../../test/support/api.js';
-import { signIn, withCookie } from '../../test/support/session.js';
+import { call } from '../../test/support/api.ts';
+import { signIn, withCookie } from '../../test/support/session.ts';
 
 // These tests go through the full app, so they answer 404 until the route is mounted in app.ts.
 describe('GET /api/${name}', () => {

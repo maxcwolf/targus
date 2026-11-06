@@ -1,11 +1,11 @@
 import { ImageHash, TargusError, type UploadImageResponse } from '@targus/core';
 
-import { sha256Hex } from '../lib/sha256.js';
-import { canAccessOrg } from './access.service.js';
-import type { Project } from '../repositories/project.repository.js';
-import type { ServiceDeps } from './deps.js';
-import type { Principal, Reviewer } from './principal.js';
-import { readPngDimensions } from './png.js';
+import { sha256Hex } from '../lib/sha256.ts';
+import { canAccessOrg } from './access.service.ts';
+import type { Project } from '../repositories/project.repository.ts';
+import type { ServiceDeps } from './deps.ts';
+import type { Principal, Reviewer } from './principal.ts';
+import { readPngDimensions } from './png.ts';
 
 type ImageDeps = Pick<ServiceDeps, 'clock' | 'images' | 'imageStore'>;
 

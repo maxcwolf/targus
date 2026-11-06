@@ -1,9 +1,9 @@
 import { isBlankPng } from '@targus/core';
 
-import type { CaptureReport, CaptureResult } from '../capture/capture-stories.js';
-import { writeCaptureOutput, type CaptureManifest } from '../capture/manifest.js';
-import { readPngSize, sha256Hex } from '../capture/png.js';
-import { encodeRgbaPng, encodeSolidPng } from '../capture/solid-png.fake.js';
+import type { CaptureReport, CaptureResult } from '../capture/capture-stories.ts';
+import { writeCaptureOutput, type CaptureManifest } from '../capture/manifest.ts';
+import { readPngSize, sha256Hex } from '../capture/png.ts';
+import { encodeRgbaPng, encodeSolidPng } from '../capture/solid-png.fake.ts';
 
 const width = 24;
 const height = 48;

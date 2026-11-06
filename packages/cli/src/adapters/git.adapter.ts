@@ -1,6 +1,6 @@
 import { isTargusError, TargusError } from '@targus/core';
 
-import { execFileBuffer, type Exec } from './exec.adapter.js';
+import { execFileBuffer, type Exec } from './exec.adapter.ts';
 
 /**
  * What `targus run` needs to know about the checkout (plan.md section 5.1, ADR 0004). Defined in

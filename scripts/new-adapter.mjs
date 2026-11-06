@@ -65,7 +65,7 @@ export function ${factory}(): ${portType} {
 `;
   const test = `import { describe, expect, it } from 'vitest';
 
-import { ${factory} } from './${base}.js';
+import { ${factory} } from './${base}.ts';
 
 describe('${adapterType}', () => {
   // TODO: replace with an integration test against the real dependency this adapter wraps.

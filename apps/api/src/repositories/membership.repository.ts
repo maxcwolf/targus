@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
-import { orgMemberships } from '../db/schema.js';
+import { orgMemberships } from '../db/schema.ts';
 
 /** A cached answer to "is this user a member of this org", and when GitHub gave it. */
 export interface CachedMembership {

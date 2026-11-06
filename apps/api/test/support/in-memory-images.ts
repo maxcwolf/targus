@@ -4,9 +4,9 @@ import type {
   ImageRecord,
   ImageRepository,
   UploaderOrg,
-} from '../../src/repositories/image.repository.js';
-import type { MembershipRepository } from '../../src/repositories/membership.repository.js';
-import type { ProjectRepository } from '../../src/repositories/project.repository.js';
+} from '../../src/repositories/image.repository.ts';
+import type { MembershipRepository } from '../../src/repositories/membership.repository.ts';
+import type { ProjectRepository } from '../../src/repositories/project.repository.ts';
 
 export interface InMemoryImages extends ImageRepository, ImageStore {
   readonly records: Map<string, ImageRecord & { lastReferencedAt: Date }>;

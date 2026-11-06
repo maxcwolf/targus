@@ -1,6 +1,6 @@
 import { type ReviewDecision, type ReviewRequest, ReviewSnapshotResponse } from '@targus/core';
 
-import { postJson } from './http.js';
+import { postJson } from './http.ts';
 
 /** `POST /api/snapshots/:id/review`: approve or deny one snapshot. */
 export function reviewSnapshot(

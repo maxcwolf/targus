@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { createFakeClock, fakeClockEpoch } from './clock.fake.js';
-import { createFakeIdGenerator } from './id-generator.fake.js';
+import { createFakeClock, fakeClockEpoch } from './clock.fake.ts';
+import { createFakeIdGenerator } from './id-generator.fake.ts';
 
 describe('createFakeClock', () => {
   it('starts at the epoch and only moves when told to', () => {

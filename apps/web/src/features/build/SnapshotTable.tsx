@@ -2,18 +2,18 @@ import { Link } from '@tanstack/react-router';
 import type { Snapshot } from '@targus/core';
 import { type ReactElement, useState } from 'react';
 
-import { ReviewPill, StateBadge } from '../../components/Badges.js';
-import { formatPercent } from '../../components/format.js';
-import { CaretIcon, OpenIcon } from '../../components/icons.js';
-import { Initial } from '../../components/StatusCircle.js';
+import { ReviewPill, StateBadge } from '../../components/Badges.tsx';
+import { formatPercent } from '../../components/format.ts';
+import { CaretIcon, OpenIcon } from '../../components/icons.tsx';
+import { Initial } from '../../components/StatusCircle.tsx';
 import {
   groupByTitle,
   isReviewable,
   type SnapshotFilter,
   type SnapshotGroup,
   storyName,
-} from './filters.js';
-import { ReviewProgress } from './ReviewProgress.js';
+} from './filters.ts';
+import { ReviewProgress } from './ReviewProgress.tsx';
 
 export interface SnapshotTableProps {
   readonly buildId: string;

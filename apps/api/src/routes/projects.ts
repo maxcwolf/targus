@@ -1,8 +1,8 @@
 import { ListBuildsQuery, maxBuildsPageLimit, TargusError } from '@targus/core';
 import { Hono } from 'hono';
 
-import type { AppEnv } from '../app-env.js';
-import { sessionAuth } from '../middleware/auth.js';
+import type { AppEnv } from '../app-env.ts';
+import { sessionAuth } from '../middleware/auth.ts';
 
 /** `/api/projects/*`: what the review UI lists, behind the session. */
 export const projectsRoute = new Hono<AppEnv>()

@@ -2,7 +2,7 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import type { ProjectSummary } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { GridIcon, LibraryIcon, ListIcon } from '../../components/icons.js';
+import { GridIcon, LibraryIcon, ListIcon } from '../../components/icons.tsx';
 
 /** The rail section the current path belongs to. Build and snapshot pages count as Builds. */
 function railSection(pathname: string): 'projects' | 'builds' | 'library' {

@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { imageHash, newProject } from '../../test/support/fixtures.js';
-import { createApprovalRepository } from './approval.repository.js';
-import { createProjectRepository } from './project.repository.js';
+import { imageHash, newProject } from '../../test/support/fixtures.ts';
+import { createApprovalRepository } from './approval.repository.ts';
+import { createProjectRepository } from './project.repository.ts';
 
 /** An approval of the `new` story `card` (no previous image) moving to image 2. */
 function approval(projectId: string) {

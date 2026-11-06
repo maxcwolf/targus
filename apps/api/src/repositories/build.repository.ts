@@ -10,15 +10,15 @@ import {
 import { and, asc, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
-import { builds, snapshots } from '../db/schema.js';
+import { builds, snapshots } from '../db/schema.ts';
 import {
   checkBuildPageLimit,
   decodeBuildCursor,
   toBuildPage,
   type BuildPage,
   type BuildPageRequest,
-} from './build-page.js';
-import { chunkForD1 } from './d1-limits.js';
+} from './build-page.ts';
+import { chunkForD1 } from './d1-limits.ts';
 import {
   buildInProgress,
   guardedSnapshotInserts,
@@ -29,10 +29,10 @@ import {
   toSnapshotRow,
   type BuildRecord,
   type SnapshotRecord,
-} from './build-rows.js';
+} from './build-rows.ts';
 
-export type { BuildPage, BuildPageRequest } from './build-page.js';
-export type { BuildRecord, SnapshotRecord } from './build-rows.js';
+export type { BuildPage, BuildPageRequest } from './build-page.ts';
+export type { BuildRecord, SnapshotRecord } from './build-rows.ts';
 
 /** What `completeWithResults` writes on the build when its results arrive. */
 export interface BuildCompletion {

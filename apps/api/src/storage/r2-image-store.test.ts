@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { imageHash } from '../../test/support/fixtures.js';
-import { createImageRepository } from '../repositories/image.repository.js';
-import { R2ImageStore } from './r2-image-store.js';
+import { imageHash } from '../../test/support/fixtures.ts';
+import { createImageRepository } from '../repositories/image.repository.ts';
+import { R2ImageStore } from './r2-image-store.ts';
 
 describe('R2ImageStore (local R2 + D1)', () => {
   const metadata = createImageRepository(env.DB);

@@ -4,9 +4,9 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { sha256Hex } from '../capture/png.js';
-import { encodeSolidPng } from '../capture/solid-png.fake.js';
-import { defaultCompareDeps, runCompare } from './compare.js';
+import { sha256Hex } from '../capture/png.ts';
+import { encodeSolidPng } from '../capture/solid-png.fake.ts';
+import { defaultCompareDeps, runCompare } from './compare.ts';
 
 const white = [255, 255, 255, 255] as const;
 const red = [255, 0, 0, 255] as const;

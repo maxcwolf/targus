@@ -55,7 +55,7 @@ describe('yarn new:route', () => {
       /export const buildsRoute = new Hono<AppEnv>\(\)/,
     );
     const test = read('apps/api/src/routes/builds.test.ts');
-    assert.match(test, /from '\.\.\/\.\.\/test\/support\/api\.js'/);
+    assert.match(test, /from '\.\.\/\.\.\/test\/support\/api\.ts'/);
     assert.match(test, /call\('\/api\/builds'/);
   });
 

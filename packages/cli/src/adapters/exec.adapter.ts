@@ -2,8 +2,8 @@ import { execFile } from 'node:child_process';
 
 import { TargusError } from '@targus/core';
 
-import { inheritedEnv } from '../config.js';
-import { formatDuration } from '../duration.js';
+import { inheritedEnv } from '../config.ts';
+import { formatDuration } from '../duration.ts';
 
 export interface ExecOptions {
   /** Variables added to the inherited environment for this one call. */

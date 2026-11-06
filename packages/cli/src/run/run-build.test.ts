@@ -1,12 +1,12 @@
 import { createFakeClock, diffImages, isBlankPng, isTargusError } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import type { CaptureReport, CaptureResult } from '../capture/capture-stories.js';
-import { compareWithCore } from '../capture/compare-images.js';
-import { sha256Hex } from '../capture/png.js';
-import { encodeSolidPng, type Rgba } from '../capture/solid-png.fake.js';
-import { createBuildRequest, runBuild, type RunBuildInput } from './run-build.js';
-import { createFakeTargusApi, type FakeTargusApi } from './targus-api.fake.js';
+import type { CaptureReport, CaptureResult } from '../capture/capture-stories.ts';
+import { compareWithCore } from '../capture/compare-images.ts';
+import { sha256Hex } from '../capture/png.ts';
+import { encodeSolidPng, type Rgba } from '../capture/solid-png.fake.ts';
+import { createBuildRequest, runBuild, type RunBuildInput } from './run-build.ts';
+import { createFakeTargusApi, type FakeTargusApi } from './targus-api.fake.ts';
 
 const sha = 'a'.repeat(40);
 const base = 'b'.repeat(40);

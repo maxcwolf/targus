@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { cryptoIdGenerator } from './crypto-id.adapter.js';
-import { systemClock } from './system-clock.adapter.js';
+import { cryptoIdGenerator } from './crypto-id.adapter.ts';
+import { systemClock } from './system-clock.adapter.ts';
 
 describe('systemClock', () => {
   it('returns the current time', () => {

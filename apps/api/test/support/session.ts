@@ -2,10 +2,10 @@ import { fakeClockEpoch, type ReviewerUser } from '@targus/core';
 import { env } from 'cloudflare:workers';
 import { generateSignedCookie } from 'hono/cookie';
 
-import { sha256Hex } from '../../src/lib/sha256.js';
-import { createSessionRepository } from '../../src/repositories/session.repository.js';
-import { createUserRepository } from '../../src/repositories/user.repository.js';
-import { sessionSecret } from './api.js';
+import { sha256Hex } from '../../src/lib/sha256.ts';
+import { createSessionRepository } from '../../src/repositories/session.repository.ts';
+import { createUserRepository } from '../../src/repositories/user.repository.ts';
+import { sessionSecret } from './api.ts';
 
 /** A session cookie for a fresh user, and that user. */
 export interface SignedIn {

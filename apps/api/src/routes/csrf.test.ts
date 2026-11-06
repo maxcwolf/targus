@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { bearer, call, createTestProject, postJson } from '../../test/support/api.js';
-import { createBuildRequest, sha } from '../../test/support/fixtures.js';
-import { reviewOrigin, signIn } from '../../test/support/session.js';
+import { bearer, call, createTestProject, postJson } from '../../test/support/api.ts';
+import { createBuildRequest, sha } from '../../test/support/fixtures.ts';
+import { reviewOrigin, signIn } from '../../test/support/session.ts';
 
 // ADR 0015: cookie-authenticated writes must be same-origin; project-token writes are exempt.
 

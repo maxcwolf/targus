@@ -1,9 +1,9 @@
 import { libraryStories, TargusError, type GetLibraryResponse } from '@targus/core';
 
-import { requireProjectAccess } from './access.service.js';
-import { toSnapshot, withSummary } from './build.service.js';
-import type { ServiceDeps } from './deps.js';
-import type { Reviewer } from './principal.js';
+import { requireProjectAccess } from './access.service.ts';
+import { toSnapshot, withSummary } from './build.service.ts';
+import type { ServiceDeps } from './deps.ts';
+import type { Reviewer } from './principal.ts';
 
 type LibraryDeps = Pick<ServiceDeps, 'builds' | 'clock' | 'github' | 'memberships' | 'projects'>;
 

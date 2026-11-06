@@ -1,4 +1,4 @@
-import { sha256Hex } from '../../src/lib/sha256.js';
+import { sha256Hex } from '../../src/lib/sha256.ts';
 
 function crc32(bytes: Uint8Array): number {
   let crc = 0xffffffff;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { ApiRequestError } from '../api-client/index.js';
-import { createQueryClient } from './query-client.js';
+import { ApiRequestError } from '../api-client/index.ts';
+import { createQueryClient } from './query-client.ts';
 
 describe('createQueryClient', () => {
   it('retries transient failures but never 4xx answers', () => {

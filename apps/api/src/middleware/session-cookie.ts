@@ -4,7 +4,7 @@ import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie';
 import type { CookieOptions } from 'hono/utils/cookie';
 import { z } from 'zod';
 
-import { sessionLifetimeSeconds, type CookieSettings, type Services } from '../services/index.js';
+import { sessionLifetimeSeconds, type CookieSettings, type Services } from '../services/index.ts';
 
 // Both cookies are signed with SESSION_SECRET, HttpOnly, and SameSite=Lax. Lax keeps the cookie
 // off cross-site POSTs; the same-origin check in middleware/auth.ts (ADR 0015) is the CSRF

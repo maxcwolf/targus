@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { Build } from './build.js';
-import { ImageHash, Snapshot } from './snapshot.js';
+import { Build } from './build.ts';
+import { ImageHash, Snapshot } from './snapshot.ts';
 
 /**
  * The fold of a build's snapshots, as `buildStatus` computes it, in wire form. `in_progress`

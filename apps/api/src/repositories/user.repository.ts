@@ -2,7 +2,7 @@ import type { ReviewerUser } from '@targus/core';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
-import { users } from '../db/schema.js';
+import { users } from '../db/schema.ts';
 
 /** A GitHub user signing in; `id` is used only when the user is new. */
 export interface UserLogin {

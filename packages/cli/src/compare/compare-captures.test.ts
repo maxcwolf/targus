@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { CaptureManifest, StoryRecord } from '../capture/manifest.js';
-import { compareCaptures } from './compare-captures.js';
+import type { CaptureManifest, StoryRecord } from '../capture/manifest.ts';
+import { compareCaptures } from './compare-captures.ts';
 
 function story(id: string, overrides: Partial<StoryRecord> = {}): StoryRecord {
   return {

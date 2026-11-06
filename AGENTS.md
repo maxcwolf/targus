@@ -56,6 +56,7 @@ come from `Clock` and `IdGenerator`; `new Date()`, `Date.now()`, `Math.random()`
   These are CODEOWNERS-protected; fix the code instead.
 - Throw `TargusError` (with a `code`) from services; `apps/api/src/errors.ts` maps codes to HTTP.
 - No `any`, no non-null assertions, files <= 300 lines, functions <= 50 lines, complexity <= 10.
+- Relative imports name the real file: `./file.ts` or `./file.tsx`, never `.js` (ADR 0017).
 - Commits and PR titles are Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`,
   `test:`, `chore:`, `perf:`, `ci:`, `build:`, `style:`, `revert:`).
 - User-facing changes to a published package need a changeset (`yarn changeset`).

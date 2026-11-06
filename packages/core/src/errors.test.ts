@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isTargusError, TargusError, targusErrorCodes } from './errors.js';
+import { isTargusError, TargusError, targusErrorCodes } from './errors.ts';
 
 describe('TargusError', () => {
   it('carries its code, message and cause', () => {

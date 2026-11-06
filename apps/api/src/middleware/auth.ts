@@ -1,9 +1,9 @@
 import type { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
-import type { AppEnv, PrincipalEnv, ProjectEnv, ReviewerEnv } from '../app-env.js';
-import type { Reviewer, Services } from '../services/index.js';
-import { readSessionId, requireCookieSettings } from './session-cookie.js';
+import type { AppEnv, PrincipalEnv, ProjectEnv, ReviewerEnv } from '../app-env.ts';
+import type { Reviewer, Services } from '../services/index.ts';
+import { readSessionId, requireCookieSettings } from './session-cookie.ts';
 
 /** The token of an `Authorization: Bearer <token>` header, or null. */
 export function bearerToken(header: string | undefined): string | null {

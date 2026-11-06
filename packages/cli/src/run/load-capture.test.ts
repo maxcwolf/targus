@@ -4,11 +4,11 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { CaptureResult } from '../capture/capture-stories.js';
-import { writeCaptureOutput } from '../capture/manifest.js';
-import { sha256Hex } from '../capture/png.js';
-import { encodeSolidPng } from '../capture/solid-png.fake.js';
-import { loadCapture } from './load-capture.js';
+import type { CaptureResult } from '../capture/capture-stories.ts';
+import { writeCaptureOutput } from '../capture/manifest.ts';
+import { sha256Hex } from '../capture/png.ts';
+import { encodeSolidPng } from '../capture/solid-png.fake.ts';
+import { loadCapture } from './load-capture.ts';
 
 const png = encodeSolidPng(2, 2, [1, 2, 3, 255]);
 const base: CaptureResult = {

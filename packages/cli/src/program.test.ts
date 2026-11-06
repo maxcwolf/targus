@@ -2,12 +2,12 @@ import { TargusError } from '@targus/core';
 import { CommanderError } from 'commander';
 import { describe, expect, it } from 'vitest';
 
-import type { CaptureCommandOptions } from './commands/capture.js';
-import type { CompareCommandOptions } from './commands/compare.js';
-import { debugEnabled, loadConfig, simulatorTestTarget } from './config.js';
-import { exitCodeFor, notImplementedExitCode, unauthorizedExitCode } from './errors/exit-codes.js';
-import { createProgram, type CommandRunners, type ProgramOptions } from './program.js';
-import { cliVersion } from './version.js';
+import type { CaptureCommandOptions } from './commands/capture.ts';
+import type { CompareCommandOptions } from './commands/compare.ts';
+import { debugEnabled, loadConfig, simulatorTestTarget } from './config.ts';
+import { exitCodeFor, notImplementedExitCode, unauthorizedExitCode } from './errors/exit-codes.ts';
+import { createProgram, type CommandRunners, type ProgramOptions } from './program.ts';
+import { cliVersion } from './version.ts';
 
 interface RunResult {
   readonly output: string;

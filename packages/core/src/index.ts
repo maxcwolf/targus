@@ -3,12 +3,12 @@
 export {
   baselineResolutionCases,
   type BaselineResolutionCase,
-} from './baseline/baseline-resolution-cases.js';
+} from './baseline/baseline-resolution-cases.ts';
 export {
   baselineShaOrder,
   resolveBaseline,
   type BaselineCandidate,
-} from './baseline/resolve-baseline.js';
+} from './baseline/resolve-baseline.ts';
 export {
   buildStatus,
   buildStatusFromTally,
@@ -19,16 +19,16 @@ export {
   type BuildStatusResult,
   type SnapshotOutcome,
   type SnapshotTally,
-} from './build-status.js';
-export * from './contracts/index.js';
-export { isTargusError, TargusError, targusErrorCodes, type TargusErrorCode } from './errors.js';
-export { diffImages, type DiffImagesOptions, type DiffImagesResult } from './images/diff-images.js';
-export { isBlankPng } from './images/is-blank.js';
-export * from './ports/index.js';
-export { acceptedImageHash } from './snapshots/accepted-image-hash.js';
+} from './build-status.ts';
+export * from './contracts/index.ts';
+export { isTargusError, TargusError, targusErrorCodes, type TargusErrorCode } from './errors.ts';
+export { diffImages, type DiffImagesOptions, type DiffImagesResult } from './images/diff-images.ts';
+export { isBlankPng } from './images/is-blank.ts';
+export * from './ports/index.ts';
+export { acceptedImageHash } from './snapshots/accepted-image-hash.ts';
 export {
   compareSnapshot,
   type ApprovalPair,
   type CompareSnapshotInput,
-} from './snapshots/compare-snapshot.js';
-export { libraryStories } from './snapshots/library-stories.js';
+} from './snapshots/compare-snapshot.ts';
+export { libraryStories } from './snapshots/library-stories.ts';

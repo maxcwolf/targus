@@ -1,6 +1,6 @@
 import { TargusError } from '@targus/core';
 
-import type { ServiceDeps } from './deps.js';
+import type { ServiceDeps } from './deps.ts';
 
 /** What a browser says about where a request comes from. */
 export interface RequestOrigin {

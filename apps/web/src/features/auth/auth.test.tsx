@@ -2,8 +2,8 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { apiError, apiState, server } from '../../test/msw.js';
-import { renderApp } from '../../test/render.js';
+import { apiError, apiState, server } from '../../test/msw.ts';
+import { renderApp } from '../../test/render.tsx';
 
 describe('auth gate', () => {
   it('shows the sign-in link with returnTo set to the current path and search', async () => {

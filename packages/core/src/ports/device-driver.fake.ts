@@ -1,4 +1,4 @@
-import type { DeviceDriver, StatusBarOverrides } from './device-driver.js';
+import type { DeviceDriver, StatusBarOverrides } from './device-driver.ts';
 
 /** One call a `FakeDeviceDriver` received, in the order it was made. */
 export type DeviceDriverCall =

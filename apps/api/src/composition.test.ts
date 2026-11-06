@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { NoopGitHubClient, OctokitGitHubClient } from './adapters/github-client.adapter.js';
-import { GitHubAppOAuth } from './adapters/github-oauth.adapter.js';
-import { createDeps } from './composition.js';
+import { NoopGitHubClient, OctokitGitHubClient } from './adapters/github-client.adapter.ts';
+import { GitHubAppOAuth } from './adapters/github-oauth.adapter.ts';
+import { createDeps } from './composition.ts';
 
 describe('createDeps', () => {
   it('uses the no-op GitHub client until the App is configured', () => {

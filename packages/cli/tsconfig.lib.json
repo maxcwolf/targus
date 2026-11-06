@@ -7,6 +7,8 @@
     "moduleResolution": "nodenext",
     "types": ["node"],
     "emitDeclarationOnly": false,
+    // Source imports say `./x.ts`; the emitted files must say `./x.js` (ADR 0017).
+    "rewriteRelativeImportExtensions": true,
     "sourceMap": true,
     "rootDir": "${configDir}/src",
     "outDir": "${configDir}/dist",

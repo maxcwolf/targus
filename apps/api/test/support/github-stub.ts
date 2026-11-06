@@ -1,4 +1,4 @@
-import { isMemberOf, type OrgMembers } from './org-members.js';
+import { isMemberOf, type OrgMembers } from './org-members.ts';
 
 /** One request the stubbed GitHub API received. */
 export interface RecordedGitHubRequest {

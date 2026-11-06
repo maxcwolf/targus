@@ -106,6 +106,24 @@ export default tseslint.config(
     },
   },
   {
+    // Relative imports name the file that exists; tsc rewrites `.ts` to `.js` on emit (ADR 0017).
+    name: 'targus/import-extensions',
+    files: ['**/*.{ts,tsx,mts}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^\\.{1,2}/.*\\.js$',
+              message: 'Import the TypeScript file by its real name (./file.ts or ./file.tsx).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     name: 'targus/port-adapters',
     files: portAdapterFiles,
     rules: { 'no-restricted-syntax': 'off' },

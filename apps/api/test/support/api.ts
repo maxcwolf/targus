@@ -2,11 +2,11 @@ import { CreateProjectResponse } from '@targus/core';
 import { env } from 'cloudflare:workers';
 import type { Hono } from 'hono';
 
-import type { AppEnv } from '../../src/app-env.js';
-import { createApp } from '../../src/app.js';
-import { createDeps } from '../../src/composition.js';
-import type { ServiceDeps } from '../../src/services/deps.js';
-import { bindServices } from '../../src/services/index.js';
+import type { AppEnv } from '../../src/app-env.ts';
+import { createApp } from '../../src/app.ts';
+import { createDeps } from '../../src/composition.ts';
+import type { ServiceDeps } from '../../src/services/deps.ts';
+import { bindServices } from '../../src/services/index.ts';
 
 /** The admin token the route tests run with (wrangler.jsonc sets none). */
 export const adminToken = 'test-admin-token';

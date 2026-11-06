@@ -1,6 +1,6 @@
 import type { Clock, DeviceDriver, StoryIndexEntry, StorybookChannel } from '@targus/core';
 
-import { readPngSize } from './png.js';
+import { readPngSize } from './png.ts';
 
 export interface CaptureOptions {
   /** Wait after `storyRendered` before the first screenshot; doubled on each retry. */

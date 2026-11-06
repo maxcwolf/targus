@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { Bindings } from './bindings.js';
+import type { Bindings } from './bindings.ts';
 
 // Workers have no process.env: configuration arrives as bindings and is validated here, the
 // only place that reads raw variables.

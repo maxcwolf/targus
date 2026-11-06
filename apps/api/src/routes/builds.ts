@@ -1,9 +1,9 @@
 import { CreateBuildRequest, SubmitResultsRequest } from '@targus/core';
 import { Hono } from 'hono';
 
-import type { AppEnv } from '../app-env.js';
-import { projectAuth, readerAuth, sessionAuth } from '../middleware/auth.js';
-import { jsonBody } from '../middleware/json-body.js';
+import type { AppEnv } from '../app-env.ts';
+import { projectAuth, readerAuth, sessionAuth } from '../middleware/auth.ts';
+import { jsonBody } from '../middleware/json-body.ts';
 
 /**
  * `/api/builds/*`. The CLI opens builds and submits results with its project token; the review

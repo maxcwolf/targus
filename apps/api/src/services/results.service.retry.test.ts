@@ -1,16 +1,16 @@
 import type { GitHubClient, SubmitResultsRequest } from '@targus/core';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ApiBuildRepository } from '../repositories/build.repository.js';
-import { createBuildRequest, newProject, sha, storyResult } from '../../test/support/fixtures.js';
-import { markUploaded } from '../../test/support/in-memory-images.js';
+import type { ApiBuildRepository } from '../repositories/build.repository.ts';
+import { createBuildRequest, newProject, sha, storyResult } from '../../test/support/fixtures.ts';
+import { markUploaded } from '../../test/support/in-memory-images.ts';
 import {
   createInMemoryBuilds,
   createTestDeps,
   type TestDeps,
-} from '../../test/support/in-memory.js';
-import { createBuild } from './build.service.js';
-import { submitResults } from './results.service.js';
+} from '../../test/support/in-memory.ts';
+import { createBuild } from './build.service.ts';
+import { submitResults } from './results.service.ts';
 
 // Submitting results must be safe to retry: whatever fails, the build is either still open
 // with nothing stored (retry succeeds) or complete with its results (retry is a conflict).

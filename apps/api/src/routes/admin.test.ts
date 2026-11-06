@@ -2,7 +2,7 @@ import { CreateProjectResponse } from '@targus/core';
 import { exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { adminToken, call, postJson } from '../../test/support/api.js';
+import { adminToken, call, postJson } from '../../test/support/api.ts';
 
 const body = {
   githubOrg: 'admin-org',

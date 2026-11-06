@@ -1,10 +1,10 @@
 import type { BuildStatusSummary } from '@targus/core';
 import { describe, expect, it, vi } from 'vitest';
 
-import { newBuild, newProject } from '../../test/support/fixtures.js';
-import { createRecordingGitHub } from '../../test/support/github-recorder.js';
-import { createInMemoryProjects } from '../../test/support/in-memory.js';
-import { checkRunState, syncCheckRun } from './check-run.js';
+import { newBuild, newProject } from '../../test/support/fixtures.ts';
+import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
+import { createInMemoryProjects } from '../../test/support/in-memory.ts';
+import { checkRunState, syncCheckRun } from './check-run.ts';
 
 const base: BuildStatusSummary = {
   status: 'passed',

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { makePng } from '../../test/support/png.js';
-import { readPngDimensions } from './png.js';
+import { makePng } from '../../test/support/png.ts';
+import { readPngDimensions } from './png.ts';
 
 describe('readPngDimensions', () => {
   it('reads width and height from IHDR', async () => {

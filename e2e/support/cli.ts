@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
-import { e2eConfig } from '../config.js';
+import { e2eConfig } from '../config.ts';
 
 const execFileAsync = promisify(execFile);
 

@@ -1,7 +1,7 @@
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
 
-import { decodePng } from './decode-png.js';
+import { decodePng } from './decode-png.ts';
 
 /** Tuning for `diffImages`. Both fields default to pixelmatch's own defaults. */
 export interface DiffImagesOptions {

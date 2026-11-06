@@ -12,17 +12,17 @@ import {
 import { CommanderError } from 'commander';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { TargusApiClient, type Fetch } from './adapters/api-client.adapter.js';
-import type { Exec } from './adapters/exec.adapter.js';
-import type { GitMetadata } from './adapters/git.adapter.js';
-import { WsStorybookChannel } from './adapters/ws-channel.adapter.js';
-import { runCapture } from './commands/capture.js';
-import { runRun, type RunCommandDeps } from './commands/run.js';
-import { loadConfig } from './config.js';
-import { failureExitCode } from './errors/exit-codes.js';
-import { writeFixtureCapture } from './fixtures/fixture-capture.js';
-import { createProgram } from './program.js';
-import { createFakeTargusApi, type FakeTargusApi } from './run/targus-api.fake.js';
+import { TargusApiClient, type Fetch } from './adapters/api-client.adapter.ts';
+import type { Exec } from './adapters/exec.adapter.ts';
+import type { GitMetadata } from './adapters/git.adapter.ts';
+import { WsStorybookChannel } from './adapters/ws-channel.adapter.ts';
+import { runCapture } from './commands/capture.ts';
+import { runRun, type RunCommandDeps } from './commands/run.ts';
+import { loadConfig } from './config.ts';
+import { failureExitCode } from './errors/exit-codes.ts';
+import { writeFixtureCapture } from './fixtures/fixture-capture.ts';
+import { createProgram } from './program.ts';
+import { createFakeTargusApi, type FakeTargusApi } from './run/targus-api.fake.ts';
 
 /**
  * Whole-run failures of `targus run`, from argv to exit code and stderr: the real command, the

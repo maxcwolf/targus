@@ -1,10 +1,10 @@
 import type { Snapshot } from '@targus/core';
 import type { ReactElement, ReactNode } from 'react';
 
-import { ActualSizeIcon, DiffIcon, FitIcon } from '../../components/icons.js';
-import { releaseFocusOnPointerUp } from '../../components/releaseFocus.js';
-import type { ViewerState } from './useViewer.js';
-import { ViewerBody } from './ViewerModes.js';
+import { ActualSizeIcon, DiffIcon, FitIcon } from '../../components/icons.tsx';
+import { releaseFocusOnPointerUp } from '../../components/releaseFocus.ts';
+import type { ViewerState } from './useViewer.ts';
+import { ViewerBody } from './ViewerModes.tsx';
 
 export interface ViewerLabels {
   /** e.g. "Build 11 on main", or "none". */

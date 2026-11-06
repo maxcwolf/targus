@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ListBuildsQuery, ListBuildsResponse, maxBuildsPageLimit } from './index.js';
+import { ListBuildsQuery, ListBuildsResponse, maxBuildsPageLimit } from './index.ts';
 
 describe('ListBuildsQuery', () => {
   it('accepts no query at all, as clients that do not page send', () => {

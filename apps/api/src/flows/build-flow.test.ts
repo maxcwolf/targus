@@ -8,10 +8,10 @@ import {
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { createApprovalRepository } from '../repositories/approval.repository.js';
-import { bearer, call, createTestProject, postJson, putImage } from '../../test/support/api.js';
-import { captured, createBuildRequest, sha, storyResult } from '../../test/support/fixtures.js';
-import { pngFixture } from '../../test/support/png.js';
+import { createApprovalRepository } from '../repositories/approval.repository.ts';
+import { bearer, call, createTestProject, postJson, putImage } from '../../test/support/api.ts';
+import { captured, createBuildRequest, sha, storyResult } from '../../test/support/fixtures.ts';
+import { pngFixture } from '../../test/support/png.ts';
 
 // The build flow over HTTP in the Workers runtime with the real local D1 and R2: what `targus run`
 // does on CI, build after build. GitHub is the no-op client (the project has no installation).

@@ -2,8 +2,8 @@ import { type QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
-import { createQueryClient } from './query-client.js';
-import type { createAppRouter } from './router.js';
+import { createQueryClient } from './query-client.ts';
+import type { createAppRouter } from './router.tsx';
 
 export interface AppProps {
   readonly router: ReturnType<typeof createAppRouter>;

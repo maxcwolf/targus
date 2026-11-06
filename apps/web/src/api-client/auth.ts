@@ -1,7 +1,7 @@
 import { MeResponse } from '@targus/core';
 import { z } from 'zod';
 
-import { getJson, postJson } from './http.js';
+import { getJson, postJson } from './http.ts';
 
 /** `GET /api/me`: the signed-in reviewer. Rejects with a `SignedOutError` when signed out. */
 export function getMe(): Promise<MeResponse> {

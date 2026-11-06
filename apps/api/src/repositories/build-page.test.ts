@@ -1,12 +1,12 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { describeBuildPaging } from '../../test/support/build-paging-suite.js';
-import { newProject } from '../../test/support/fixtures.js';
-import { createInMemoryBuilds } from '../../test/support/in-memory-builds.js';
-import { decodeBuildCursor, encodeBuildCursor } from './build-page.js';
-import { D1BuildRepository } from './build.repository.js';
-import { createProjectRepository } from './project.repository.js';
+import { describeBuildPaging } from '../../test/support/build-paging-suite.ts';
+import { newProject } from '../../test/support/fixtures.ts';
+import { createInMemoryBuilds } from '../../test/support/in-memory-builds.ts';
+import { decodeBuildCursor, encodeBuildCursor } from './build-page.ts';
+import { D1BuildRepository } from './build.repository.ts';
+import { createProjectRepository } from './project.repository.ts';
 
 describe('build cursors', () => {
   it('round-trip a build number through URL-safe text', () => {

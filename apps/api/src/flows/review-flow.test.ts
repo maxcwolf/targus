@@ -10,17 +10,17 @@ import {
 import type { Hono } from 'hono';
 import { describe, expect, it } from 'vitest';
 
-import { OctokitGitHubClient } from '../adapters/github-client.adapter.js';
-import type { AppEnv } from '../app-env.js';
-import { appWith, bearer, call, createTestProject, putImage } from '../../test/support/api.js';
-import { captured, createBuildRequest, sha, storyResult } from '../../test/support/fixtures.js';
+import { OctokitGitHubClient } from '../adapters/github-client.adapter.ts';
+import type { AppEnv } from '../app-env.ts';
+import { appWith, bearer, call, createTestProject, putImage } from '../../test/support/api.ts';
+import { captured, createBuildRequest, sha, storyResult } from '../../test/support/fixtures.ts';
 import {
   createGitHubStub,
   generatePrivateKeyPem,
   type GitHubStub,
-} from '../../test/support/github-stub.js';
-import { pngFixture } from '../../test/support/png.js';
-import { signIn, withCookie } from '../../test/support/session.js';
+} from '../../test/support/github-stub.ts';
+import { pngFixture } from '../../test/support/png.ts';
+import { signIn, withCookie } from '../../test/support/session.ts';
 
 // The review flow over HTTP with the real local D1 and R2 and Octokit against a stubbed GitHub:
 // the CLI publishes a build with changes, a reviewer of the org approves, denies and approves

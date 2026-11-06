@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 
-import { signInUrl } from '../../api-client/index.js';
-import { useReturnTo } from './useMe.js';
+import { signInUrl } from '../../api-client/index.ts';
+import { useReturnTo } from './useMe.ts';
 
 /** Shown instead of any page while there is no session. Returns to the current page after. */
 export function SignIn(): ReactElement {

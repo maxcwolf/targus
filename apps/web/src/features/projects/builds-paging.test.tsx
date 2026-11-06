@@ -3,9 +3,9 @@ import { fireEvent, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { mainBuild, project } from '../../test/fixtures.js';
-import { apiError, server } from '../../test/msw.js';
-import { renderApp } from '../../test/render.js';
+import { mainBuild, project } from '../../test/fixtures.ts';
+import { apiError, server } from '../../test/msw.ts';
+import { renderApp } from '../../test/render.tsx';
 
 const zero = { unchanged: 0, changed: 0, new: 0, removed: 0, unstable: 0, error: 0 };
 

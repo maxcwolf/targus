@@ -1,10 +1,10 @@
 import { TargusError } from '@targus/core';
 
-import type { BuildRecord } from '../repositories/build.repository.js';
-import type { CachedMembership } from '../repositories/membership.repository.js';
-import type { Project } from '../repositories/project.repository.js';
-import type { ServiceDeps } from './deps.js';
-import type { Principal, Reviewer } from './principal.js';
+import type { BuildRecord } from '../repositories/build.repository.ts';
+import type { CachedMembership } from '../repositories/membership.repository.ts';
+import type { Project } from '../repositories/project.repository.ts';
+import type { ServiceDeps } from './deps.ts';
+import type { Principal, Reviewer } from './principal.ts';
 
 /** How long a cached org membership answer is trusted (plan.md section 5.2). */
 const membershipTtlMs = 60 * 60 * 1000;

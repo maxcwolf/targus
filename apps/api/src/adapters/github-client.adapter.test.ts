@@ -1,8 +1,8 @@
 import type { GitHubClient } from '@targus/core';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { createGitHubStub, generatePrivateKeyPem } from '../../test/support/github-stub.js';
-import { NoopGitHubClient, OctokitGitHubClient } from './github-client.adapter.js';
+import { createGitHubStub, generatePrivateKeyPem } from '../../test/support/github-stub.ts';
+import { NoopGitHubClient, OctokitGitHubClient } from './github-client.adapter.ts';
 
 const target = { installationId: 42, repo: 'example-org/example-app', headSha: 'a'.repeat(40) };
 let privateKey = '';

@@ -1,7 +1,7 @@
 import type { SnapshotCounts } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { changeCount, plural, storyCount, storyLabel } from '../../components/format.js';
+import { changeCount, plural, storyCount, storyLabel } from '../../components/format.ts';
 
 /**
  * "6 changes · 1 new · 1 removed", where changes are changed plus new (as on the build page),

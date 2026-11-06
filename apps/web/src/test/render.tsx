@@ -1,9 +1,9 @@
 import { createMemoryHistory } from '@tanstack/react-router';
 import { render, type RenderResult } from '@testing-library/react';
 
-import { App } from '../app/App.js';
-import { createQueryClient } from '../app/query-client.js';
-import { createAppRouter } from '../app/router.js';
+import { App } from '../app/App.tsx';
+import { createQueryClient } from '../app/query-client.ts';
+import { createAppRouter } from '../app/router.tsx';
 
 export interface RenderedApp extends RenderResult {
   readonly router: ReturnType<typeof createAppRouter>;

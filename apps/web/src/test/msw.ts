@@ -18,7 +18,7 @@ import {
   prBuild,
   project,
   reviewer,
-} from './fixtures.js';
+} from './fixtures.ts';
 
 /** An in-memory API: handlers read and write it, `resetApiState` runs after every test. */
 interface ApiState {

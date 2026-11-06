@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { createFakeOAuth, octocat } from '../../test/support/in-memory-auth.js';
-import { createTestDeps, testConfig } from '../../test/support/in-memory.js';
+import { createFakeOAuth, octocat } from '../../test/support/in-memory-auth.ts';
+import { createTestDeps, testConfig } from '../../test/support/in-memory.ts';
 import {
   beginLogin,
   completeLogin,
   cookieSettings,
   logout,
   safeReturnTo,
-} from './login.service.js';
+} from './login.service.ts';
 
 describe('safeReturnTo', () => {
   it.each([

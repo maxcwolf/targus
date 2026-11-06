@@ -2,7 +2,7 @@ import type { Approval } from '@targus/core';
 import { and, asc, eq, isNull, type SQL } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
-import { approvals } from '../db/schema.js';
+import { approvals } from '../db/schema.ts';
 
 export interface ApprovalRepository {
   /** Every approval of a project, oldest first. */

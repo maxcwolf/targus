@@ -1,5 +1,5 @@
-import type { CompareImages } from '../capture/capture-stories.js';
-import type { CaptureManifest, StoryRecord } from '../capture/manifest.js';
+import type { CompareImages } from '../capture/capture-stories.ts';
+import type { CaptureManifest, StoryRecord } from '../capture/manifest.ts';
 
 /** A story present in both captures, with its changed-pixel ratio against the baseline. */
 export interface ComparedStory {

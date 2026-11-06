@@ -1,10 +1,10 @@
 import type { Snapshot } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { imageUrl } from '../../api-client/index.js';
-import { CompareSlider } from '../../components/CompareSlider.js';
-import { ImagePane } from './ImagePane.js';
-import type { ViewerState } from './useViewer.js';
+import { imageUrl } from '../../api-client/index.ts';
+import { CompareSlider } from '../../components/CompareSlider.tsx';
+import { ImagePane } from './ImagePane.tsx';
+import type { ViewerState } from './useViewer.ts';
 
 interface ModeProps {
   readonly snapshot: Snapshot;

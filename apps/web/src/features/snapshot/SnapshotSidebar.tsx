@@ -2,9 +2,9 @@ import { Link } from '@tanstack/react-router';
 import type { Snapshot } from '@targus/core';
 import { type ReactElement, useEffect, useRef } from 'react';
 
-import { formatPercent } from '../../components/format.js';
-import { PathText } from '../../components/PathText.js';
-import { groupByTitle, isReviewable, type SnapshotFilter, storyName } from '../build/filters.js';
+import { formatPercent } from '../../components/format.ts';
+import { PathText } from '../../components/PathText.tsx';
+import { groupByTitle, isReviewable, type SnapshotFilter, storyName } from '../build/filters.ts';
 
 export interface SnapshotSidebarProps {
   readonly buildId: string;

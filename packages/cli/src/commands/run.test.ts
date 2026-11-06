@@ -5,13 +5,13 @@ import path from 'node:path';
 import { createFakeClock, isTargusError } from '@targus/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { Exec } from '../adapters/exec.adapter.js';
-import type { GitMetadata } from '../adapters/git.adapter.js';
-import type { CaptureCommandOptions } from './capture.js';
-import { loadConfig, type CliConfig } from '../config.js';
-import { fixtureCaptureReport, writeFixtureCapture } from '../fixtures/fixture-capture.js';
-import { createFakeTargusApi, type FakeTargusApi } from '../run/targus-api.fake.js';
-import { runRun, type RunCommandDeps, type RunCommandOptions } from './run.js';
+import type { Exec } from '../adapters/exec.adapter.ts';
+import type { GitMetadata } from '../adapters/git.adapter.ts';
+import type { CaptureCommandOptions } from './capture.ts';
+import { loadConfig, type CliConfig } from '../config.ts';
+import { fixtureCaptureReport, writeFixtureCapture } from '../fixtures/fixture-capture.ts';
+import { createFakeTargusApi, type FakeTargusApi } from '../run/targus-api.fake.ts';
+import { runRun, type RunCommandDeps, type RunCommandOptions } from './run.ts';
 
 const head = 'a'.repeat(40);
 const mergeBase = 'b'.repeat(40);

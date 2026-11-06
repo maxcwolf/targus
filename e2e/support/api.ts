@@ -1,7 +1,7 @@
 import type { APIRequestContext } from '@playwright/test';
 import { z } from 'zod';
 
-import { e2eConfig } from '../config.js';
+import { e2eConfig } from '../config.ts';
 
 // Just the response fields the e2e suite asserts on. The full contracts live in @targus/core and
 // are tested in apps/api; here a field that went missing or changed type fails the parse.

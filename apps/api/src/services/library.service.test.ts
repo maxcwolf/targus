@@ -1,11 +1,11 @@
 import { GetLibraryResponse } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { imageHash, newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.js';
-import { createRecordingGitHub } from '../../test/support/github-recorder.js';
-import { signInReviewer } from '../../test/support/in-memory-auth.js';
-import { createTestDeps } from '../../test/support/in-memory.js';
-import { getLibrary } from './library.service.js';
+import { imageHash, newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.ts';
+import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
+import { signInReviewer } from '../../test/support/in-memory-auth.ts';
+import { createTestDeps } from '../../test/support/in-memory.ts';
+import { getLibrary } from './library.service.ts';
 
 async function setup() {
   const deps = createTestDeps({ github: createRecordingGitHub(['octocat']) });

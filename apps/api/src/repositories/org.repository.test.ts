@@ -2,7 +2,7 @@ import { createFakeClock, createFakeIdGenerator } from '@targus/core';
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { createOrgRepository } from './org.repository.js';
+import { createOrgRepository } from './org.repository.ts';
 
 describe('createOrgRepository (local D1)', () => {
   it('inserts an org and reads it back', async () => {

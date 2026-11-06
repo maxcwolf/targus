@@ -1,15 +1,15 @@
 import { useNavigate } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
-import { Skeleton } from '../../components/Skeleton.js';
-import { ErrorView } from '../errors/ErrorView.js';
-import { BuildActions } from './BuildActions.js';
-import { BuildCounters } from './BuildCounters.js';
-import { BuildHeader } from './BuildHeader.js';
-import { effectiveFilter, matchesFilter, type SnapshotFilter } from './filters.js';
-import { ReviewProgress } from './ReviewProgress.js';
-import { SnapshotTable } from './SnapshotTable.js';
-import { useBuildData } from './useBuildData.js';
+import { Skeleton } from '../../components/Skeleton.tsx';
+import { ErrorView } from '../errors/ErrorView.tsx';
+import { BuildActions } from './BuildActions.tsx';
+import { BuildCounters } from './BuildCounters.tsx';
+import { BuildHeader } from './BuildHeader.tsx';
+import { effectiveFilter, matchesFilter, type SnapshotFilter } from './filters.ts';
+import { ReviewProgress } from './ReviewProgress.tsx';
+import { SnapshotTable } from './SnapshotTable.tsx';
+import { useBuildData } from './useBuildData.ts';
 
 export interface BuildPageProps {
   readonly buildId: string;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { RunBuildOutput } from './run-build.js';
-import { formatRunSummary } from './run-summary.js';
+import type { RunBuildOutput } from './run-build.ts';
+import { formatRunSummary } from './run-summary.ts';
 
 const output: RunBuildOutput = {
   build: { id: 'b1', number: 7 },

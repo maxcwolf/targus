@@ -3,15 +3,15 @@ import { Link } from '@tanstack/react-router';
 import type { BuildWithSummary, ProjectSummary } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { listBuilds, queryKeys } from '../../api-client/index.js';
-import { commitUrl, formatDateTime, pullRequestUrl, shortSha } from '../../components/format.js';
-import { Skeleton } from '../../components/Skeleton.js';
-import { StatusChip } from '../../components/StatusChip.js';
-import { StatusCircle } from '../../components/StatusCircle.js';
-import { ErrorView, NotFound } from '../errors/ErrorView.js';
-import { BuildCounts } from './BuildCounts.js';
-import { LoadMoreBuilds } from './LoadMoreBuilds.js';
-import { useProjects } from './useProjects.js';
+import { listBuilds, queryKeys } from '../../api-client/index.ts';
+import { commitUrl, formatDateTime, pullRequestUrl, shortSha } from '../../components/format.ts';
+import { Skeleton } from '../../components/Skeleton.tsx';
+import { StatusChip } from '../../components/StatusChip.tsx';
+import { StatusCircle } from '../../components/StatusCircle.tsx';
+import { ErrorView, NotFound } from '../errors/ErrorView.tsx';
+import { BuildCounts } from './BuildCounts.tsx';
+import { LoadMoreBuilds } from './LoadMoreBuilds.tsx';
+import { useProjects } from './useProjects.ts';
 
 function BuildRow({
   item,

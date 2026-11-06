@@ -1,6 +1,6 @@
 import { createElement, type ComponentType, type ReactElement } from 'react';
 
-import { TargusErrorBoundary, type StoryErrorReport } from './error-boundary.js';
+import { TargusErrorBoundary, type StoryErrorReport } from './error-boundary.ts';
 
 /** Channel event the CLI listens for to record a story as an error (ADR 0008). */
 export const storyErrorEvent = 'targus/storyError';

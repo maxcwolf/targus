@@ -5,10 +5,10 @@ import path from 'node:path';
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 import { writeFixtureCapture } from '@targus/cli';
 
-import { e2eConfig } from './config.js';
-import { createProject, getBuild } from './support/api.js';
-import { headSha, mergeBaseSha, targusRun } from './support/cli.js';
-import { checkRunsFor, signInNextAs } from './support/github.js';
+import { e2eConfig } from './config.ts';
+import { createProject, getBuild } from './support/api.ts';
+import { headSha, mergeBaseSha, targusRun } from './support/cli.ts';
+import { checkRunsFor, signInNextAs } from './support/github.ts';
 
 // The review flow of docs/engineering-standards.md section 3.3: builds published by the CLI,
 // sign-in through the stubbed GitHub OAuth, approve-all on the first build so it becomes the

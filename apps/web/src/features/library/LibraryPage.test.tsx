@@ -2,9 +2,9 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { hash, project } from '../../test/fixtures.js';
-import { apiError, apiState, server } from '../../test/msw.js';
-import { renderApp } from '../../test/render.js';
+import { hash, project } from '../../test/fixtures.ts';
+import { apiError, apiState, server } from '../../test/msw.ts';
+import { renderApp } from '../../test/render.tsx';
 
 const library = `/projects/${project.id}/library`;
 

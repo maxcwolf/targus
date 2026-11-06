@@ -1,6 +1,6 @@
 import type { BuildStatusSummary } from '@targus/core';
 
-import { plural, storyLabel } from '../../components/format.js';
+import { plural, storyLabel } from '../../components/format.ts';
 
 /** The one-line status under the build header. */
 export function summaryLine(summary: BuildStatusSummary): string {

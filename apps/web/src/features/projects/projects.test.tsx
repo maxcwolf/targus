@@ -2,9 +2,9 @@ import { screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { project } from '../../test/fixtures.js';
-import { apiError, server } from '../../test/msw.js';
-import { renderApp } from '../../test/render.js';
+import { project } from '../../test/fixtures.ts';
+import { apiError, server } from '../../test/msw.ts';
+import { renderApp } from '../../test/render.tsx';
 
 function buildRow(link: HTMLElement): HTMLElement {
   const row = link.closest('li');

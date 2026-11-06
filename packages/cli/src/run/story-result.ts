@@ -1,7 +1,7 @@
 import { compareSnapshot, type BaselineEntry, type StoryResult } from '@targus/core';
 
-import type { CaptureResult, CompareImages } from '../capture/capture-stories.js';
-import type { TargusApi } from './targus-api.js';
+import type { CaptureResult, CompareImages } from '../capture/capture-stories.ts';
+import type { TargusApi } from './targus-api.ts';
 
 /** Every story is captured once per build, so it is always the default variant (plan.md 6). */
 export const defaultVariant = 'default';

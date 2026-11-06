@@ -4,21 +4,21 @@ import path from 'node:path';
 
 import { isBlankPng, TargusError, type Clock } from '@targus/core';
 
-import { TargusApiClient } from '../adapters/api-client.adapter.js';
-import { execFileBuffer, type Exec } from '../adapters/exec.adapter.js';
-import { GitCli, type GitMetadata } from '../adapters/git.adapter.js';
-import { SimctlDriver } from '../adapters/simctl.adapter.js';
-import { systemClock } from '../adapters/system-clock.adapter.js';
-import { compareWithCore } from '../capture/compare-images.js';
-import { sha256Hex } from '../capture/png.js';
-import type { CliConfig } from '../config.js';
-import { resolveCiContext, type CiContext } from '../run/ci-context.js';
-import { readGitInfo } from '../run/git-info.js';
-import { loadCapture } from '../run/load-capture.js';
-import { runBuild, type RunBuildOutput } from '../run/run-build.js';
-import { formatRunSummary } from '../run/run-summary.js';
-import type { TargusApi } from '../run/targus-api.js';
-import { runCapture, type CaptureCommandOptions } from './capture.js';
+import { TargusApiClient } from '../adapters/api-client.adapter.ts';
+import { execFileBuffer, type Exec } from '../adapters/exec.adapter.ts';
+import { GitCli, type GitMetadata } from '../adapters/git.adapter.ts';
+import { SimctlDriver } from '../adapters/simctl.adapter.ts';
+import { systemClock } from '../adapters/system-clock.adapter.ts';
+import { compareWithCore } from '../capture/compare-images.ts';
+import { sha256Hex } from '../capture/png.ts';
+import type { CliConfig } from '../config.ts';
+import { resolveCiContext, type CiContext } from '../run/ci-context.ts';
+import { readGitInfo } from '../run/git-info.ts';
+import { loadCapture } from '../run/load-capture.ts';
+import { runBuild, type RunBuildOutput } from '../run/run-build.ts';
+import { formatRunSummary } from '../run/run-summary.ts';
+import type { TargusApi } from '../run/targus-api.ts';
+import { runCapture, type CaptureCommandOptions } from './capture.ts';
 
 /** The `capture` options, optional where `--from-capture` makes them unnecessary. */
 type CaptureFlags = Omit<CaptureCommandOptions, 'udid' | 'app' | 'out'>;

@@ -1,7 +1,7 @@
 import { TargusError, type ReviewerUser } from '@targus/core';
 
-import type { GitHubOAuth } from '../adapters/github-oauth.adapter.js';
-import type { ServiceDeps } from './deps.js';
+import type { GitHubOAuth } from '../adapters/github-oauth.adapter.ts';
+import type { ServiceDeps } from './deps.ts';
 
 /** How long a review session (and its cookie) lasts. */
 export const sessionLifetimeSeconds = 30 * 24 * 60 * 60;

@@ -15,18 +15,18 @@ import {
   newProject,
   sha,
   snapshotRecord,
-} from '../../test/support/fixtures.js';
-import { createRecordingGitHub } from '../../test/support/github-recorder.js';
-import { signInReviewer } from '../../test/support/in-memory-auth.js';
+} from '../../test/support/fixtures.ts';
+import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
+import { signInReviewer } from '../../test/support/in-memory-auth.ts';
 import {
   asProject,
   completion,
   createTestDeps,
   type TestDeps,
-} from '../../test/support/in-memory.js';
-import type { SnapshotRecord } from '../repositories/build.repository.js';
-import type { Project } from '../repositories/project.repository.js';
-import { createBuild, getBuild, listBuilds, listSnapshots } from './build.service.js';
+} from '../../test/support/in-memory.ts';
+import type { SnapshotRecord } from '../repositories/build.repository.ts';
+import type { Project } from '../repositories/project.repository.ts';
+import { createBuild, getBuild, listBuilds, listSnapshots } from './build.service.ts';
 
 async function setup(): Promise<{ deps: TestDeps; project: Project }> {
   const deps = createTestDeps();

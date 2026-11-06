@@ -1,6 +1,6 @@
 import { maxBuildsPageLimit, TargusError } from '@targus/core';
 
-import type { BuildRecord } from './build-rows.js';
+import type { BuildRecord } from './build-rows.ts';
 
 /**
  * Keyset paging of a project's builds, shared by the D1 repository and its in-memory double so

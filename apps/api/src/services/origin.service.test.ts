@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { createTestDeps, testConfig } from '../../test/support/in-memory.js';
-import { assertSameOrigin, type RequestOrigin } from './origin.service.js';
+import { createTestDeps, testConfig } from '../../test/support/in-memory.ts';
+import { assertSameOrigin, type RequestOrigin } from './origin.service.ts';
 
 // testConfig.publicUrl is https://targus.test.
 const deps = createTestDeps();

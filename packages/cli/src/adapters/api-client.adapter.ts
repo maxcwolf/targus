@@ -10,9 +10,9 @@ import {
 } from '@targus/core';
 import { z } from 'zod';
 
-import { formatDuration } from '../duration.js';
-import { defaultRetryPolicy, withRetry, type RetryPolicy } from '../retry.js';
-import type { TargusApi } from '../run/targus-api.js';
+import { formatDuration } from '../duration.ts';
+import { defaultRetryPolicy, withRetry, type RetryPolicy } from '../retry.ts';
+import type { TargusApi } from '../run/targus-api.ts';
 import {
   ApiRequestError,
   errorDetail,
@@ -20,7 +20,7 @@ import {
   isRetryable,
   statusError,
   transportError,
-} from './api-errors.js';
+} from './api-errors.ts';
 
 export type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 

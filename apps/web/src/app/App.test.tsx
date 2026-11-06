@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { renderApp } from '../test/render.js';
+import { renderApp } from '../test/render.tsx';
 
 describe('App', () => {
   it('renders the header with the signed-in reviewer and the projects page at /', async () => {

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ImageHash } from './snapshot.js';
+import { ImageHash } from './snapshot.ts';
 
 /**
  * A reviewer's approval of one story's change, as stored in the `approvals` table (plan.md

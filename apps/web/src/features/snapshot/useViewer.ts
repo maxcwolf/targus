@@ -1,7 +1,7 @@
 import type { Snapshot } from '@targus/core';
 import { useState } from 'react';
 
-import { useHotkeys } from './useHotkeys.js';
+import { useHotkeys } from './useHotkeys.ts';
 
 export type ViewerMode = 'one-up' | 'two-up' | 'slider';
 export type ImageKind = 'baseline' | 'current';

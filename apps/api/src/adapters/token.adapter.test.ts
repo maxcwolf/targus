@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { webCryptoTokens } from './token.adapter.js';
+import { webCryptoTokens } from './token.adapter.ts';
 
 describe('webCryptoTokens', () => {
   it('generates distinct 48-character url-safe tokens', () => {

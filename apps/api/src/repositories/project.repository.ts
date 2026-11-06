@@ -1,7 +1,7 @@
 import { asc, eq, type SQL } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
-import { orgs, projects } from '../db/schema.js';
+import { orgs, projects } from '../db/schema.ts';
 
 /** A project with the org fields the API needs (GitHub App installation for check runs). */
 export interface Project {

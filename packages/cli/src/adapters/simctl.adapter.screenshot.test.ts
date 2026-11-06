@@ -4,8 +4,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { ExecError, type Exec } from './exec.adapter.js';
-import { SimctlDriver } from './simctl.adapter.js';
+import { ExecError, type Exec } from './exec.adapter.ts';
+import { SimctlDriver } from './simctl.adapter.ts';
 
 const udid = 'SIM-UDID';
 const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);

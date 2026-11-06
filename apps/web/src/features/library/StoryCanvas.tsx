@@ -2,11 +2,11 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import type { LibraryStory } from '@targus/core';
 import { type ReactElement, useMemo } from 'react';
 
-import { imageUrl } from '../../api-client/index.js';
-import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons.js';
-import { SnapshotImage } from '../../components/SnapshotImage.js';
-import { useHotkeys } from '../snapshot/useHotkeys.js';
-import { storyKey, storyTitle } from './stories.js';
+import { imageUrl } from '../../api-client/index.ts';
+import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons.tsx';
+import { SnapshotImage } from '../../components/SnapshotImage.tsx';
+import { useHotkeys } from '../snapshot/useHotkeys.ts';
+import { storyKey, storyTitle } from './stories.ts';
 
 export interface StoryCanvasProps {
   readonly projectId: string;

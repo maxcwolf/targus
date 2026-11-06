@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { createFakeDeviceDriver } from './device-driver.fake.js';
-import { createFakeStorybookChannel } from './storybook-channel.fake.js';
+import { createFakeDeviceDriver } from './device-driver.fake.ts';
+import { createFakeStorybookChannel } from './storybook-channel.fake.ts';
 
 describe('createFakeDeviceDriver', () => {
   it('records every call in order with its arguments', async () => {

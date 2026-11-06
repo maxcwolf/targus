@@ -1,9 +1,9 @@
 import { isTargusError } from '@targus/core';
 
-import { ExecError } from '../adapters/exec.adapter.js';
-import { exitCodeFor, failureExitCode } from './exit-codes.js';
-import { explainSystemError, type Explanation } from './system-error.js';
-import { summarizeIssues, zodIssues } from './zod-summary.js';
+import { ExecError } from '../adapters/exec.adapter.ts';
+import { exitCodeFor, failureExitCode } from './exit-codes.ts';
+import { explainSystemError, type Explanation } from './system-error.ts';
+import { summarizeIssues, zodIssues } from './zod-summary.ts';
 
 /** How a failed command is reported: the text for stderr, the exit code, a Commander code. */
 export interface ErrorReport {

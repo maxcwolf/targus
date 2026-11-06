@@ -1,6 +1,6 @@
 import { SnapshotState } from '@targus/core';
 
-import type { RunBuildOutput } from './run-build.js';
+import type { RunBuildOutput } from './run-build.ts';
 
 /**
  * Human summary printed by `targus run`: the build id on its own `build: <id>` line (for scripts),

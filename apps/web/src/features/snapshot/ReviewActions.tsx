@@ -1,7 +1,7 @@
 import type { ReviewDecision, ReviewState } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { CheckIcon, CloseIcon } from '../../components/icons.js';
+import { CheckIcon, CloseIcon } from '../../components/icons.tsx';
 
 export interface ReviewActionsProps {
   readonly review: ReviewState;

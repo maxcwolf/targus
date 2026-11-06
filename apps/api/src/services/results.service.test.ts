@@ -6,20 +6,20 @@ import {
 } from '@targus/core';
 import { describe, expect, it, vi } from 'vitest';
 
-import { OctokitGitHubClient } from '../adapters/github-client.adapter.js';
-import type { Project } from '../repositories/project.repository.js';
+import { OctokitGitHubClient } from '../adapters/github-client.adapter.ts';
+import type { Project } from '../repositories/project.repository.ts';
 import {
   createBuildRequest,
   imageHash,
   newProject,
   sha,
   storyResult,
-} from '../../test/support/fixtures.js';
-import { createGitHubStub, generatePrivateKeyPem } from '../../test/support/github-stub.js';
-import { markUploaded } from '../../test/support/in-memory-images.js';
-import { asProject, createTestDeps, type TestDeps } from '../../test/support/in-memory.js';
-import { createBuild, getBuild } from './build.service.js';
-import { submitResults } from './results.service.js';
+} from '../../test/support/fixtures.ts';
+import { createGitHubStub, generatePrivateKeyPem } from '../../test/support/github-stub.ts';
+import { markUploaded } from '../../test/support/in-memory-images.ts';
+import { asProject, createTestDeps, type TestDeps } from '../../test/support/in-memory.ts';
+import { createBuild, getBuild } from './build.service.ts';
+import { submitResults } from './results.service.ts';
 
 async function setup(
   github?: GitHubClient,

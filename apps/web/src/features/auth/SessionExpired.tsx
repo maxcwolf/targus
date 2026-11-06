@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 
-import { signInUrl } from '../../api-client/index.js';
-import { useReturnTo } from './useMe.js';
+import { signInUrl } from '../../api-client/index.ts';
+import { useReturnTo } from './useMe.ts';
 
 /**
  * Shown above the page once the session has expired mid-visit. The page stays, so an action

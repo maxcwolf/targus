@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { loadConfig } from './config.js';
+import { loadConfig } from './config.ts';
 
 const vars = {
   APP_VERSION: '1.2.3',

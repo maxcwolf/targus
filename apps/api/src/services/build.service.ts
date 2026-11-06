@@ -18,11 +18,11 @@ import {
   type Snapshot,
 } from '@targus/core';
 
-import type { BuildRecord, SnapshotRecord } from '../repositories/build.repository.js';
-import type { Project } from '../repositories/project.repository.js';
-import { requireBuildAccess, requireProjectAccess } from './access.service.js';
-import type { ServiceDeps } from './deps.js';
-import type { Principal, Reviewer } from './principal.js';
+import type { BuildRecord, SnapshotRecord } from '../repositories/build.repository.ts';
+import type { Project } from '../repositories/project.repository.ts';
+import { requireBuildAccess, requireProjectAccess } from './access.service.ts';
+import type { ServiceDeps } from './deps.ts';
+import type { Principal, Reviewer } from './principal.ts';
 
 /** The accepted image of every story of a build (plan.md section 6, rule 5), skipping none. */
 export function baselineEntries(snapshots: readonly Snapshot[]): BaselineEntry[] {

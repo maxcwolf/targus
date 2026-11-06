@@ -1,13 +1,13 @@
 import { GitSha } from '@targus/core';
 import { Command, InvalidArgumentError } from 'commander';
 
-import { runCapture, type CaptureCommandOptions } from './commands/capture.js';
-import { runCompare, type CompareCommandOptions } from './commands/compare.js';
-import { runRun, type RunCommandOptions } from './commands/run.js';
-import { debugEnabled, loadConfig, type CliConfig } from './config.js';
-import { describeError } from './errors/describe-error.js';
-import { writeFixtureCapture } from './fixtures/fixture-capture.js';
-import { cliVersion } from './version.js';
+import { runCapture, type CaptureCommandOptions } from './commands/capture.ts';
+import { runCompare, type CompareCommandOptions } from './commands/compare.ts';
+import { runRun, type RunCommandOptions } from './commands/run.ts';
+import { debugEnabled, loadConfig, type CliConfig } from './config.ts';
+import { describeError } from './errors/describe-error.ts';
+import { writeFixtureCapture } from './fixtures/fixture-capture.ts';
+import { cliVersion } from './version.ts';
 
 /** What each command does once its options are parsed. Tests swap these out. */
 export interface CommandRunners {

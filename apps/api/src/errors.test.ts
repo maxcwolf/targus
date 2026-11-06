@@ -3,8 +3,8 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { AppEnv } from './app-env.js';
-import { errorHandler, httpStatusFor } from './errors.js';
+import type { AppEnv } from './app-env.ts';
+import { errorHandler, httpStatusFor } from './errors.ts';
 
 function appThrowing(error: unknown): Hono<AppEnv> {
   const app = new Hono<AppEnv>();

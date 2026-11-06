@@ -2,10 +2,10 @@ import { tallySnapshots } from '@targus/core';
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.js';
-import type { SnapshotRecord } from './build.repository.js';
-import { D1BuildRepository } from './build.repository.js';
-import { createProjectRepository } from './project.repository.js';
+import { newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.ts';
+import type { SnapshotRecord } from './build.repository.ts';
+import { D1BuildRepository } from './build.repository.ts';
+import { createProjectRepository } from './project.repository.ts';
 
 // `completeWithResults` is the one write that ends a build's `in_progress` phase. These tests
 // pin down that it is all-or-nothing and happens at most once per build.

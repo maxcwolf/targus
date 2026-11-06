@@ -1,11 +1,11 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { CompareImages } from '../capture/capture-stories.js';
-import { compareWithCore } from '../capture/compare-images.js';
-import { readCaptureManifest } from '../capture/manifest.js';
-import { compareCaptures, type CaptureComparison } from '../compare/compare-captures.js';
-import { comparisonHtml, comparisonJson, type ReportPaths } from '../compare/compare-report.js';
+import type { CompareImages } from '../capture/capture-stories.ts';
+import { compareWithCore } from '../capture/compare-images.ts';
+import { readCaptureManifest } from '../capture/manifest.ts';
+import { compareCaptures, type CaptureComparison } from '../compare/compare-captures.ts';
+import { comparisonHtml, comparisonJson, type ReportPaths } from '../compare/compare-report.ts';
 
 export interface CompareCommandOptions {
   readonly current: string;

@@ -1,4 +1,4 @@
-import { sha256Hex } from '../lib/sha256.js';
+import { sha256Hex } from '../lib/sha256.ts';
 
 /** Project and admin bearer tokens. Only the SHA-256 of a project token is stored. */
 export interface Tokens {

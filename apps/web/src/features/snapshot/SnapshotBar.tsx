@@ -2,13 +2,13 @@ import { Link } from '@tanstack/react-router';
 import type { BuildWithSummary, Snapshot } from '@targus/core';
 import type { ReactElement, ReactNode } from 'react';
 
-import { ReviewBadge, StateBadge } from '../../components/Badges.js';
-import { formatDateTime } from '../../components/format.js';
-import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons.js';
-import { StatusCircle } from '../../components/StatusCircle.js';
-import { Tabs } from '../../components/Tabs.js';
-import { componentTitle, isReviewable, type SnapshotFilter, storyName } from '../build/filters.js';
-import type { ViewerMode, ViewerState } from './useViewer.js';
+import { ReviewBadge, StateBadge } from '../../components/Badges.tsx';
+import { formatDateTime } from '../../components/format.ts';
+import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons.tsx';
+import { StatusCircle } from '../../components/StatusCircle.tsx';
+import { Tabs } from '../../components/Tabs.tsx';
+import { componentTitle, isReviewable, type SnapshotFilter, storyName } from '../build/filters.ts';
+import type { ViewerMode, ViewerState } from './useViewer.ts';
 
 const modes: readonly { id: ViewerMode; label: string }[] = [
   { id: 'one-up', label: '1 up' },

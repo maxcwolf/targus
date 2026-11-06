@@ -11,8 +11,8 @@ import {
 } from '@targus/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { Exec } from '../adapters/exec.adapter.js';
-import { encodeSolidPng } from '../capture/solid-png.fake.js';
+import type { Exec } from '../adapters/exec.adapter.ts';
+import { encodeSolidPng } from '../capture/solid-png.fake.ts';
 import {
   defaultCaptureDeps,
   formatCaptureSummary,
@@ -20,7 +20,7 @@ import {
   runCapture,
   type CaptureCommandDeps,
   type CaptureCommandOptions,
-} from './capture.js';
+} from './capture.ts';
 
 const white = encodeSolidPng(2, 2, [255, 255, 255, 255]);
 const black = encodeSolidPng(2, 2, [0, 0, 0, 255]);

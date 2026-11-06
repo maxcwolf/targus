@@ -7,13 +7,13 @@ import {
   newProject,
   sha,
   snapshotRecord,
-} from '../../test/support/fixtures.js';
-import { createRecordingGitHub } from '../../test/support/github-recorder.js';
-import { signInReviewer } from '../../test/support/in-memory-auth.js';
-import { createTestDeps } from '../../test/support/in-memory.js';
-import type { SnapshotRecord } from '../repositories/build.repository.js';
-import { createBuild } from './build.service.js';
-import { approveAll, reviewSnapshot } from './review.service.js';
+} from '../../test/support/fixtures.ts';
+import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
+import { signInReviewer } from '../../test/support/in-memory-auth.ts';
+import { createTestDeps } from '../../test/support/in-memory.ts';
+import type { SnapshotRecord } from '../repositories/build.repository.ts';
+import { createBuild } from './build.service.ts';
+import { approveAll, reviewSnapshot } from './review.service.ts';
 
 /** A completed build with a changed, a new, an unchanged and a removed story. */
 function records(buildId: string): SnapshotRecord[] {

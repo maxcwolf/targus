@@ -1,4 +1,4 @@
-import { decodePng } from './decode-png.js';
+import { decodePng } from './decode-png.ts';
 
 const bytesPerPixel = 4;
 

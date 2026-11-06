@@ -2,9 +2,9 @@ import { TargusError } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { TargusApiClient } from '../adapters/api-client.adapter.js';
-import { ExecError } from '../adapters/exec.adapter.js';
-import { describeError } from './describe-error.js';
+import { TargusApiClient } from '../adapters/api-client.adapter.ts';
+import { ExecError } from '../adapters/exec.adapter.ts';
+import { describeError } from './describe-error.ts';
 
 function systemError(message: string, fields: Record<string, unknown>): Error {
   return Object.assign(new Error(message), fields);

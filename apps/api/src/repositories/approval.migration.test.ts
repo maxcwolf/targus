@@ -1,8 +1,8 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { imageHash, newProject } from '../../test/support/fixtures.js';
-import { createProjectRepository } from './project.repository.js';
+import { imageHash, newProject } from '../../test/support/fixtures.ts';
+import { createProjectRepository } from './project.repository.ts';
 
 // Migration 0004 removes duplicate approvals before it makes an approval's identity unique.
 // The test database is already migrated, so this replays the approvals statements of 0001

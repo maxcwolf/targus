@@ -1,6 +1,6 @@
 import type { ImageStore } from '@targus/core';
 
-import type { ImageRepository } from '../repositories/image.repository.js';
+import type { ImageRepository } from '../repositories/image.repository.ts';
 
 /** R2 object key of an image. Content-addressed, so a key never changes meaning. */
 function keyFor(hash: string): string {

@@ -8,10 +8,10 @@ import {
   pullRequestUrl,
   shortSha,
   storyCount,
-} from '../../components/format.js';
-import { StatusChip } from '../../components/StatusChip.js';
-import { StatusCircle } from '../../components/StatusCircle.js';
-import { summaryLine } from './summary.js';
+} from '../../components/format.ts';
+import { StatusChip } from '../../components/StatusChip.tsx';
+import { StatusCircle } from '../../components/StatusCircle.tsx';
+import { summaryLine } from './summary.ts';
 
 export interface BuildHeaderProps {
   readonly item: BuildWithSummary;

@@ -10,8 +10,8 @@ import {
 } from '@targus/core';
 import { z } from 'zod';
 
-import type { CaptureReport } from '../capture/capture-stories.js';
-import type { CiContext } from './ci-context.js';
+import type { CaptureReport } from '../capture/capture-stories.ts';
+import type { CiContext } from './ci-context.ts';
 import {
   defaultVariant,
   errorResult,
@@ -20,8 +20,8 @@ import {
   type CapturedStory,
   type DiffImage,
   type StoryJudge,
-} from './story-result.js';
-import type { TargusApi } from './targus-api.js';
+} from './story-result.ts';
+import type { TargusApi } from './targus-api.ts';
 
 /** The server keeps at most this many first-parent ancestors (ADR 0004). */
 export const maxAncestors = 100;

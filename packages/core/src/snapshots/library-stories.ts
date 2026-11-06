@@ -1,6 +1,6 @@
-import type { LibraryStory } from '../contracts/library.js';
-import type { Snapshot } from '../contracts/snapshot.js';
-import { acceptedImageHash } from './accepted-image-hash.js';
+import type { LibraryStory } from '../contracts/library.ts';
+import type { Snapshot } from '../contracts/snapshot.ts';
+import { acceptedImageHash } from './accepted-image-hash.ts';
 
 /**
  * The stories a build contributes to the library: each one that still exists, with its accepted

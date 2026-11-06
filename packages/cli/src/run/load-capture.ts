@@ -3,9 +3,9 @@ import path from 'node:path';
 
 import { TargusError } from '@targus/core';
 
-import type { CaptureReport, CaptureResult } from '../capture/capture-stories.js';
-import { readCaptureManifest, type StoryRecord } from '../capture/manifest.js';
-import { sha256Hex } from '../capture/png.js';
+import type { CaptureReport, CaptureResult } from '../capture/capture-stories.ts';
+import { readCaptureManifest, type StoryRecord } from '../capture/manifest.ts';
+import { sha256Hex } from '../capture/png.ts';
 
 async function loadStory(dir: string, record: StoryRecord): Promise<CaptureResult> {
   const { file, ...rest } = record;

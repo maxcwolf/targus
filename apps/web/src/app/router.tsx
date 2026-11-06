@@ -6,15 +6,15 @@ import {
 } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
-import { BuildPage } from '../features/build/BuildPage.js';
-import { validateFilterSearch } from '../features/build/filters.js';
-import { NotFound, RouteCrash } from '../features/errors/ErrorView.js';
-import { LibraryPage } from '../features/library/LibraryPage.js';
-import { validateLibrarySearch } from '../features/library/stories.js';
-import { BuildsPage } from '../features/projects/BuildsPage.js';
-import { ProjectsPage } from '../features/projects/ProjectsPage.js';
-import { SnapshotPage } from '../features/snapshot/SnapshotPage.js';
-import { RootLayout } from './RootLayout.js';
+import { BuildPage } from '../features/build/BuildPage.tsx';
+import { validateFilterSearch } from '../features/build/filters.ts';
+import { NotFound, RouteCrash } from '../features/errors/ErrorView.tsx';
+import { LibraryPage } from '../features/library/LibraryPage.tsx';
+import { validateLibrarySearch } from '../features/library/stories.ts';
+import { BuildsPage } from '../features/projects/BuildsPage.tsx';
+import { ProjectsPage } from '../features/projects/ProjectsPage.tsx';
+import { SnapshotPage } from '../features/snapshot/SnapshotPage.tsx';
+import { RootLayout } from './RootLayout.tsx';
 
 // Route components here only read params and search; the pages live in features/.
 const rootRoute = createRootRoute({

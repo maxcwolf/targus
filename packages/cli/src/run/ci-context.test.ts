@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveCiContext, type CiContext, type CiEnv, type CiOverrides } from './ci-context.js';
+import { resolveCiContext, type CiContext, type CiEnv, type CiOverrides } from './ci-context.ts';
 
 interface Case {
   readonly name: string;

@@ -1,7 +1,7 @@
 import type { Snapshot } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { isReviewable } from './filters.js';
+import { isReviewable } from './filters.ts';
 
 export interface ReviewTally {
   readonly approved: number;

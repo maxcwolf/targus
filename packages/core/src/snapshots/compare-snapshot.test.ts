@@ -1,9 +1,9 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { buildStatus } from '../build-status.js';
-import { TargusError } from '../errors.js';
-import { compareSnapshot, type CompareSnapshotInput } from './compare-snapshot.js';
+import { buildStatus } from '../build-status.ts';
+import { TargusError } from '../errors.ts';
+import { compareSnapshot, type CompareSnapshotInput } from './compare-snapshot.ts';
 
 const before = 'a'.repeat(64);
 const after = 'b'.repeat(64);

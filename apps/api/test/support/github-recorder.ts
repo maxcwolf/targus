@@ -1,6 +1,6 @@
 import type { CheckRunState, CheckRunTarget, GitHubClient } from '@targus/core';
 
-import { isMemberOf, type OrgMembers } from './org-members.js';
+import { isMemberOf, type OrgMembers } from './org-members.ts';
 
 /**
  * A `GitHubClient` that records what it was asked and knows a fixed set of org members, per org

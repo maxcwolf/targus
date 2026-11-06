@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { defineConfig, devices } from '@playwright/test';
 
-import { e2eConfig } from './config.js';
+import { e2eConfig } from './config.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const baseURL = `http://127.0.0.1:${e2eConfig.port}`;

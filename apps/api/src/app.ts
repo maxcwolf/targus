@@ -1,18 +1,18 @@
 import { Hono } from 'hono';
 
-import type { AppEnv } from './app-env.js';
-import type { Bindings } from './bindings.js';
-import { createServices } from './composition.js';
-import { errorHandler, notFoundHandler } from './errors.js';
-import { adminRoute } from './routes/admin.js';
-import { authRoute } from './routes/auth.js';
-import { buildsRoute } from './routes/builds.js';
-import { healthRoute } from './routes/health.js';
-import { imagesRoute } from './routes/images.js';
-import { meRoute } from './routes/me.js';
-import { projectsRoute } from './routes/projects.js';
-import { snapshotsRoute } from './routes/snapshots.js';
-import type { Services } from './services/index.js';
+import type { AppEnv } from './app-env.ts';
+import type { Bindings } from './bindings.ts';
+import { createServices } from './composition.ts';
+import { errorHandler, notFoundHandler } from './errors.ts';
+import { adminRoute } from './routes/admin.ts';
+import { authRoute } from './routes/auth.ts';
+import { buildsRoute } from './routes/builds.ts';
+import { healthRoute } from './routes/health.ts';
+import { imagesRoute } from './routes/images.ts';
+import { meRoute } from './routes/me.ts';
+import { projectsRoute } from './routes/projects.ts';
+import { snapshotsRoute } from './routes/snapshots.ts';
+import type { Services } from './services/index.ts';
 
 /**
  * The API. `makeServices` is the composition root; tests pass one with fakes (for example a

@@ -6,8 +6,8 @@ import {
   type SubmitResultsResponse,
 } from '@targus/core';
 
-import { sha256Hex } from '../capture/png.js';
-import type { TargusApi } from './targus-api.js';
+import { sha256Hex } from '../capture/png.ts';
+import type { TargusApi } from './targus-api.ts';
 
 export type FakeApiCall =
   | { readonly method: 'createBuild'; readonly request: CreateBuildRequest }

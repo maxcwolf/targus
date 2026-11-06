@@ -1,14 +1,14 @@
 import { TargusError, type ReviewerUser } from '@targus/core';
 
-import type { GitHubOAuth, GitHubUser } from '../../src/adapters/github-oauth.adapter.js';
+import type { GitHubOAuth, GitHubUser } from '../../src/adapters/github-oauth.adapter.ts';
 import type {
   CachedMembership,
   MembershipRepository,
-} from '../../src/repositories/membership.repository.js';
-import type { NewSession, SessionRepository } from '../../src/repositories/session.repository.js';
-import type { UserRepository } from '../../src/repositories/user.repository.js';
-import type { ServiceDeps } from '../../src/services/deps.js';
-import type { Reviewer } from '../../src/services/principal.js';
+} from '../../src/repositories/membership.repository.ts';
+import type { NewSession, SessionRepository } from '../../src/repositories/session.repository.ts';
+import type { UserRepository } from '../../src/repositories/user.repository.ts';
+import type { ServiceDeps } from '../../src/services/deps.ts';
+import type { Reviewer } from '../../src/services/principal.ts';
 
 // In-memory doubles of the login side: users, sessions, the membership cache and GitHub OAuth.
 

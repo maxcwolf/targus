@@ -8,9 +8,9 @@ import {
   navigationList,
   type SnapshotFilter,
   storyName,
-} from '../build/filters.js';
-import { useReview } from './useReview.js';
-import { useHotkeys } from './useHotkeys.js';
+} from '../build/filters.ts';
+import { useReview } from './useReview.ts';
+import { useHotkeys } from './useHotkeys.ts';
 
 export interface SnapshotReviewInput {
   readonly item: BuildWithSummary;

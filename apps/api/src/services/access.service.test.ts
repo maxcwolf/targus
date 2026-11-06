@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { createBuildRequest, newProject, sha } from '../../test/support/fixtures.js';
-import { createRecordingGitHub } from '../../test/support/github-recorder.js';
-import { signInReviewer } from '../../test/support/in-memory-auth.js';
-import { createTestDeps } from '../../test/support/in-memory.js';
-import { canAccessProject, requireBuildAccess, requireProjectAccess } from './access.service.js';
-import { createBuild } from './build.service.js';
+import { createBuildRequest, newProject, sha } from '../../test/support/fixtures.ts';
+import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
+import { signInReviewer } from '../../test/support/in-memory-auth.ts';
+import { createTestDeps } from '../../test/support/in-memory.ts';
+import { canAccessProject, requireBuildAccess, requireProjectAccess } from './access.service.ts';
+import { createBuild } from './build.service.ts';
 
 const hour = 60 * 60 * 1000;
 

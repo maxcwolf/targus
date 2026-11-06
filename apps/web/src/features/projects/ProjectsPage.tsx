@@ -1,9 +1,9 @@
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
-import { Skeleton } from '../../components/Skeleton.js';
-import { ErrorView } from '../errors/ErrorView.js';
-import { useProjects } from './useProjects.js';
+import { Skeleton } from '../../components/Skeleton.tsx';
+import { ErrorView } from '../errors/ErrorView.tsx';
+import { useProjects } from './useProjects.ts';
 
 /** `/`: every project the reviewer can see, as cards. Never auto-redirects. */
 export function ProjectsPage(): ReactElement | null {

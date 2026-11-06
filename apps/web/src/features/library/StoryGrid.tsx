@@ -2,11 +2,11 @@ import { Link } from '@tanstack/react-router';
 import type { LibraryStory } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { imageUrl } from '../../api-client/index.js';
-import { PathText } from '../../components/PathText.js';
-import { SnapshotImage } from '../../components/SnapshotImage.js';
-import { storyName } from '../build/filters.js';
-import { groupStories, storyKey, storyTitle } from './stories.js';
+import { imageUrl } from '../../api-client/index.ts';
+import { PathText } from '../../components/PathText.tsx';
+import { SnapshotImage } from '../../components/SnapshotImage.tsx';
+import { storyName } from '../build/filters.ts';
+import { groupStories, storyKey, storyTitle } from './stories.ts';
 
 export interface StoryGridProps {
   readonly projectId: string;

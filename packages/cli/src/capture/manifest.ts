@@ -4,8 +4,8 @@ import path from 'node:path';
 import { TargusError } from '@targus/core';
 import { z } from 'zod';
 
-import { summarizeIssues } from '../errors/zod-summary.js';
-import type { CaptureReport, CaptureResult } from './capture-stories.js';
+import { summarizeIssues } from '../errors/zod-summary.ts';
+import type { CaptureReport, CaptureResult } from './capture-stories.ts';
 
 const Ms = z.number().int().nonnegative();
 

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { newProject } from '../../test/support/fixtures.js';
-import { signInReviewer } from '../../test/support/in-memory-auth.js';
-import { createTestDeps, testConfig } from '../../test/support/in-memory.js';
+import { newProject } from '../../test/support/fixtures.ts';
+import { signInReviewer } from '../../test/support/in-memory-auth.ts';
+import { createTestDeps, testConfig } from '../../test/support/in-memory.ts';
 import {
   authenticateAdmin,
   authenticateProjectToken,
   authenticateSession,
-} from './auth.service.js';
+} from './auth.service.ts';
 
 describe('authenticateAdmin', () => {
   it('accepts the configured admin token', async () => {
