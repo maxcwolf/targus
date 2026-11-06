@@ -12,7 +12,11 @@ import { webCryptoTokens } from '../../src/adapters/token.adapter.ts';
 import type { ApiConfig } from '../../src/config.ts';
 import type { ApprovalRepository } from '../../src/repositories/approval.repository.ts';
 import type { BuildCompletion } from '../../src/repositories/build.repository.ts';
-import type { Project, ProjectRepository } from '../../src/repositories/project.repository.ts';
+import type {
+  NewProject,
+  Project,
+  ProjectRepository,
+} from '../../src/repositories/project.repository.ts';
 import type { ServiceDeps } from '../../src/services/deps.ts';
 import type { Principal } from '../../src/services/principal.ts';
 import {
@@ -22,30 +26,62 @@ import {
   createInMemoryUsers,
   type FakeOAuth,
 } from './in-memory-auth.ts';
+import { compareText, uniqueViolation } from './d1-semantics.ts';
 import { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.ts';
 import { createInMemoryImages, type InMemoryImages } from './in-memory-images.ts';
 
 export { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.ts';
 
-// In-memory doubles of the API's repositories, for service unit tests. The D1 adapters are
-// tested against the same behaviour in src/repositories/*.test.ts.
+// In-memory doubles of the API's repositories, for service unit tests. Each double and its D1
+// adapter run the same contract suite (test/support/contracts/), so the two cannot drift.
+
+/** An org row, keyed by its GitHub org (`orgs.github_org` is unique). */
+interface OrgRow {
+  readonly orgId: string;
+  readonly installationId: number | null;
+}
+
+/**
+ * As `upsertOrg` in the D1 adapter: create the org, or fill in a non-null installation id. It
+ * runs before the project insert and stays when that insert fails, as in D1. Projects read the
+ * org through a join, so every stored project of the org sees the new installation id.
+ */
+function upsertOrg(orgs: Map<string, OrgRow>, all: Project[], input: NewProject): OrgRow {
+  const existing = orgs.get(input.githubOrg);
+  const installationId = input.installationId ?? existing?.installationId ?? null;
+  const org = { orgId: existing?.orgId ?? input.newOrgId, installationId };
+  orgs.set(input.githubOrg, org);
+  all.forEach((project, index) => {
+    if (project.orgId === org.orgId)
+      all[index] = { ...project, org: { ...project.org, installationId } };
+  });
+  return org;
+}
 
 export function createInMemoryProjects(): ProjectRepository & { readonly all: Project[] } {
   const all: Project[] = [];
+  const orgs = new Map<string, OrgRow>();
   const tokenHashes = new Map<string, string>();
   const find = (match: (project: Project) => boolean) => Promise.resolve(all.find(match) ?? null);
+  // The primary key and the unique indexes on repo and token hash.
+  const clashes = (input: NewProject) =>
+    all.some(
+      (p) =>
+        p.id === input.id || p.repo === input.repo || p.id === tokenHashes.get(input.tokenHash),
+    );
   return {
     all,
     create(input) {
-      const org = all.find((project) => project.org.githubOrg === input.githubOrg);
+      const org = upsertOrg(orgs, all, input);
+      if (clashes(input)) return uniqueViolation('projects');
       const project: Project = {
         id: input.id,
-        orgId: org?.orgId ?? input.newOrgId,
+        orgId: org.orgId,
         repo: input.repo,
         name: input.name,
         defaultBranch: input.defaultBranch,
         createdAt: input.createdAt,
-        org: { githubOrg: input.githubOrg, installationId: input.installationId },
+        org: { githubOrg: input.githubOrg, installationId: org.installationId },
       };
       all.push(project);
       tokenHashes.set(input.tokenHash, project.id);
@@ -54,7 +90,10 @@ export function createInMemoryProjects(): ProjectRepository & { readonly all: Pr
     findById: (id) => find((project) => project.id === id),
     findByRepo: (repo) => find((project) => project.repo === repo),
     findByTokenHash: (hash) => find((project) => project.id === tokenHashes.get(hash)),
-    listAll: () => Promise.resolve([...all].sort((a, b) => a.name.localeCompare(b.name))),
+    listAll: () =>
+      Promise.resolve(
+        [...all].sort((a, b) => compareText(a.name, b.name) || compareText(a.id, b.id)),
+      ),
   };
 }
 
@@ -68,19 +107,32 @@ const samePair =
     approval.fromHash === fromHash &&
     approval.toHash === toHash;
 
+/** `all` holds the approvals in insertion order; `listForProject` orders them as D1 does. */
 export function createInMemoryApprovals(): ApprovalRepository & { readonly all: Approval[] } {
   const all: Approval[] = [];
+  const ids = new Map<Approval, string>();
+  const oldestFirst = (a: Approval, b: Approval) =>
+    compareText(a.approvedAt, b.approvedAt) || compareText(ids.get(a) ?? '', ids.get(b) ?? '');
   return {
     all,
-    listForProject: (projectId) => Promise.resolve(all.filter((a) => a.projectId === projectId)),
-    create(_id, approval) {
-      // The unique indexes on an approval's identity, a null fromHash included.
+    listForProject: (projectId) =>
+      Promise.resolve(all.filter((a) => a.projectId === projectId).sort(oldestFirst)),
+    create(id, input) {
+      // ON CONFLICT DO NOTHING with no target: the primary key and both identity indexes (a null
+      // fromHash included) each make it a no-op. D1 stores approvedAt as epoch milliseconds.
+      const approval = { ...input, approvedAt: new Date(input.approvedAt).toISOString() };
       const { projectId, storyId, variant, fromHash, toHash } = approval;
-      if (!all.some(samePair(projectId, storyId, variant, fromHash, toHash))) all.push(approval);
+      const taken = [...ids.values()].includes(id);
+      if (taken || all.some(samePair(projectId, storyId, variant, fromHash, toHash))) {
+        return Promise.resolve();
+      }
+      all.push(approval);
+      ids.set(approval, id);
       return Promise.resolve();
     },
     delete(...pair) {
       const keep = all.filter((approval) => !samePair(...pair)(approval));
+      for (const gone of all.filter((approval) => !keep.includes(approval))) ids.delete(gone);
       all.splice(0, all.length, ...keep);
       return Promise.resolve();
     },

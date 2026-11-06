@@ -210,8 +210,9 @@ real-simulator test (`src/commands/capture.simulator.test.ts`) runs only when
 with the committed migrations applied by `test/apply-migrations.ts`. They cover routes,
 services and repositories: build creation, baseline resolution, image upload records,
 results, review state, retries and races, builds paging, hashed sessions and the same-origin
-rule for cookie-authenticated writes. One paging suite (`test/support/build-paging-suite.ts`)
-runs against both the D1 build repository and its in-memory double, so the two cannot drift.
+rule for cookie-authenticated writes. Each repository with an in-memory double (builds, approvals, images and upload records,
+projects, users, sessions, memberships) and the R2 image store run one contract suite from
+`test/support/contracts/` against both the D1 or R2 adapter and the double, so the two cannot drift.
 GitHub is a recording stub
 (`test/support/github-recorder.ts`), not MSW. Authorization covers org member, non-member,
 no session and cross-org (`src/routes/cross-org.test.ts`, `src/services/cross-org.test.ts`).

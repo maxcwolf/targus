@@ -9,6 +9,7 @@ import type { NewSession, SessionRepository } from '../../src/repositories/sessi
 import type { UserRepository } from '../../src/repositories/user.repository.ts';
 import type { ServiceDeps } from '../../src/services/deps.ts';
 import type { Reviewer } from '../../src/services/principal.ts';
+import { uniqueViolation } from './d1-semantics.ts';
 
 // In-memory doubles of the login side: users, sessions, the membership cache and GitHub OAuth.
 
@@ -18,6 +19,8 @@ export function createInMemoryUsers(): UserRepository & { readonly all: Reviewer
     all,
     upsertByGithubId({ id, githubId, login, avatarUrl }) {
       const index = all.findIndex((user) => user.githubId === githubId);
+      // A new GitHub id under an id another user has breaks the primary key, as in D1.
+      if (index === -1 && all.some((user) => user.id === id)) return uniqueViolation('users.id');
       const user = { id: all[index]?.id ?? id, githubId, login, avatarUrl };
       if (index === -1) all.push(user);
       else all[index] = user;
@@ -34,9 +37,14 @@ export function createInMemorySessions(
   const all = new Map<string, NewSession>();
   return {
     all,
-    create(session) {
+    async create(session) {
+      // The foreign key on user_id, as D1 enforces it; then the primary key, with no await
+      // between the check and the write.
+      if ((await users.findById(session.userId)) === null) {
+        throw new Error('FOREIGN KEY constraint failed: sessions.user_id');
+      }
+      if (all.has(session.idHash)) return uniqueViolation('sessions.id_hash');
       all.set(session.idHash, session);
-      return Promise.resolve();
     },
     async findActive(idHash, now) {
       const session = all.get(idHash);

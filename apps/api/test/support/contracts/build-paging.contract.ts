@@ -1,14 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ApiBuildRepository, BuildPage } from '../../src/repositories/build.repository.ts';
-import { newBuild } from './fixtures.ts';
-
-/** A builds repository to page through, and how to make a project its builds may belong to. */
-export interface BuildPagingHarness {
-  readonly repository: ApiBuildRepository;
-  /** A project id that `create` accepts builds for; `key` is unique per call. */
-  readonly seedProject: (key: string) => Promise<string>;
-}
+import type { ApiBuildRepository, BuildPage } from '../../../src/repositories/build.repository.ts';
+import { newBuild } from '../fixtures.ts';
+import type { BuildHarness } from './build-harness.ts';
 
 /** Create `count` builds of a project, all with the same `createdAt` (the fake clock epoch). */
 async function createBuilds(
@@ -37,7 +31,7 @@ async function allPages(
 const numbers = (page: BuildPage | undefined): number[] =>
   page?.builds.map((build) => build.number) ?? [];
 
-type Harness = () => BuildPagingHarness;
+type Harness = () => BuildHarness;
 
 function describeOrder(name: string, harness: Harness): void {
   describe(`${name} listForProject paging`, () => {

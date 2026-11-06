@@ -10,10 +10,11 @@ import {
   decodeBuildCursor,
   toBuildPage,
 } from '../../src/repositories/build-page.ts';
+import { compareText, uniqueViolation } from './d1-semantics.ts';
 
-// The in-memory double of the builds repository, for service unit tests. The D1 adapter is
-// tested against the same behaviour in src/repositories/build.repository*.test.ts. Each write
-// checks its guard and applies with no await in between, as one D1 transaction would.
+// The in-memory double of the builds repository, for service unit tests. It and the D1 adapter
+// run the same contract suites (test/support/contracts/build*.contract.ts). Each write checks
+// its guard and applies with no await in between, as one D1 transaction would.
 
 export interface InMemoryBuilds extends ApiBuildRepository {
   readonly builds: BuildRecord[];
@@ -57,12 +58,27 @@ function buildQueries(
   };
 }
 
-/** What the unique index `snapshots_build_story_variant_unique` would reject, if anything. */
-function duplicateStory(records: readonly SnapshotRecord[]): Error | null {
-  const keys = new Set(records.map((record) => `${record.storyId}\u0000${record.variant}`));
-  return keys.size === records.length
-    ? null
-    : new Error('UNIQUE constraint failed: snapshots.build_id, snapshots.story_id, ...');
+/** A build's snapshots as D1 lists them: by story, then variant. */
+const storyOrder = (records: readonly SnapshotRecord[]): SnapshotRecord[] =>
+  [...records].sort(
+    (a, b) => compareText(a.storyId, b.storyId) || compareText(a.variant, b.variant),
+  );
+
+/**
+ * What D1 would reject in `records` for `buildId`, if anything: a story and variant twice
+ * (`snapshots_build_story_variant_unique`), or a snapshot id twice or already used by another
+ * build's snapshot (the primary key). The build's own snapshots are cleared first, as in D1.
+ */
+function rejectedSnapshot(
+  snapshots: ReadonlyMap<string, readonly SnapshotRecord[]>,
+  buildId: string,
+  records: readonly SnapshotRecord[],
+): string | null {
+  const stories = new Set(records.map((record) => `${record.storyId}\u0000${record.variant}`));
+  if (stories.size !== records.length) return 'snapshots.build_id, snapshots.story_id, ...';
+  const others = [...snapshots].filter(([id]) => id !== buildId).flatMap(([, stored]) => stored);
+  const ids = new Set([...records, ...others].map((record) => record.id));
+  return ids.size === records.length + others.length ? null : 'snapshots.id';
 }
 
 type Patch = (buildId: string, fields: Partial<BuildRecord>) => void;
@@ -72,6 +88,7 @@ function snapshotReviews(
   snapshots: Map<string, SnapshotRecord[]>,
   versions: Map<string, number>,
   patch: Patch,
+  exists: (buildId: string) => boolean,
 ): Pick<ApiBuildRepository, 'findSnapshotById' | 'readForReview' | 'commitReview'> {
   return {
     findSnapshotById: (snapshotId) =>
@@ -81,11 +98,12 @@ function snapshotReviews(
     readForReview: (buildId) =>
       Promise.resolve({
         version: versions.get(buildId) ?? 0,
-        snapshots: [...(snapshots.get(buildId) ?? [])],
+        snapshots: storyOrder(snapshots.get(buildId) ?? []),
       }),
     commitReview(buildId, readVersion, commit) {
       const version = versions.get(buildId) ?? 0;
-      if (version !== readVersion) return Promise.resolve(false);
+      // No build row, no update: D1's guarded UPDATE matches nothing.
+      if (!exists(buildId) || version !== readVersion) return Promise.resolve(false);
       const { snapshotIds, review, reviewedBy, reviewedAt, status, tally } = commit;
       const ids = new Set(snapshotIds);
       const decided = { review, reviewedBy, reviewedAt: reviewedAt.toISOString() };
@@ -116,6 +134,7 @@ export function createInMemoryBuilds(): InMemoryBuilds {
     snapshots,
     versions,
     create(build, tally = emptyTally) {
+      if (builds.some((other) => other.id === build.id)) return uniqueViolation('builds.id');
       const number = builds.filter((other) => other.projectId === build.projectId).length + 1;
       const created = { ...build, number, tally };
       builds.push(created);
@@ -129,8 +148,8 @@ export function createInMemoryBuilds(): InMemoryBuilds {
         return Promise.resolve(false);
       }
       // Checked before anything changes, so a rejected write leaves no trace, as in D1.
-      const rejected = duplicateStory(records);
-      if (rejected !== null) return Promise.reject(rejected);
+      const rejected = rejectedSnapshot(snapshots, buildId, records);
+      if (rejected !== null) return uniqueViolation(rejected);
       snapshots.set(
         buildId,
         records.map((record) => ({ ...record, buildId })),
@@ -142,7 +161,7 @@ export function createInMemoryBuilds(): InMemoryBuilds {
       patch(buildId, { checkRunId });
       return Promise.resolve();
     },
-    listSnapshots: (buildId) => Promise.resolve([...(snapshots.get(buildId) ?? [])]),
-    ...snapshotReviews(snapshots, versions, patch),
+    listSnapshots: (buildId) => Promise.resolve(storyOrder(snapshots.get(buildId) ?? [])),
+    ...snapshotReviews(snapshots, versions, patch, (id) => builds.some((b) => b.id === id)),
   };
 }

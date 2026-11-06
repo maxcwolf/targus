@@ -1,12 +1,12 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { describeBuildPaging } from '../../test/support/build-paging-suite.ts';
-import { newProject } from '../../test/support/fixtures.ts';
-import { createInMemoryBuilds } from '../../test/support/in-memory-builds.ts';
+import {
+  d1BuildHarness,
+  inMemoryBuildHarness,
+} from '../../test/support/contracts/build-harness.ts';
+import { describeBuildPaging } from '../../test/support/contracts/build-paging.contract.ts';
 import { decodeBuildCursor, encodeBuildCursor } from './build-page.ts';
-import { D1BuildRepository } from './build.repository.ts';
-import { createProjectRepository } from './project.repository.ts';
 
 describe('build cursors', () => {
   it('round-trip a build number through URL-safe text', () => {
@@ -18,15 +18,5 @@ describe('build cursors', () => {
   });
 });
 
-describeBuildPaging('D1BuildRepository (local D1)', () => ({
-  repository: new D1BuildRepository(env.DB),
-  async seedProject(key) {
-    const project = await createProjectRepository(env.DB).create(newProject(`d1-${key}`));
-    return project.id;
-  },
-}));
-
-describeBuildPaging('in-memory builds double', () => ({
-  repository: createInMemoryBuilds(),
-  seedProject: (key) => Promise.resolve(`project-mem-${key}`),
-}));
+describeBuildPaging('D1BuildRepository (local D1)', () => d1BuildHarness(env.DB));
+describeBuildPaging('in-memory builds double', inMemoryBuildHarness);

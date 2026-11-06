@@ -61,11 +61,14 @@ export function createInMemoryImages(sources: UploaderSources): InMemoryImages {
       }
       return Promise.resolve();
     },
+    // Copies in and out, as R2 holds its own bytes: a caller's later write to its buffer, or to
+    // what `get` returned, changes nothing stored.
     put(hash, value) {
-      if (!bytes.has(hash)) bytes.set(hash, value);
+      if (!bytes.has(hash)) bytes.set(hash, value.slice());
       return Promise.resolve();
     },
-    get: (hash) => Promise.resolve(bytes.get(hash) ?? null),
+    get: (hash) => Promise.resolve(bytes.get(hash)?.slice() ?? null),
+    // Unlike D1, no foreign key on the project: service tests upload as made-up projects.
     recordUpload(projectId, hash) {
       uploads.set(projectId, (uploads.get(projectId) ?? new Set()).add(hash));
       return Promise.resolve();

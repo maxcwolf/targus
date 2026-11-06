@@ -120,10 +120,11 @@ describe('createBuild with a baseline', () => {
     );
 
     expect(response.baselineBuildId).toBe(baselineId);
+    // In story order, as D1 lists a build's snapshots.
     expect(response.baselines).toEqual([
-      { storyId: 'same', variant: 'default', imageHash: imageHash('3') },
       { storyId: 'approved', variant: 'default', imageHash: imageHash('4') },
       { storyId: 'denied', variant: 'default', imageHash: imageHash('7') },
+      { storyId: 'same', variant: 'default', imageHash: imageHash('3') },
     ]);
     expect(response.build.number).toBe(2);
   });
