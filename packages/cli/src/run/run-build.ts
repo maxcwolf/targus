@@ -47,8 +47,13 @@ export interface RunBuildOutput {
   readonly build: CreateBuildResponse['build'];
   readonly response: SubmitResultsResponse;
   readonly results: readonly StoryResult[];
-  /** Per-state counts; `removed` counts baseline stories this capture did not have. */
+  /**
+   * Per-state counts; `removed` counts baseline stories this capture did not have, except the
+   * ones `parameters.targus.skip` left out.
+   */
   readonly counts: StateCounts;
+  /** Stories left out by `parameters.targus.skip`: not submitted, not counted as removed. */
+  readonly skipped: readonly string[];
   /** Every hash uploaded: missing captures first, then diff images. */
   readonly uploaded: readonly string[];
 }
@@ -148,7 +153,7 @@ async function uploadImages(
 }
 
 function removedCount(input: RunBuildInput, baselines: readonly BaselineEntry[]): number {
-  const ids = new Set(input.report.stories.map((story) => story.id));
+  const ids = new Set([...input.report.stories.map((story) => story.id), ...input.report.skipped]);
   return baselines.filter((entry) => !ids.has(entry.storyId)).length;
 }
 
@@ -171,6 +176,7 @@ export async function runBuild(input: RunBuildInput): Promise<RunBuildOutput> {
     response,
     results,
     counts: countStates(results, removedCount(input, created.baselines)),
+    skipped: input.report.skipped,
     uploaded,
   };
 }

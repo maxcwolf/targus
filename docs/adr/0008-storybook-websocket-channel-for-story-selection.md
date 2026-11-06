@@ -2,7 +2,16 @@
 
 ## Status
 
-accepted
+accepted, amended by [0022](0022-story-parameters-reported-by-the-decorator.md)
+
+## Amended by
+
+The channel still drives selection. One part of the text below was overtaken:
+
+- **What a selection waits for.** `storyRendered` arrives before React renders the story, so when
+  the app runs `withTargus` the CLI also waits, briefly, for the decorator's
+  `targus/storyParameters` or `targus/storyError` report, and applies `parameters.targus`
+  before the settle (ADR 0022).
 
 ## Date
 

@@ -7,6 +7,7 @@ const output: RunBuildOutput = {
   build: { id: 'b1', number: 7 },
   results: [],
   uploaded: [],
+  skipped: [],
   counts: { unchanged: 10, changed: 2, new: 1, removed: 0, unstable: 1, error: 0 },
   response: {
     build: { id: 'b1', number: 7 },
@@ -37,5 +38,12 @@ describe('formatRunSummary', () => {
       'review: https://targus.test/builds/b1',
       'check run: 42',
     ]);
+  });
+
+  it('lists skipped stories after the counts', () => {
+    const lines = formatRunSummary({ ...output, skipped: ['spinner--a', 'spinner--b'] });
+
+    expect(lines[8]).toBe('skipped (2, parameters.targus.skip): spinner--a, spinner--b');
+    expect(lines[9]).toBe('3 to review, 0 denied, 0 errored');
   });
 });

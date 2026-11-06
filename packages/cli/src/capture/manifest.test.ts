@@ -41,6 +41,7 @@ function result(id: string, overrides: Partial<CaptureResult> = {}): CaptureResu
 }
 
 const report: CaptureReport = {
+  skipped: ['e'],
   startedAt: '2026-11-04T10:00:00.000Z',
   durationMs: 4200,
   stories: [
@@ -75,6 +76,7 @@ describe('buildManifest', () => {
       failed: 1,
       unstable: ['b'],
       blank: ['d'],
+      skipped: ['e'],
       duplicateHashes: [['a', 'd']],
       startedAt: '2026-11-04T10:00:00.000Z',
       durationMs: 4200,
@@ -100,6 +102,18 @@ describe('writeCaptureOutput', () => {
     expect(files).toEqual(['a.png', 'b.png', 'd.png', 'manifest.json']);
     expect([...(await readFile(path.join(dir, 'out', 'a.png')))]).toEqual([1, 2, 3]);
     expect(await readCaptureManifest(path.join(dir, 'out'))).toEqual(written);
+  });
+
+  it('reads a manifest written before skipped existed as skipping nothing', async () => {
+    const written = await writeCaptureOutput(path.join(dir, 'out'), report, run);
+    const { skipped, ...older } = written.summary;
+    await writeFile(
+      path.join(dir, 'out', 'manifest.json'),
+      JSON.stringify({ ...written, summary: older }),
+    );
+
+    expect(skipped).toEqual(['e']);
+    expect((await readCaptureManifest(path.join(dir, 'out'))).summary.skipped).toEqual([]);
   });
 
   it('rejects a manifest that does not match the schema', async () => {

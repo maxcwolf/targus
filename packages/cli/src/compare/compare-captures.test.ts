@@ -22,7 +22,7 @@ function story(id: string, overrides: Partial<StoryRecord> = {}): StoryRecord {
   };
 }
 
-function manifest(stories: StoryRecord[]): CaptureManifest {
+function manifest(stories: StoryRecord[], skipped: string[] = []): CaptureManifest {
   return {
     version: 1,
     summary: {
@@ -35,6 +35,7 @@ function manifest(stories: StoryRecord[]): CaptureManifest {
       failed: 0,
       unstable: [],
       blank: [],
+      skipped,
       duplicateHashes: [],
       startedAt: '2026-11-04T10:00:00.000Z',
       durationMs: 1,
@@ -114,5 +115,17 @@ describe('compareCaptures', () => {
     ]);
     expect(comparison.threshold).toBe(0.001);
     expect(compared).toEqual(['current:changed.png', 'current:noise.png', 'current:spinner.png']);
+  });
+
+  it('does not call a story removed when the current capture skipped it', async () => {
+    const comparison = await compareCaptures({
+      baseline,
+      current: manifest(current.stories, ['gone']),
+      threshold: 0.001,
+      loadPng,
+      compareImages: () => ({ ratio: 0, diffPng: null }),
+    });
+
+    expect(comparison.removed).toEqual([]);
   });
 });

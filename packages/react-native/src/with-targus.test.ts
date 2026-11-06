@@ -11,6 +11,7 @@ import {
   createWithTargus,
   resolveStorybookChannel,
   storyErrorEvent,
+  storyParametersEvent,
   withTargus,
   type TargusChannel,
 } from './with-targus.ts';
@@ -117,20 +118,64 @@ describe('createWithTargus', () => {
     const renderer = await render(decorator(Broken, { id: 'chat--broken' }));
 
     expect(renderer.toJSON()).toBeNull();
-    expect(emit).toHaveBeenCalledTimes(1);
     expect(emit).toHaveBeenCalledWith(
       storyErrorEvent,
       expect.objectContaining({ storyId: 'chat--broken', message: 'No QueryClient set' }),
     );
   });
 
-  it('renders a healthy story unchanged and emits nothing', async () => {
+  it('renders a healthy story unchanged and reports only its parameters', async () => {
     const emit = vi.fn();
 
     const renderer = await render(createWithTargus({ emit })(Healthy, { id: 'ok' }));
 
     expect(renderer.toJSON()).toMatchObject({ type: 'Text' });
-    expect(emit).not.toHaveBeenCalled();
+    expect(emit).toHaveBeenCalledTimes(1);
+    expect(emit).toHaveBeenCalledWith(storyParametersEvent, { storyId: 'ok', targus: undefined });
+  });
+});
+
+describe('createWithTargus parameters', () => {
+  it('forwards parameters.targus as the story set it, valid or not', async () => {
+    const emit = vi.fn();
+    const decorator = createWithTargus({ emit });
+
+    await render(decorator(Healthy, { id: 'a', parameters: { targus: { skip: true } } }));
+    await render(decorator(Healthy, { id: 'b', parameters: { targus: { delay: 500 } } }));
+    await render(decorator(Healthy, { id: 'c', parameters: { targus: { delay: -1 } } }));
+    await render(decorator(Healthy, { id: 'd', parameters: null }));
+
+    expect(emit.mock.calls).toEqual([
+      [storyParametersEvent, { storyId: 'a', targus: { skip: true } }],
+      [storyParametersEvent, { storyId: 'b', targus: { delay: 500 } }],
+      [storyParametersEvent, { storyId: 'c', targus: { delay: -1 } }],
+      [storyParametersEvent, { storyId: 'd', targus: undefined }],
+    ]);
+  });
+
+  it('reports a render error before the parameters, once each', async () => {
+    const emit = vi.fn();
+
+    await render(createWithTargus({ emit })(Broken, { id: 'x', parameters: { targus: {} } }));
+
+    expect(emit.mock.calls.map(([event]: unknown[]) => event)).toEqual([
+      storyErrorEvent,
+      storyParametersEvent,
+    ]);
+  });
+
+  it('does not report again when the same story re-renders', async () => {
+    const emit = vi.fn();
+    const decorator = createWithTargus({ emit });
+    const parameters = { targus: { delay: 50 } };
+    const renderer = await render(decorator(Healthy, { id: 'r', parameters }));
+
+    await act(() => {
+      renderer.update(decorator(Healthy, { id: 'r', parameters }));
+      return Promise.resolve();
+    });
+
+    expect(emit).toHaveBeenCalledTimes(1);
   });
 });
 

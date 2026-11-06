@@ -108,8 +108,9 @@ targus/
   packages/cli         Built. `targus` binary: device driver (simctl), Storybook channel server,
                        capture loop, git metadata, API client, local HTML report.
   packages/react-native  Partly built. `withTargus` decorator (an error boundary that reports
-                       render errors over the channel) and `parameters.targus` typings. Reduced
-                       motion, the locked date and settle hints are not built (section 7).
+                       render errors, and a reporter for `parameters.targus` delay and skip,
+                       over the channel). Reduced motion and the locked date are not built
+                       (section 7).
   apps/api             Built. Cloudflare Worker: Hono router, Drizzle + D1, R2 bindings, GitHub
                        App login and check runs. Also serves the built web app as static assets.
   apps/web             Built. React + Vite review UI (TanStack Router + Query), served by apps/api.
@@ -150,8 +151,10 @@ Internals:
   Then screenshot again after `--stability-gap` (default 150 ms) and compare. If the two
   differ, retry with a doubled settle up to `--attempts` (default 3) and mark the story
   `unstable`, rather than silently diffing noise. `unstable` never blocks the check.
-  **Not built:** per-story `parameters.targus.delay` and `parameters.targus.skip`. The
-  `@targus/react-native` package types and resolves them, but the CLI does not read them.
+  Per-story `parameters.targus.delay` and `parameters.targus.skip` (built, ADR 0022): the
+  `withTargus` decorator reports them over the channel once the story commits; `delay` (0 to
+  10 000 ms) replaces `--settle` for that story, and a `skip` story is neither captured nor
+  submitted. An invalid value makes the story an error.
 - Error detection (built): Storybook RN's error boundary emits nothing on the channel, so the
   `withTargus` decorator wraps each story in its own boundary and emits `targus/storyError`. The
   CLI records the error instead of a snapshot, and the build fails (ADR 0004, rule 6).

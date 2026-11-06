@@ -31,6 +31,7 @@ export async function loadCapture(dir: string): Promise<CaptureReport> {
   for (const record of manifest.stories) stories.push(await loadStory(dir, record));
   return {
     stories,
+    skipped: manifest.summary.skipped,
     startedAt: manifest.summary.startedAt,
     durationMs: manifest.summary.durationMs,
   };

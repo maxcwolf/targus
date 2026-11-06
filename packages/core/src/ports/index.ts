@@ -11,7 +11,12 @@ export type { CheckRunState, CheckRunTarget, GitHubClient } from './github-clien
 export type { IdGenerator } from './id-generator.ts';
 export { createFakeIdGenerator } from './id-generator.fake.ts';
 export type { ImageStore } from './image-store.ts';
-export type { StoryIndexEntry, StorybookChannel, StorySelection } from './storybook-channel.ts';
+export type {
+  StoryCaptureParameters,
+  StoryIndexEntry,
+  StorybookChannel,
+  StorySelection,
+} from './storybook-channel.ts';
 export {
   createFakeStorybookChannel,
   type FakeStorybookChannel,

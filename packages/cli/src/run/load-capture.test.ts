@@ -49,6 +49,7 @@ describe('loadCapture', () => {
     const errored = { ...base, id: 'b--broken', png: null, hash: null, error: 'boom' };
     const report = {
       stories: [base, errored],
+      skipped: ['c--skipped'],
       startedAt: '2026-11-04T10:00:00.000Z',
       durationMs: 9,
     };
@@ -60,7 +61,7 @@ describe('loadCapture', () => {
   it('rejects a PNG that no longer matches its manifest hash', async () => {
     await writeCaptureOutput(
       dir,
-      { stories: [base], startedAt: '2026-11-04T10:00:00.000Z', durationMs: 1 },
+      { stories: [base], skipped: [], startedAt: '2026-11-04T10:00:00.000Z', durationMs: 1 },
       run,
     );
     await writeFile(path.join(dir, 'a--ok.png'), encodeSolidPng(2, 2, [9, 9, 9, 255]));

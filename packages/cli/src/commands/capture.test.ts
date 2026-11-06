@@ -143,6 +143,27 @@ describe('runCapture', () => {
   });
 });
 
+describe('runCapture with parameters.targus', () => {
+  it('lists a skipped story without capturing it or counting it as failed', async () => {
+    channel.setOutcome('a--one', { kind: 'rendered', parameters: { delay: null, skip: true } });
+    channel.setOutcome('b--two', { kind: 'rendered', parameters: { delay: 1000, skip: false } });
+    driver.queueScreenshots(white, white, black, black);
+
+    const manifest = await runCapture(options(), deps());
+
+    expect(manifest.summary).toMatchObject({
+      storyCount: 2,
+      captured: 2,
+      failed: 0,
+      skipped: ['a--one'],
+    });
+    expect(manifest.stories.map((story) => story.id)).toEqual(['b--two', 'c--three']);
+    expect(lines).toContain('1/3 a--one SKIPPED (parameters.targus.skip)');
+    expect(lines).toContain('2/3 b--two render=0ms total=1150ms');
+    expect(lines).toContain('skipped (1): a--one');
+  });
+});
+
 describe('runCapture failures', () => {
   it('closes the channel when the device fails', async () => {
     driver.boot = () => Promise.reject(new Error('boot failed'));

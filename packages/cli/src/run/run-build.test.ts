@@ -43,8 +43,8 @@ function errored(id: string, error: string): CaptureResult {
   return { ...captured(id, whitePng), png: null, hash: null, width: 0, height: 0, error };
 }
 
-function report(stories: CaptureResult[]): CaptureReport {
-  return { stories, startedAt: '2026-11-04T10:00:00.000Z', durationMs: 1000 };
+function report(stories: CaptureResult[], skipped: string[] = []): CaptureReport {
+  return { stories, skipped, startedAt: '2026-11-04T10:00:00.000Z', durationMs: 1000 };
 }
 
 function input(
@@ -225,6 +225,21 @@ describe('runBuild uploads and submit', () => {
       error: 0,
     });
     expect(output.response.reviewUrl).toBe('https://targus.test/builds/build-1');
+  });
+
+  it('neither submits nor counts as removed a baseline story that is now skipped', async () => {
+    const api = createFakeTargusApi({ baselines: { spinner: whitePng } });
+
+    const output = await runBuild({
+      ...input(api, [captured('a', whitePng)]),
+      report: report([captured('a', whitePng)], ['spinner']),
+    });
+
+    const [submit] = api.callsOf('submitResults');
+    expect(submit?.request.results.map((result) => result.storyId)).toEqual(['a']);
+    expect(api.callsOf('createBuild')[0]?.request.snapshots).toHaveLength(1);
+    expect(output.counts.removed).toBe(0);
+    expect(output.skipped).toEqual(['spinner']);
   });
 });
 

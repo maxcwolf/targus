@@ -10,10 +10,13 @@ import { WebSocket, WebSocketServer, type RawData } from 'ws';
 import { z } from 'zod';
 
 import { formatDuration } from '../duration.ts';
-
-/** One message on the Storybook channel: plain JSON `{ type, args }` (ADR 0008). */
-const ChannelEvent = z.object({ type: z.string(), args: z.array(z.unknown()).default([]) });
-type ChannelEvent = z.infer<typeof ChannelEvent>;
+import {
+  ChannelEvent,
+  isRenderedFor,
+  isTargusEvent,
+  targusReport,
+  targusReportFor,
+} from './channel-events.ts';
 
 const IndexResponse = z.object({
   index: z.object({
@@ -24,10 +27,10 @@ const IndexResponse = z.object({
   }),
 });
 
-const StoryErrorPayload = z.object({ storyId: z.string(), message: z.string() });
-
-const renderedEvents = new Set(['storyRendered', 'storyUnchanged']);
 const indexRetryMs = 1000;
+
+/** How long a selection waits after `storyRendered` for the decorator's report (ADR 0022). */
+export const defaultReportGraceMs = 1000;
 
 export interface WsStorybookChannelOptions {
   /** Port the app connects to; Storybook RN defaults to 7007. Pass 0 for any free port. */
@@ -35,6 +38,8 @@ export interface WsStorybookChannelOptions {
   readonly host?: string;
   /** How long `getIndex` waits for the app to connect and answer. */
   readonly connectTimeoutMs: number;
+  /** How long to wait after `storyRendered` for `targus/storyParameters`. */
+  readonly reportGraceMs?: number;
 }
 
 type Listener = (event: ChannelEvent) => void;
@@ -57,6 +62,14 @@ export class WsStorybookChannel implements StorybookChannel {
   private readonly clients = new Set<WebSocket>();
   private readonly listeners = new Set<Listener>();
   private readonly pending = new Set<(error: Error) => void>();
+  /**
+   * The decorator's last report per story, kept even when no selection waits: the report can
+   * land in the same socket read as `storyRendered`, or before a selection of a story that is
+   * already on screen. A story's parameters do not change within a run.
+   */
+  private readonly reports = new Map<string, StorySelection>();
+  /** Whether the app runs `withTargus`: unknown until a targus event or a missed report. */
+  private decorator: boolean | null = null;
   private readonly disconnected: Promise<void>;
   private markDisconnected = (): void => undefined;
   private closing = false;
@@ -64,6 +77,7 @@ export class WsStorybookChannel implements StorybookChannel {
   private constructor(
     private readonly server: WebSocketServer,
     private readonly connectTimeoutMs: number,
+    private readonly reportGraceMs: number,
   ) {
     this.disconnected = new Promise((resolve) => {
       this.markDisconnected = resolve;
@@ -85,13 +99,14 @@ export class WsStorybookChannel implements StorybookChannel {
     port,
     host,
     connectTimeoutMs,
+    reportGraceMs = defaultReportGraceMs,
   }: WsStorybookChannelOptions): Promise<WsStorybookChannel> {
     return new Promise((resolve, reject) => {
       const server = new WebSocketServer(host === undefined ? { port } : { port, host });
       server.once('error', reject);
       server.once('listening', () => {
         server.off('error', reject);
-        resolve(new WsStorybookChannel(server, connectTimeoutMs));
+        resolve(new WsStorybookChannel(server, connectTimeoutMs, reportGraceMs));
       });
     });
   }
@@ -126,14 +141,21 @@ export class WsStorybookChannel implements StorybookChannel {
       .map(({ id, title, name }) => ({ id, title, name }));
   }
 
-  selectStory(storyId: string, timeoutMs: number): Promise<StorySelection> {
-    const selection = this.waitFor(
-      (event) => selectionFor(event, storyId),
+  /**
+   * Storybook RN emits `storyRendered` before React renders the story, so once it arrives the
+   * selection waits up to `reportGraceMs` for the decorator's `targus/storyParameters` (or
+   * `targus/storyError`). An app without the decorator never reports; after its first miss
+   * the channel stops waiting, until a targus event shows the decorator after all.
+   */
+  async selectStory(storyId: string, timeoutMs: number): Promise<StorySelection> {
+    const first = this.waitFor(
+      (event) => (isRenderedFor(event, storyId) ? 'rendered' : targusReportFor(event, storyId)),
       timeoutMs,
       `storyRendered ${storyId}`,
     );
     this.send('setCurrentStory', [{ storyId }]);
-    return selection;
+    const signal = await first;
+    return signal === 'rendered' ? this.reportAfterRender(storyId) : signal;
   }
 
   whenDisconnected(): Promise<void> {
@@ -152,6 +174,41 @@ export class WsStorybookChannel implements StorybookChannel {
     });
   }
 
+  private async reportAfterRender(storyId: string): Promise<StorySelection> {
+    const cached = this.reports.get(storyId);
+    if (cached !== undefined) return cached;
+    if (this.decorator === false) return { kind: 'rendered' };
+    const grace = this.waitFor(
+      (event) => targusReportFor(event, storyId),
+      this.reportGraceMs,
+      `targus/storyParameters ${storyId}`,
+      null,
+    );
+    // An app that drops the channel during the grace wait has not rendered anything: answer
+    // nothing, like a render wait, so the crash watch (ADR 0021) ends the run and close()
+    // rejects this wait, rather than reporting the story as rendered when the grace runs out.
+    const gone = this.disconnected.then(() => 'disconnected' as const);
+    const report = await Promise.race([grace, gone]);
+    if (report === 'disconnected') return this.unanswered();
+    if (report !== null) return report;
+    this.decorator ??= false;
+    return { kind: 'rendered' };
+  }
+
+  /** A wait that only `close()` ends, by rejecting it. */
+  private unanswered(): Promise<never> {
+    return new Promise((_resolve, reject) => {
+      this.pending.add(reject);
+    });
+  }
+
+  /** Remember what the decorator says, whether or not a selection is waiting for it. */
+  private observe(event: ChannelEvent): void {
+    if (isTargusEvent(event)) this.decorator = true;
+    const report = targusReport(event);
+    if (report !== undefined) this.reports.set(report.storyId, report.selection);
+  }
+
   private dispatch(data: RawData): void {
     let json: unknown;
     try {
@@ -161,6 +218,7 @@ export class WsStorybookChannel implements StorybookChannel {
     }
     const event = ChannelEvent.safeParse(json);
     if (!event.success) return;
+    this.observe(event.data);
     for (const listener of [...this.listeners]) listener(event.data);
   }
 
@@ -194,10 +252,12 @@ export class WsStorybookChannel implements StorybookChannel {
     });
   }
 
+  /** Resolve on the first event `match` maps to a value; on timeout reject, or yield `onTimeout`. */
   private waitFor<T>(
     match: (event: ChannelEvent) => T | undefined,
     timeoutMs: number,
     label: string,
+    onTimeout?: T,
   ): Promise<T> {
     return new Promise((resolve, reject) => {
       const settle = (): void => {
@@ -216,29 +276,17 @@ export class WsStorybookChannel implements StorybookChannel {
         resolve(value);
       };
       const timer = setTimeout(() => {
-        fail(new Error(`timeout after ${timeoutMs}ms waiting for ${label}`));
+        if (onTimeout === undefined) {
+          fail(new Error(`timeout after ${timeoutMs}ms waiting for ${label}`));
+          return;
+        }
+        settle();
+        resolve(onTimeout);
       }, timeoutMs);
       this.listeners.add(listener);
       this.pending.add(fail);
     });
   }
-}
-
-/** `storyRendered`/`storyUnchanged` carry the id as a string or as `{ storyId }`. */
-function selectionFor(event: ChannelEvent, storyId: string): StorySelection | undefined {
-  const [first] = event.args;
-  if (renderedEvents.has(event.type) && eventStoryId(first) === storyId)
-    return { kind: 'rendered' };
-  if (event.type !== 'targus/storyError') return undefined;
-  const error = StoryErrorPayload.safeParse(first);
-  if (!error.success || error.data.storyId !== storyId) return undefined;
-  return { kind: 'error', message: error.data.message };
-}
-
-function eventStoryId(value: unknown): string | null {
-  if (typeof value === 'string') return value;
-  const parsed = z.object({ storyId: z.string() }).safeParse(value);
-  return parsed.success ? parsed.data.storyId : null;
 }
 
 function rawText(data: RawData): string {

@@ -48,6 +48,32 @@ UI from the Vite dev server instead, pass its origin, for example
 Scaffolding: `yarn new:route <name>` and `yarn new:adapter <port> <name>` create files in the
 right layer with a test beside them.
 
+## Writing stories
+
+Register the decorator from `@targus/react-native` in `.rnstorybook/preview.tsx`
+(`decorators: [withTargus]`). It reports render errors, and it reports two optional story
+parameters to the CLI ([ADR 0022](docs/adr/0022-story-parameters-reported-by-the-decorator.md)):
+
+```tsx
+export const Loading: Story = {
+  // A spinner never holds still: leave it out of capture. It is not an error.
+  parameters: { targus: { skip: true } },
+};
+
+export const Entering: Story = {
+  // Wait 800 ms after the story renders before the first screenshot, instead of --settle.
+  parameters: { targus: { delay: 800 } },
+};
+```
+
+- `skip` (boolean, default false): the story is selected but never screenshotted or submitted.
+  It is listed as `skipped` in the capture and run summaries.
+- `delay` (milliseconds, 0 to 10000, default `--settle`, 300): replaces the settle wait for this
+  story; a stability retry doubles it.
+
+A value of the wrong type or out of range makes the story an error that names the field. Both
+parameters need the decorator; without it the CLI applies its defaults.
+
 ## Notes
 
 - `.github/CODEOWNERS` names `@maxcwolf` while the repo lives under that account. Point it at an

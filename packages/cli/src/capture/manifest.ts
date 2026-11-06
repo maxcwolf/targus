@@ -40,6 +40,8 @@ const Summary = z.object({
   failed: z.number().int().nonnegative(),
   unstable: z.array(z.string()),
   blank: z.array(z.string()),
+  /** Ids left out by `parameters.targus.skip`; absent in manifests written before it. */
+  skipped: z.array(z.string()).default([]),
   /** Groups of story ids whose captures are byte-identical (plan.md 5.1 capture hygiene). */
   duplicateHashes: z.array(z.array(z.string())),
   startedAt: z.iso.datetime(),
@@ -113,6 +115,7 @@ export function buildManifest(report: CaptureReport, run: CaptureRunInfo): Captu
       failed: report.stories.filter((story) => story.error !== null).length,
       unstable: captured.filter((story) => !story.stable).map((story) => story.id),
       blank: captured.filter((story) => story.blank === true).map((story) => story.id),
+      skipped: [...report.skipped],
       duplicateHashes: duplicateGroups(captured),
       startedAt: report.startedAt,
       durationMs: report.durationMs,

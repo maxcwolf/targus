@@ -70,8 +70,9 @@ export async function readBundleId(exec: Exec, appPath: string): Promise<string>
   return bundleId;
 }
 
-function progressLine({ index, total, result }: CaptureProgress): string {
+function progressLine({ index, total, result, skipped }: CaptureProgress): string {
   const position = `${index + 1}/${total} ${result.id}`;
+  if (skipped) return `${position} SKIPPED (parameters.targus.skip)`;
   if (result.error !== null) return `${position} ERROR ${result.error.slice(0, 160)}`;
   const unstable = result.stable ? '' : ` UNSTABLE after ${result.attempts} attempts`;
   return `${position} render=${result.renderMs}ms total=${result.captureMs}ms${unstable}`;
@@ -87,6 +88,8 @@ export function formatCaptureSummary(manifest: CaptureManifest): string[] {
   ];
   if (summary.blank.length > 0)
     lines.push(`blank (${summary.blank.length}): ${summary.blank.join(', ')}`);
+  if (summary.skipped.length > 0)
+    lines.push(`skipped (${summary.skipped.length}): ${summary.skipped.join(', ')}`);
   if (summary.perStoryMs !== null) {
     const { mean, median, p90, max } = summary.perStoryMs;
     lines.push(`per story: mean ${mean}ms, median ${median}ms, p90 ${p90}ms, max ${max}ms`);

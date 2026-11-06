@@ -27,7 +27,7 @@ const never = new Promise<never>(() => undefined);
 
 function progress(index: number, total: number): CaptureProgress {
   const result = { id: `story-${index}` } as CaptureProgress['result'];
-  return { index, total, result };
+  return { index, total, result, skipped: false };
 }
 
 describe('whileAppRuns', () => {

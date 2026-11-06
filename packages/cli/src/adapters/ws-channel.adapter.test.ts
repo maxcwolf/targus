@@ -52,8 +52,13 @@ const index = {
 
 let channel: WsStorybookChannel | undefined;
 
-async function listen(connectTimeoutMs = 2000): Promise<WsStorybookChannel> {
-  channel = await WsStorybookChannel.listen({ port: 0, host: '127.0.0.1', connectTimeoutMs });
+async function listen(connectTimeoutMs = 2000, reportGraceMs = 30): Promise<WsStorybookChannel> {
+  channel = await WsStorybookChannel.listen({
+    port: 0,
+    host: '127.0.0.1',
+    connectTimeoutMs,
+    reportGraceMs,
+  });
   return channel;
 }
 
@@ -143,6 +148,123 @@ describe('WsStorybookChannel.selectStory', () => {
     await expect(server.selectStory('slow', 20)).rejects.toThrow(
       'timeout after 20ms waiting for storyRendered slow',
     );
+  });
+});
+
+describe('WsStorybookChannel parameters reports', () => {
+  it('waits after storyRendered for the decorator and returns the parameters', async () => {
+    const server = await listen(2000, 2000);
+    const app = await connectApp(server.port);
+    const selection = server.selectStory('chat--mine', 1000);
+    await app.nextMessage();
+    app.send('storyRendered', 'chat--mine');
+    app.send('targus/storyParameters', { storyId: 'other', targus: { skip: true } });
+    app.send('targus/storyParameters', { storyId: 'chat--mine', targus: { delay: 500 } });
+
+    expect(await selection).toEqual({
+      kind: 'rendered',
+      parameters: { delay: 500, skip: false },
+    });
+  });
+
+  it('takes a report that arrives before storyRendered, and skip with delay', async () => {
+    const server = await listen();
+    const app = await connectApp(server.port);
+    const selection = server.selectStory('chat--mine', 1000);
+    await app.nextMessage();
+    app.send('targus/storyParameters', { bad: true });
+    app.send('targus/storyParameters', { storyId: 'chat--mine', targus: { delay: 0, skip: true } });
+
+    expect(await selection).toEqual({ kind: 'rendered', parameters: { delay: 0, skip: true } });
+  });
+
+  it('records an invalid parameters.targus as an error', async () => {
+    const server = await listen();
+    const app = await connectApp(server.port);
+    const selection = server.selectStory('chat--mine', 1000);
+    await app.nextMessage();
+    app.send('storyRendered', 'chat--mine');
+    app.send('targus/storyParameters', { storyId: 'chat--mine', targus: { delay: 60_000 } });
+
+    const result = await selection;
+    expect(result.kind === 'error' && result.message).toMatch(/^invalid parameters\.targus: delay/);
+  });
+
+  it('catches a render error the decorator reports after storyRendered', async () => {
+    const server = await listen(2000, 2000);
+    const app = await connectApp(server.port);
+    const selection = server.selectStory('chat--mine', 1000);
+    await app.nextMessage();
+    app.send('storyRendered', 'chat--mine');
+    app.send('targus/storyError', { storyId: 'chat--mine', message: 'boom' });
+
+    expect(await selection).toEqual({ kind: 'error', message: 'boom' });
+  });
+});
+
+describe('WsStorybookChannel disconnect during the report wait', () => {
+  it('never reports rendered once the app drops, and close() ends the wait', async () => {
+    const graceMs = 50;
+    const server = await listen(2000, graceMs);
+    const app = await connectApp(server.port);
+    let outcome: unknown = 'pending';
+    const selection = server.selectStory('chat--mine', 10_000).then(
+      (value) => (outcome = { value }),
+      (error: unknown) => (outcome = { error }),
+    );
+    await app.nextMessage();
+    app.send('targus/storyParameters', { storyId: 'other', targus: {} });
+    app.send('storyRendered', 'chat--mine');
+    app.socket.close();
+    await server.whenDisconnected();
+    await new Promise((resolve) => setTimeout(resolve, graceMs * 4));
+
+    expect(outcome).toBe('pending');
+    await server.close();
+    channel = undefined;
+    await selection;
+    expect(outcome).toEqual({ error: new Error('channel closed') });
+  });
+});
+
+describe('WsStorybookChannel cached and missing reports', () => {
+  it('uses a report sent before the selection when the story is already on screen', async () => {
+    const server = await listen(2000, 2000);
+    const app = await connectApp(server.port);
+    app.send('targus/storyParameters', { storyId: 'chat--mine', targus: { skip: true } });
+    // The report is cached only once it is received; a round trip through the server proves it.
+    const indexed = server.getIndex();
+    await app.nextMessage();
+    app.send('RN_GET_INDEX_RESPONSE', { index });
+    await indexed;
+
+    const selection = server.selectStory('chat--mine', 1000);
+    await app.nextMessage();
+    app.send('storyUnchanged', { storyId: 'chat--mine' });
+
+    expect(await selection).toEqual({ kind: 'rendered', parameters: { delay: null, skip: true } });
+  });
+
+  it('stops waiting for reports after the first miss when the app has no decorator', async () => {
+    const graceMs = 1000;
+    const server = await listen(2000, graceMs);
+    const app = await connectApp(server.port);
+    const select = async (storyId: string) => {
+      const selection = server.selectStory(storyId, 5000);
+      await app.nextMessage();
+      app.send('storyRendered', storyId);
+      const started = performance.now();
+      const result = await selection;
+      return { result, waitedMs: performance.now() - started };
+    };
+
+    const first = await select('button--primary');
+    const second = await select('chat--mine');
+
+    expect(first.result).toEqual({ kind: 'rendered' });
+    expect(first.waitedMs).toBeGreaterThanOrEqual(graceMs - 50);
+    expect(second.result).toEqual({ kind: 'rendered' });
+    expect(second.waitedMs).toBeLessThan(graceMs / 2);
   });
 });
 

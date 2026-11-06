@@ -4,9 +4,9 @@ import type { RunBuildOutput } from './run-build.ts';
 
 /**
  * Human summary printed by `targus run`: the build id on its own `build: <id>` line (for scripts),
- * a count per state, the build status and the links.
+ * a count per state, any skipped stories, the build status and the links.
  */
-export function formatRunSummary({ build, response, counts }: RunBuildOutput): string[] {
+export function formatRunSummary({ build, response, counts, skipped }: RunBuildOutput): string[] {
   const width = Math.max(...SnapshotState.options.map((state) => state.length));
   const rows = SnapshotState.options.map(
     (state) => `  ${state.padEnd(width)}  ${String(counts[state]).padStart(4)}`,
@@ -20,6 +20,9 @@ export function formatRunSummary({ build, response, counts }: RunBuildOutput): s
     `build: ${build.id}`,
     `build #${build.number} (${build.id}): ${status}`,
     ...rows,
+    ...(skipped.length === 0
+      ? []
+      : [`skipped (${skipped.length}, parameters.targus.skip): ${skipped.join(', ')}`]),
     `${pendingCount} to review, ${deniedCount} denied, ${errorCount} errored`,
     `review: ${response.reviewUrl}`,
     checkRun,

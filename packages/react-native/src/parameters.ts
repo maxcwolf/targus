@@ -1,8 +1,15 @@
-/** `parameters.targus` on a story or in preview.tsx. Every field is optional. */
+/**
+ * `parameters.targus` on a story or in preview.tsx. Every field is optional. The `withTargus`
+ * decorator reports it to the CLI, which validates it and applies it (ADR 0022); an invalid
+ * value makes the story an `error`, never a silent default.
+ */
 export interface TargusParameters {
-  /** Milliseconds to wait after `storyRendered` before the first screenshot. Default 300. */
+  /**
+   * Milliseconds to wait after the story renders before the first screenshot, in place of the
+   * CLI's `--settle` (default 300). From 0 to 10000; a stability retry doubles it.
+   */
   readonly delay?: number;
-  /** Leave this story out of capture entirely. Default false. */
+  /** Leave this story out of capture entirely: no screenshot, not an error. Default false. */
   readonly skip?: boolean;
 }
 

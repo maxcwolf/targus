@@ -90,7 +90,8 @@ describe('captureStories', () => {
     ]);
     expect(sleeps).toEqual([300, 150]);
     expect(compared).toHaveLength(0);
-    expect(progress).toEqual([{ index: 0, total: 1, result: report.stories[0] }]);
+    expect(progress).toEqual([{ index: 0, total: 1, result: report.stories[0], skipped: false }]);
+    expect(report.skipped).toEqual([]);
   });
 
   it('retries with a doubled settle and marks a story unstable when captures keep differing', async () => {

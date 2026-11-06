@@ -46,6 +46,8 @@ export interface CaptureResult {
 
 export interface CaptureReport {
   readonly stories: readonly CaptureResult[];
+  /** Ids of stories left out by `parameters.targus.skip`: not captured and not errors. */
+  readonly skipped: readonly string[];
   readonly startedAt: string;
   readonly durationMs: number;
 }
@@ -53,7 +55,9 @@ export interface CaptureReport {
 export interface CaptureProgress {
   readonly index: number;
   readonly total: number;
+  /** For a skipped story, an empty result with `skipped` true. */
   readonly result: CaptureResult;
+  readonly skipped: boolean;
 }
 
 export interface CaptureStoriesInput {
@@ -96,23 +100,31 @@ export async function captureStories(input: CaptureStoriesInput): Promise<Captur
   const startedAt = clock.now();
   const stories = selectStories(input.stories ?? (await channel.getIndex()), options);
   const results: CaptureResult[] = [];
+  const skipped: string[] = [];
   for (const [index, story] of stories.entries()) {
-    const result = await captureStory(input, story);
+    const outcome = await captureStory(input, story);
     input.signal?.throwIfAborted();
-    results.push(result);
-    input.onProgress?.({ index, total: stories.length, result });
+    const result = outcome === 'skipped' ? emptyResult(story) : outcome;
+    if (outcome === 'skipped') skipped.push(story.id);
+    else results.push(result);
+    input.onProgress?.({ index, total: stories.length, result, skipped: outcome === 'skipped' });
   }
   return {
     stories: results,
+    skipped,
     startedAt: startedAt.toISOString(),
     durationMs: elapsedMs(clock, startedAt),
   };
 }
 
+/**
+ * Capture one story, or `skipped` when its `parameters.targus.skip` is set. Its
+ * `parameters.targus.delay` replaces `settleMs` as the wait before the first screenshot.
+ */
 async function captureStory(
   input: CaptureStoriesInput,
   story: StoryIndexEntry,
-): Promise<CaptureResult> {
+): Promise<CaptureResult | 'skipped'> {
   const { channel, clock, options } = input;
   const started = clock.now();
   const failed = (error: string, renderMs: number): CaptureResult => ({
@@ -126,7 +138,8 @@ async function captureStory(
     const selection = await channel.selectStory(story.id, options.renderTimeoutMs);
     renderMs = elapsedMs(clock, started);
     if (selection.kind === 'error') return failed(selection.message, renderMs);
-    const settled = await settle(input);
+    if (selection.parameters?.skip === true) return 'skipped';
+    const settled = await settle(input, selection.parameters?.delay ?? options.settleMs);
     return {
       ...emptyResult(story),
       ...settled,
@@ -147,9 +160,9 @@ interface Settled {
   readonly stable: boolean;
 }
 
-async function settle(input: CaptureStoriesInput): Promise<Settled> {
+async function settle(input: CaptureStoriesInput, firstSettleMs: number): Promise<Settled> {
   const { driver, options, sleep } = input;
-  let settleMs = options.settleMs;
+  let settleMs = firstSettleMs;
   let last: Settled | undefined;
   for (let attempt = 1; attempt <= Math.max(1, options.maxAttempts); attempt += 1) {
     await sleep(settleMs);

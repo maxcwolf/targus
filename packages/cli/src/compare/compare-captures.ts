@@ -56,7 +56,11 @@ interface Buckets {
 /** Sort every current story into changed / new / unchanged / unstable / errored, plus removed. */
 export async function compareCaptures(input: CompareCapturesInput): Promise<CaptureComparison> {
   const baselineById = new Map(input.baseline.stories.map((story) => [story.id, story]));
-  const currentIds = new Set(input.current.stories.map((story) => story.id));
+  // A story the current capture skipped (parameters.targus.skip) is absent on purpose.
+  const currentIds = new Set([
+    ...input.current.stories.map((story) => story.id),
+    ...input.current.summary.skipped,
+  ]);
   const buckets: Buckets = { changed: [], new: [], unchanged: [], unstable: [], errored: [] };
   for (const story of input.current.stories) {
     await classify(input, buckets, story, baselineById.get(story.id));
