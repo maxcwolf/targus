@@ -1,7 +1,7 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "targus",
-  "main": "src/index.ts",
+  "main": "src/cloudflare/worker.ts",
   // esbuild bundles with wrangler's conditions (workerd, worker, browser), which skip the
   // "development" export, so `wrangler deploy` bundles @targus/core from its dist/ (`yarn deploy`
   // builds the web app first, which runs tsc for core). `yarn dev` sets WRANGLER_BUILD_CONDITIONS to add "development" and

@@ -84,6 +84,34 @@ module.exports = {
       to: { path: '^apps/api/src/services/' },
     },
     {
+      name: 'api-cloudflare-only-at-the-edge',
+      comment:
+        'The API app is built from plain dependencies (ADR 0023). Only src/cloudflare/ (bindings, ' +
+        'the env-to-deps module and the Worker entry) and the D1 and R2 adapters (repositories/, ' +
+        'storage/r2-*) may import Cloudflare modules, Cloudflare types or drizzle D1; nothing else ' +
+        'imports src/cloudflare/. Tests run in workerd and are exempt. ESLint ' +
+        '(targus/api-no-cloudflare-types) bans the ambient Cloudflare type names, which no import ' +
+        'reveals.',
+      severity: 'error',
+      from: {
+        path: '^apps/api/src/',
+        pathNot: [
+          '^apps/api/src/cloudflare/',
+          '^apps/api/src/repositories/',
+          '^apps/api/src/storage/r2-',
+          '\\.test\\.ts$',
+        ],
+      },
+      to: {
+        path: [
+          '^cloudflare:',
+          'node_modules/@cloudflare/',
+          'node_modules/drizzle-orm/d1/',
+          '^apps/api/src/cloudflare/',
+        ],
+      },
+    },
+    {
       name: 'web-features-use-api-client-index',
       comment:
         'Data enters the web app only through api-client/. Features import its index.ts; the fetch ' +

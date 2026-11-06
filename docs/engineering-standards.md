@@ -27,7 +27,8 @@ numbers stable.
 packages/core          pure domain: types, zod contracts, ports, diff, baseline rules   (no I/O)
 packages/cli           adapters + orchestration: simctl, channel server, git, API client
 packages/react-native  app-side helper: withTargus decorator, parameters.targus types
-apps/api               Cloudflare Worker: routes -> services -> repositories/ + storage/
+apps/api               createApp(deps): routes -> services -> repositories/ + storage/;
+                       Cloudflare only in src/cloudflare/ (Worker entry) and the D1/R2 adapters
 apps/web               React review UI: features/ -> api-client/ (components/ are presentational)
 e2e/                   Playwright suites against a local Worker
 scripts/               the yarn new:* generators and their tests
@@ -58,6 +59,12 @@ depends on no other workspace and on no I/O library; nothing depends on an app.
 - `api` layering: `routes/` (HTTP only: parse, call a service, map the result) →
   `services/` (use-cases, the only place rules live outside `core`) → `repositories/` and
   `storage/` (D1 and R2 adapters).
+- `api` composition (ADR 0023): `createApp(deps)` builds the Hono app from plain dependencies
+  (`AppDeps`: repositories, image store, GitHub, clock, ids, validated config); per request it
+  makes only the request log and binds the services to it. `composition.ts` adds the
+  platform-free adapters; `src/cloudflare/` turns the Worker `env` into the storage adapters
+  and holds the Worker entry, which builds the app once per isolate. No Cloudflare type or
+  import appears outside `src/cloudflare/`, `repositories/` and `storage/r2-*`.
 - `api` authentication is middleware (`apps/api/src/middleware/auth.ts`): `projectAuth` for the
   CLI's bearer token, `sessionAuth` for the reviewer's cookie. `sessionAuth` also refuses a
   cookie-authenticated write that is not same-origin, and session ids are stored only as
@@ -78,6 +85,10 @@ depends on no other workspace and on no I/O library; nothing depends on an app.
 - `api-routes-not-repositories`: a route never imports `repositories/`, `storage/` or `db/`.
 - `api-layers-point-down`: nothing below `routes/` imports a route.
 - `api-adapters-not-services`: repositories and storage never import a service.
+- `api-cloudflare-only-at-the-edge`: under `apps/api/src/`, only `cloudflare/`, `repositories/`
+  and `storage/r2-*` import `cloudflare:*`, `@cloudflare/*` or `drizzle-orm/d1`, and nothing
+  else imports `cloudflare/` (ADR 0023). ESLint `targus/api-no-cloudflare-types` bans the
+  ambient Cloudflare type names in the same files, which dependency-cruiser cannot see.
 - `web-features-use-api-client-index`: the web app reaches `api-client/` only through its
   `index.ts`.
 - `web-components-are-presentational`: `components/` imports neither `api-client/` nor

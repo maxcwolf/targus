@@ -1,10 +1,8 @@
 import { Hono } from 'hono';
 
 import type { AppEnv } from './app-env.ts';
-import type { Bindings } from './bindings.ts';
-import { createServices, systemObservability } from './composition.ts';
+import { systemObservability, type AppDeps } from './composition.ts';
 import { errorHandler, notFoundHandler } from './errors.ts';
-import type { ServiceLog } from './logging/request-log.ts';
 import { requestLogger, type Observability } from './middleware/request-log.ts';
 import { adminRoute } from './routes/admin.ts';
 import { authRoute } from './routes/auth.ts';
@@ -14,15 +12,16 @@ import { imagesRoute } from './routes/images.ts';
 import { meRoute } from './routes/me.ts';
 import { projectsRoute } from './routes/projects.ts';
 import { snapshotsRoute } from './routes/snapshots.ts';
-import type { Services } from './services/index.ts';
+import { bindServices } from './services/index.ts';
 
 /**
- * The API. `makeServices` is the composition root; tests pass one with fakes (for example a
- * stubbed GitHub client) and production uses `createServices`. `observe` supplies request ids,
- * time and the log sink; tests pass fakes and a logger that keeps the lines.
+ * The API, built from plain dependencies (ADR 0023): no host type reaches it, so any entry that
+ * can build `AppDeps` can serve it. `deps` live as long as the app (once per isolate on the
+ * Worker); only the request log, and the services bound to it, are made per request. `observe`
+ * supplies request ids, time and the log sink; tests pass fakes and a logger that keeps lines.
  */
 export function createApp(
-  makeServices: (bindings: Bindings, log: ServiceLog) => Services = createServices,
+  deps: AppDeps,
   observe: Observability = systemObservability,
 ): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -31,7 +30,7 @@ export function createApp(
   app.notFound(notFoundHandler);
   app.use(requestLogger(observe));
   app.use('/api/*', async (c, next) => {
-    c.set('services', makeServices(c.env, c.var.log));
+    c.set('services', bindServices({ ...deps, log: c.var.log }));
     await next();
   });
   app.route('/api/health', healthRoute);

@@ -136,6 +136,42 @@ export default tseslint.config(
   },
 
   {
+    // The ambient half of depcruise's api-cloudflare-only-at-the-edge (ADR 0023): Cloudflare's
+    // types are globals, so using one needs no import for dependency-cruiser to see.
+    name: 'targus/api-no-cloudflare-types',
+    files: ['apps/api/src/**/*.ts'],
+    ignores: [
+      'apps/api/src/cloudflare/**',
+      'apps/api/src/repositories/**',
+      'apps/api/src/storage/r2-*',
+      '**/*.test.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-restricted-types': [
+        'error',
+        {
+          types: Object.fromEntries(
+            [
+              'D1Database',
+              'D1PreparedStatement',
+              'D1Result',
+              'R2Bucket',
+              'R2Object',
+              'R2ObjectBody',
+              'ExecutionContext',
+              'ExportedHandler',
+              'Cloudflare.Env',
+            ].map((name) => [
+              name,
+              { message: 'Cloudflare types stay in src/cloudflare/ and the D1/R2 adapters.' },
+            ]),
+          ),
+        },
+      ],
+    },
+  },
+
+  {
     name: 'targus/web',
     files: ['apps/web/src/**/*.{ts,tsx}'],
     languageOptions: { globals: globals.browser },

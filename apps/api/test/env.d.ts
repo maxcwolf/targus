@@ -1,8 +1,8 @@
 // Types for `env` and `exports` from "cloudflare:workers" inside tests.
 import type { D1Migration } from 'cloudflare:test';
 
-import type { Bindings } from '../src/bindings.ts';
-import type app from '../src/index.ts';
+import type { Bindings } from '../src/cloudflare/bindings.ts';
+import type worker from '../src/cloudflare/worker.ts';
 
 declare global {
   namespace Cloudflare {
@@ -11,7 +11,7 @@ declare global {
     }
 
     interface GlobalProps {
-      mainModule: { default: typeof app };
+      mainModule: { default: typeof worker };
     }
   }
 }

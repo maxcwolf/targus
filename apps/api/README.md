@@ -15,7 +15,9 @@ src/repositories/  D1 via Drizzle (projects, builds + snapshots, approvals, imag
 src/storage/       R2ImageStore (bytes in R2, "missing" answered by the images table)
 src/adapters/      Clock, IdGenerator, tokens, GitHub App client (Octokit or no-op), GitHub OAuth,
                    console Logger
-src/composition.ts wires the real adapters for a request's bindings
+src/app.ts         createApp(deps): the Hono app from plain dependencies (ADR 0023)
+src/composition.ts AppDeps, and the platform-free adapters (clock, ids, GitHub) for a config
+src/cloudflare/    the Worker edge: bindings, env -> deps (D1, R2), and the Worker entry
 ```
 
 ## Routes

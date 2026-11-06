@@ -6,6 +6,7 @@ import type {
   CreateProjectResponse,
   GetBuildResponse,
   GetLibraryResponse,
+  HealthResponse,
   ListBuildsQuery,
   ListBuildsResponse,
   ListProjectsResponse,
@@ -25,6 +26,7 @@ import {
 } from './auth.service.ts';
 import { createBuild, getBuild, listBuilds, listSnapshots } from './build.service.ts';
 import type { ServiceDeps } from './deps.ts';
+import { getHealth } from './health.service.ts';
 import { getImage, uploadImage } from './image.service.ts';
 import { getLibrary } from './library.service.ts';
 import {
@@ -45,6 +47,7 @@ import { approveAll, reviewSnapshot } from './review.service.ts';
 
 /** The use-cases with their dependencies bound: what routes and middleware call. */
 export interface Services {
+  getHealth(): HealthResponse;
   authenticateAdmin(token: string | null): Promise<void>;
   authenticateProjectToken(token: string | null): Promise<Project>;
   authenticateSession(sessionId: string | null): Promise<Reviewer>;
@@ -83,6 +86,7 @@ export interface Services {
 
 export function bindServices(deps: ServiceDeps): Services {
   return {
+    getHealth: () => getHealth(deps.config),
     authenticateAdmin: (token) => authenticateAdmin(deps, token),
     authenticateProjectToken: (token) => authenticateProjectToken(deps, token),
     authenticateSession: (sessionId) => authenticateSession(deps, sessionId),

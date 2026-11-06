@@ -4,10 +4,9 @@ import type { Hono } from 'hono';
 
 import type { AppEnv } from '../../src/app-env.ts';
 import { createApp } from '../../src/app.ts';
-import { createDeps, createServices } from '../../src/composition.ts';
+import { createWorkerDeps } from '../../src/cloudflare/worker-deps.ts';
+import type { AppDeps } from '../../src/composition.ts';
 import type { Observability } from '../../src/middleware/request-log.ts';
-import type { ServiceDeps } from '../../src/services/deps.ts';
-import { bindServices } from '../../src/services/index.ts';
 import { fakeObservability } from './logs.ts';
 
 /** The admin token the route tests run with (wrangler.jsonc sets none). */
@@ -15,31 +14,33 @@ export const adminToken = 'test-admin-token';
 /** The session secret the route tests run with; `signIn` signs cookies with it. */
 export const sessionSecret = 'test-session-secret';
 
+/** The Worker's own dependencies over the local D1 and R2, with the test secrets set. */
+const testDeps = createWorkerDeps({
+  ...env,
+  ADMIN_TOKEN: adminToken,
+  SESSION_SECRET: sessionSecret,
+});
 // Route tests keep request lines in memory instead of printing one per request.
-const defaultApp = createApp(createServices, fakeObservability());
-const testEnv = { ...env, ADMIN_TOKEN: adminToken, SESSION_SECRET: sessionSecret };
+const defaultApp = createApp(testDeps, fakeObservability());
 
 /**
  * The real app with some dependencies replaced, e.g. a GitHub client that knows members.
  * `observe` receives the request lines (see `test/support/logs.ts`).
  */
 export function appWith(
-  overrides: Partial<ServiceDeps>,
+  overrides: Partial<AppDeps>,
   observe: Observability = fakeObservability(),
 ): Hono<AppEnv> {
-  return createApp(
-    (bindings, log) => bindServices({ ...createDeps(bindings, log), ...overrides }),
-    observe,
-  );
+  return createApp({ ...testDeps, ...overrides }, observe);
 }
 
-/** Send a request through the full app with the local D1 and R2 bindings. */
+/** Send a request through the full app (by default over the local D1 and R2). */
 export function call(
   path: string,
   init: RequestInit = {},
   app: Hono<AppEnv> = defaultApp,
 ): Promise<Response> {
-  return Promise.resolve(app.request(`http://targus.test${path}`, init, testEnv));
+  return Promise.resolve(app.request(`http://targus.test${path}`, init));
 }
 
 export function bearer(token: string): { authorization: string } {

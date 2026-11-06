@@ -10,7 +10,8 @@ Background: [docs/plan.md](docs/plan.md), [docs/engineering-standards.md](docs/e
 packages/core          pure domain: types, zod contracts, ports, build rules   (no I/O)
 packages/cli           adapters + orchestration: simctl, channel server, API client
 packages/react-native  app-side helper: withTargus decorator, parameters.targus types
-apps/api               Cloudflare Worker: routes -> services -> repositories/ + storage/
+apps/api               createApp(deps): routes -> services -> repositories/ + storage/;
+                       Cloudflare only in src/cloudflare/ (Worker entry) and the D1/R2 adapters
 apps/web               React review UI: features/ -> api-client/ (components/ are presentational)
 e2e/                   Playwright suites against a local Worker (`yarn e2e`)
 ```

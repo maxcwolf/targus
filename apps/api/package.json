@@ -6,7 +6,7 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/cloudflare/worker.ts"
   },
   "scripts": {
     "dev": "WRANGLER_BUILD_CONDITIONS=development,workerd,worker,browser wrangler dev",

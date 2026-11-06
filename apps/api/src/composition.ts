@@ -4,56 +4,57 @@ import { NoopGitHubClient, OctokitGitHubClient } from './adapters/github-client.
 import { GitHubAppOAuth } from './adapters/github-oauth.adapter.ts';
 import { systemClock } from './adapters/system-clock.adapter.ts';
 import { webCryptoTokens } from './adapters/token.adapter.ts';
-import type { Bindings } from './bindings.ts';
-import { loadConfig } from './config.ts';
-import type { ServiceLog } from './logging/request-log.ts';
+import type { ApiConfig } from './config.ts';
 import type { Observability } from './middleware/request-log.ts';
-import { createApprovalRepository } from './repositories/approval.repository.ts';
-import { D1BuildRepository } from './repositories/build.repository.ts';
-import { createImageRepository } from './repositories/image.repository.ts';
-import { createMembershipRepository } from './repositories/membership.repository.ts';
-import { createProjectRepository } from './repositories/project.repository.ts';
-import { createSessionRepository } from './repositories/session.repository.ts';
-import { createUserRepository } from './repositories/user.repository.ts';
 import type { ServiceDeps } from './services/deps.ts';
-import { bindServices, type Services } from './services/index.ts';
-import { R2ImageStore } from './storage/r2-image-store.ts';
 
-/** Composition root: the real adapters for one request's bindings, writing to its log. */
-export function createDeps(bindings: Bindings, log: ServiceLog): ServiceDeps {
-  const config = loadConfig(bindings);
-  const images = createImageRepository(bindings.DB);
+// The neutral half of the composition root (ADR 0023). A host entry (the Worker in
+// src/cloudflare/ today) validates its config, builds its storage adapters and joins them with
+// these; nothing here knows which platform it runs on.
+
+/** What `createApp` takes: every service dependency except the request's own log. */
+export type AppDeps = Omit<ServiceDeps, 'log'>;
+
+/** The dependencies that hold data, which each host supplies from its own storage. */
+export type StorageDeps = Pick<
+  AppDeps,
+  | 'projects'
+  | 'builds'
+  | 'approvals'
+  | 'images'
+  | 'imageStore'
+  | 'users'
+  | 'sessions'
+  | 'memberships'
+>;
+
+/** The GitHub App client for `config`: Octokit when the App is configured, else a no-op. */
+function githubFor(config: ApiConfig): AppDeps['github'] {
+  if (config.githubApp === null) return new NoopGitHubClient();
+  return new OctokitGitHubClient({ ...config.githubApp, baseUrl: config.githubApiOrigin });
+}
+
+/** GitHub login for `config`, or null when the OAuth client is not configured. */
+function oauthFor(config: ApiConfig): AppDeps['oauth'] {
+  if (config.githubOAuth === null) return null;
+  return new GitHubAppOAuth({
+    ...config.githubOAuth,
+    oauthOrigin: config.githubOAuthOrigin,
+    apiOrigin: config.githubApiOrigin,
+  });
+}
+
+/** The app's dependencies: the host's storage plus the real clock, ids, tokens and GitHub. */
+export function createAppDeps(config: ApiConfig, storage: StorageDeps): AppDeps {
   return {
+    ...storage,
     config,
-    log,
     clock: systemClock,
     ids: cryptoIdGenerator,
     tokens: webCryptoTokens,
-    projects: createProjectRepository(bindings.DB),
-    builds: new D1BuildRepository(bindings.DB),
-    approvals: createApprovalRepository(bindings.DB),
-    images,
-    imageStore: new R2ImageStore(bindings.IMAGES, images),
-    users: createUserRepository(bindings.DB),
-    sessions: createSessionRepository(bindings.DB),
-    memberships: createMembershipRepository(bindings.DB),
-    github:
-      config.githubApp === null
-        ? new NoopGitHubClient()
-        : new OctokitGitHubClient({ ...config.githubApp, baseUrl: config.githubApiOrigin }),
-    oauth:
-      config.githubOAuth === null
-        ? null
-        : new GitHubAppOAuth({
-            ...config.githubOAuth,
-            oauthOrigin: config.githubOAuthOrigin,
-            apiOrigin: config.githubApiOrigin,
-          }),
+    github: githubFor(config),
+    oauth: oauthFor(config),
   };
-}
-
-export function createServices(bindings: Bindings, log: ServiceLog): Services {
-  return bindServices(createDeps(bindings, log));
 }
 
 /** The real request ids, clock and log sink for `requestLogger`. */
