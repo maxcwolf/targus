@@ -27,20 +27,33 @@ async function acquire() {
 }
 
 /**
+ * Run `task` while holding the lock, so no `tsc -b` of a package runs meanwhile. The generator
+ * check holds it while its probe files sit in packages/cli/src/, which a build would emit.
+ * @template T
+ * @param {() => Promise<T>} task
+ * @returns {Promise<T>}
+ */
+export async function withBuildLock(task) {
+  await acquire();
+  try {
+    return await task();
+  } finally {
+    rmSync(lockDir, { recursive: true, force: true });
+  }
+}
+
+/**
  * Build `projects` (paths relative to the repo root) with `tsc -b`.
  * @param {string[]} projects
  * @returns {Promise<{ status: number | null, output: string }>}
  */
-export async function buildPackages(projects) {
+export function buildPackages(projects) {
   const tsc = createRequire(import.meta.url).resolve('typescript/bin/tsc');
-  await acquire();
-  try {
+  return withBuildLock(() => {
     const build = spawnSync(process.execPath, [tsc, '-b', ...projects], {
       cwd: repoRoot,
       encoding: 'utf8',
     });
-    return { status: build.status, output: build.stdout + build.stderr };
-  } finally {
-    rmSync(lockDir, { recursive: true, force: true });
-  }
+    return Promise.resolve({ status: build.status, output: build.stdout + build.stderr });
+  });
 }

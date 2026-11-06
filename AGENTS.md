@@ -24,7 +24,8 @@ Nothing imports an app. A package is reached only through its `src/index.ts`.
 
 - A business rule with no I/O: `packages/core/src/`, as a plain function with a test beside it.
 - A request or response shape: a zod schema in `packages/core/src/contracts/`.
-- An HTTP endpoint: `yarn new:route <name>` (creates `apps/api/src/routes/<name>.ts` + test).
+- An HTTP endpoint: `yarn new:route <name>` (creates `apps/api/src/routes/<name>.ts` + test and
+  mounts it in `apps/api/src/app.ts`).
   Routes parse, call one service, and map the result. They never import a repository.
 - A use-case: `apps/api/src/services/`. The only place rules live outside core.
 - D1 or R2 access: `apps/api/src/repositories/` or `apps/api/src/storage/`.

@@ -1,10 +1,15 @@
 // @ts-check
-// Test helper for the generators: run one into the real tree, check what it wrote the way
-// `yarn check` would (TypeScript, ESLint, Prettier), and delete it again whatever happens.
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+// Test helper for the generators: run them into the real tree under a probe name, check what
+// they wrote the way `yarn check` would (TypeScript, ESLint, Prettier), and delete it again
+// whatever happens. A copy of the tree would not do: typed linting and the `development`
+// condition need the repository's own tsconfig projects and node_modules.
+import { spawn } from 'node:child_process';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+
+import { withBuildLock } from './build-packages.mjs';
+import { appFile, unregisterRoute } from './register-route.mjs';
 
 const repoRoot = path.resolve(import.meta.dirname, '../..');
 const require = createRequire(import.meta.url);
@@ -17,13 +22,18 @@ const bins = {
 /**
  * @param {string} script
  * @param {string[]} args
+ * @returns {Promise<{ ok: boolean; output: string }>}
  */
 function node(script, args) {
-  const result = spawnSync(process.execPath, [script, ...args], {
-    cwd: repoRoot,
-    encoding: 'utf8',
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [script, ...args], { cwd: repoRoot });
+    let output = '';
+    child.stdout.on('data', (chunk) => (output += String(chunk)));
+    child.stderr.on('data', (chunk) => (output += String(chunk)));
+    child.on('close', (status) => {
+      resolve({ ok: status === 0, output });
+    });
   });
-  return { ok: result.status === 0, output: `${result.stdout}${result.stderr}` };
 }
 
 /**
@@ -33,8 +43,9 @@ function node(script, args) {
  * then resolve to their source through the "development" condition, as in tests (ADR 0010).
  * @param {string} tsconfig repo-relative, for example apps/api/tsconfig.worker.json
  */
-function typecheck(tsconfig) {
-  const dir = path.join(repoRoot, path.dirname(tsconfig), '.tsbuild', 'generator-check');
+async function typecheck(tsconfig) {
+  const name = path.basename(tsconfig, '.json');
+  const dir = path.join(repoRoot, path.dirname(tsconfig), '.tsbuild', `generator-check-${name}`);
   const probe = path.join(dir, 'tsconfig.json');
   mkdirSync(dir, { recursive: true });
   const compilerOptions = {
@@ -49,10 +60,32 @@ function typecheck(tsconfig) {
   };
   writeFileSync(probe, JSON.stringify({ extends: path.join(repoRoot, tsconfig), compilerOptions }));
   try {
-    return node(bins.tsc, ['-p', probe]);
+    const result = await node(bins.tsc, ['-p', probe]);
+    return { ...result, output: `${tsconfig}:\n${result.output}` };
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+}
+
+/**
+ * Undo what an interrupted run may have left: every file whose name starts with `probe` in
+ * `dirs` (repo-relative), and a mount of route `probe` in app.ts. The probe files are also
+ * gitignored, so a leftover is never committed by accident.
+ * @param {string} probe
+ * @param {string[]} dirs
+ */
+export function removeProbeLeftovers(probe, dirs) {
+  for (const dir of dirs) {
+    const absolute = path.join(repoRoot, dir);
+    if (!existsSync(absolute)) continue;
+    for (const entry of readdirSync(absolute)) {
+      if (entry.startsWith(probe)) rmSync(path.join(absolute, entry), { force: true });
+    }
+  }
+  const app = path.join(repoRoot, appFile);
+  const source = readFileSync(app, 'utf8');
+  const cleaned = unregisterRoute(source, probe);
+  if (cleaned !== source) writeFileSync(app, cleaned);
 }
 
 /** @param {string} output */
@@ -63,32 +96,54 @@ function createdFiles(output) {
 }
 
 /**
- * Run `scripts/<script>` once per entry of `runs` (its arguments) in the repository, then
- * type-check `tsconfig` (which must include the generated files) and lint and format-check
- * them. Only files the generator reports as created are deleted, even when a check fails.
- * @param {{ script: string; runs: string[][]; tsconfig: string }} options
- * @returns {{ files: string[]; failures: string[] }}
+ * @typedef {object} CheckRequest
+ * @property {ReadonlyArray<{ script: string; args: string[] }>} runs each generator call
+ * @property {string[]} tsconfigs projects that, between them, include every generated file
+ * @property {ReadonlyArray<{ path: string; content: string }>} [extra] more probe files to
+ *   write and check with the generated ones (repo-relative)
  */
-export function generateAndCheck({ script, runs, tsconfig }) {
-  /** @type {string[]} */
-  const files = [];
-  try {
-    for (const args of runs) {
-      const generated = node(path.join(import.meta.dirname, '..', script), args);
-      files.push(...createdFiles(generated.output));
-      if (!generated.ok)
-        return { files, failures: [`${script} ${args.join(' ')}:\n${generated.output}`] };
-    }
-    const checks = {
-      tsc: typecheck(tsconfig),
-      eslint: node(bins.eslint, ['--max-warnings', '0', ...files]),
-      prettier: node(bins.prettier, ['--check', ...files]),
-    };
-    const failures = Object.entries(checks)
-      .filter(([, result]) => !result.ok)
-      .map(([label, result]) => `${label}:\n${result.output}`);
-    return { files, failures };
-  } finally {
-    for (const file of files) rmSync(path.join(repoRoot, file), { force: true });
+
+/**
+ * @param {CheckRequest} request
+ * @param {string[]} files filled in as files are created, so the caller can delete them
+ * @returns {Promise<string[]>} failures
+ */
+async function generateThenCheck({ runs, tsconfigs, extra = [] }, files) {
+  for (const { script, args } of runs) {
+    const generated = await node(path.join(import.meta.dirname, '..', script), args);
+    files.push(...createdFiles(generated.output));
+    if (!generated.ok) return [`${script} ${args.join(' ')}:\n${generated.output}`];
   }
+  for (const file of extra) {
+    writeFileSync(path.join(repoRoot, file.path), file.content);
+    files.push(file.path);
+  }
+  const checks = await Promise.all([
+    ...tsconfigs.map(typecheck),
+    node(bins.eslint, ['--max-warnings', '0', ...files]),
+    // The probe files are gitignored, which Prettier would honour and skip them.
+    node(bins.prettier, ['--check', '--ignore-path', '.prettierignore', ...files]),
+  ]);
+  return checks.filter((result) => !result.ok).map((result) => result.output);
+}
+
+/**
+ * Run each generator call in `runs` in the repository, then type-check `tsconfigs` and lint and
+ * format-check what was written. Only files the generators report as created (and `extra`)
+ * are deleted, even when a check fails. Holds the build lock throughout, so no `tsc -b`
+ * of a package emits a probe file.
+ * @param {CheckRequest} request
+ * @returns {Promise<{ files: string[]; failures: string[] }>}
+ */
+export function generateAndCheck(request) {
+  return withBuildLock(async () => {
+    /** @type {string[]} */
+    const files = [];
+    try {
+      const failures = await generateThenCheck(request, files);
+      return { files: [...files], failures };
+    } finally {
+      for (const file of files) rmSync(path.join(repoRoot, file), { force: true });
+    }
+  });
 }

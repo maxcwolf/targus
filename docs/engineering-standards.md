@@ -324,9 +324,15 @@ review. So loosening a guard is visible in the diff, but no one else has to appr
 ### 4.4 Scaffolding over instructions
 
 `yarn new:adapter <port> <name>` (`scripts/new-adapter.mjs`) and `yarn new:route <name>`
-(`scripts/new-route.mjs`) write the files in the right layer with a test beside them.
-`scripts/generators.test.mjs`, run by `yarn test:scripts`, generates each into a scratch copy and
-checks that the output type-checks and lints.
+(`scripts/new-route.mjs`) write the files in the right layer with a test beside them; the route
+generator also mounts the route in `apps/api/src/app.ts`, or prints the two lines to add when
+`app.ts` no longer has the shape it knows. A generated adapter stubs every method its port
+declares, read from the port's source, and names where to wire it (`composition.ts`, or
+`cloudflare/worker-deps.ts` for a Cloudflare-backed store). `scripts/generators.test.mjs`, run
+by `yarn test:scripts`, checks their behaviour in a scratch directory, and generates one adapter
+per port and one route into the tree under a gitignored probe name (leftovers of an interrupted
+run are removed first, and everything is deleted afterwards) to check that the output, with the
+route mounted in a copy of `app.ts`, type-checks, lints and is formatted.
 
 ### 4.5 AGENTS.md
 

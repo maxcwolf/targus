@@ -18,3 +18,6 @@ playwright-report/
 test-results/
 blob-report/
 *.tsbuildinfo
+
+# Probe files scripts/generators.test.mjs writes into the tree and deletes again.
+**/generator-probe*
