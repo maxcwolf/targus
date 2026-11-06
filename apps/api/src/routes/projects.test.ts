@@ -1,8 +1,13 @@
-import { GetLibraryResponse, ListBuildsResponse, ListProjectsResponse } from '@targus/core';
+import {
+  CreateBuildResponse,
+  GetLibraryResponse,
+  ListBuildsResponse,
+  ListProjectsResponse,
+} from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { call } from '../../test/support/api.js';
-import { storyResult } from '../../test/support/fixtures.js';
+import { call, postJson } from '../../test/support/api.js';
+import { createBuildRequest, sha, storyResult } from '../../test/support/fixtures.js';
 import { getAsReviewer, postAsReviewer, projectWithBuild } from '../../test/support/review.js';
 import { signIn } from '../../test/support/session.js';
 
@@ -42,6 +47,44 @@ describe('GET /api/projects/:id/builds', () => {
     });
   });
 
+  it('pages to the oldest build with nextCursor, and a request without a query reads one page', async () => {
+    const { project, token, buildId } = await projectWithBuild([]);
+    const created = await postJson('/api/builds', token, createBuildRequest(sha('b')));
+    const newest = CreateBuildResponse.parse(await created.json()).build.id;
+    const { cookie } = await signIn('octocat');
+    const builds = `/api/projects/${project.id}/builds`;
+
+    const first = ListBuildsResponse.parse(
+      await (await getAsReviewer(`${builds}?limit=1`, cookie)).json(),
+    );
+    const cursor = encodeURIComponent(first.nextCursor ?? '');
+    const last = ListBuildsResponse.parse(
+      await (await getAsReviewer(`${builds}?limit=1&cursor=${cursor}`, cookie)).json(),
+    );
+    const whole = await (await getAsReviewer(builds, cookie)).json();
+
+    expect(first.builds.map((entry) => entry.build.id)).toEqual([newest]);
+    expect(last.builds.map((entry) => entry.build.id)).toEqual([buildId]);
+    expect(last.nextCursor).toBeNull();
+    expect(whole).toMatchObject({ nextCursor: null, builds: [{}, {}] });
+  });
+});
+
+describe('GET /api/projects/:id/builds cursors', () => {
+  it('answers 400 for an empty or forged cursor', async () => {
+    const { project } = await projectWithBuild([]);
+    const { cookie } = await signIn('octocat');
+
+    for (const cursor of ['', 'forged', btoa('n:0')]) {
+      const path = `/api/projects/${project.id}/builds?cursor=${encodeURIComponent(cursor)}`;
+      const response = await getAsReviewer(path, cookie);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ error: { code: 'bad_request' } });
+    }
+  });
+});
+
+describe('GET /api/projects/:id/builds access', () => {
   it('validates the limit and answers 403 outside the org and 404 for unknown projects', async () => {
     const { project } = await projectWithBuild([]);
     const member = await signIn('octocat');

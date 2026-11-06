@@ -43,9 +43,28 @@ export type BuildWithSummary = z.infer<typeof BuildWithSummary>;
 export const GetBuildResponse = z.object({ ...BuildWithSummary.shape });
 export type GetBuildResponse = z.infer<typeof GetBuildResponse>;
 
-/** `GET /api/projects/:id/builds` response, newest build first. */
+/** How many builds one page of the builds list holds when the request names no `limit`. */
+export const defaultBuildsPageLimit = 50;
+/** The largest `limit` a builds list request may ask for. */
+export const maxBuildsPageLimit = 100;
+
+/**
+ * `GET /api/projects/:id/builds` query. Both are optional: with neither, the newest
+ * `defaultBuildsPageLimit` builds. `cursor` is opaque; send back a page's `nextCursor`.
+ */
+export const ListBuildsQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(maxBuildsPageLimit).optional(),
+  cursor: z.string().min(1).max(128).optional(),
+});
+export type ListBuildsQuery = z.infer<typeof ListBuildsQuery>;
+
+/**
+ * `GET /api/projects/:id/builds` response, newest build first. `nextCursor` reads the next,
+ * older page; null on the last page. It defaults to null so a body without it still parses.
+ */
 export const ListBuildsResponse = z.object({
   builds: z.array(BuildWithSummary),
+  nextCursor: z.string().min(1).nullable().default(null),
 });
 export type ListBuildsResponse = z.infer<typeof ListBuildsResponse>;
 

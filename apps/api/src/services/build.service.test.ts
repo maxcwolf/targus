@@ -180,15 +180,15 @@ describe('getBuild and listSnapshots', () => {
   });
 });
 
-describe('build reads for reviewers', () => {
-  async function reviewSetup() {
-    const deps = createTestDeps({ github: createRecordingGitHub(['octocat']) });
-    const project = await deps.projects.create(newProject('rev', { installationId: 42 }));
-    const member = await signInReviewer(deps, 'octocat');
-    const outsider = await signInReviewer(deps, 'outsider');
-    return { deps, project, member, outsider };
-  }
+async function reviewSetup() {
+  const deps = createTestDeps({ github: createRecordingGitHub(['octocat']) });
+  const project = await deps.projects.create(newProject('rev', { installationId: 42 }));
+  const member = await signInReviewer(deps, 'octocat');
+  const outsider = await signInReviewer(deps, 'outsider');
+  return { deps, project, member, outsider };
+}
 
+describe('build reads for reviewers', () => {
   it('lets a member read a build and its snapshots, and forbids an outsider', async () => {
     const { deps, project, member, outsider } = await reviewSetup();
     const { build } = await createBuild(deps, project, createBuildRequest(sha('a')));
@@ -223,7 +223,28 @@ describe('build reads for reviewers', () => {
       summary: { status: 'pending', pendingCount: 2 },
       counts: { changed: 2 },
     });
-    expect((await listBuilds(deps, member, project.id, 1)).builds).toHaveLength(1);
+    expect(response.nextCursor).toBeNull();
+  });
+});
+
+describe('listBuilds paging', () => {
+  it('pages to the oldest build with the next cursor and rejects a forged one', async () => {
+    const { deps, project, member } = await reviewSetup();
+    for (const letter of ['a', 'b', 'c']) {
+      await createBuild(deps, project, createBuildRequest(sha(letter)));
+    }
+
+    const first = await listBuilds(deps, member, project.id, { limit: 2 });
+    const last = await listBuilds(deps, member, project.id, {
+      limit: 2,
+      cursor: first.nextCursor ?? undefined,
+    });
+
+    expect(first.builds.map((entry) => entry.build.number)).toEqual([3, 2]);
+    expect(last).toMatchObject({ builds: [{ build: { number: 1 } }], nextCursor: null });
+    await expect(listBuilds(deps, member, project.id, { cursor: 'forged' })).rejects.toMatchObject({
+      code: 'bad_request',
+    });
   });
 
   it('answers not_found for an unknown project and forbidden outside the org', async () => {

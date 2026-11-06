@@ -2,6 +2,7 @@ import {
   acceptedImageHash,
   baselineShaOrder,
   buildStatusFromTally,
+  defaultBuildsPageLimit,
   emptyTally,
   TargusError,
   type BaselineEntry,
@@ -11,6 +12,7 @@ import {
   type CreateBuildRequest,
   type CreateBuildResponse,
   type GetBuildResponse,
+  type ListBuildsQuery,
   type ListBuildsResponse,
   type ListSnapshotsResponse,
   type Snapshot,
@@ -90,9 +92,6 @@ export async function createBuild(
     missingImageHashes: missing,
   };
 }
-
-/** The max builds `GET /api/projects/:id/builds` returns by default. */
-const defaultBuildsLimit = 50;
 
 /**
  * The summary of a build, from its stored tally. While it is `in_progress` there is nothing to
@@ -181,16 +180,22 @@ export async function listSnapshots(
   return { snapshots: records.map(toSnapshot) };
 }
 
-/** `GET /api/projects/:id/builds`: the newest builds first, each with its summary. */
+/**
+ * `GET /api/projects/:id/builds`: one page of builds, newest first, each with its summary, and
+ * the cursor of the next page. With no query, the newest `defaultBuildsPageLimit` builds.
+ */
 export async function listBuilds(
   deps: ReadDeps,
   reviewer: Reviewer,
   projectId: string,
-  limit: number = defaultBuildsLimit,
+  query: ListBuildsQuery = {},
 ): Promise<ListBuildsResponse> {
   const project = await deps.projects.findById(projectId);
   if (project === null) throw new TargusError('not_found', `no project ${projectId}`);
   await requireProjectAccess(deps, { kind: 'reviewer', reviewer }, project);
-  const builds = await deps.builds.listForProject(project.id, limit);
-  return { builds: builds.map(withSummary) };
+  const page = await deps.builds.listForProject(project.id, {
+    limit: query.limit ?? defaultBuildsPageLimit,
+    cursor: query.cursor,
+  });
+  return { builds: page.builds.map(withSummary), nextCursor: page.nextCursor };
 }

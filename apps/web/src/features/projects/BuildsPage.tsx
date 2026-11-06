@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { BuildWithSummary, ProjectSummary } from '@targus/core';
 import type { ReactElement } from 'react';
@@ -10,6 +10,7 @@ import { StatusChip } from '../../components/StatusChip.js';
 import { StatusCircle } from '../../components/StatusCircle.js';
 import { ErrorView, NotFound } from '../errors/ErrorView.js';
 import { BuildCounts } from './BuildCounts.js';
+import { LoadMoreBuilds } from './LoadMoreBuilds.js';
 import { useProjects } from './useProjects.js';
 
 function BuildRow({
@@ -57,20 +58,34 @@ function BuildRow({
   );
 }
 
+/** The project's builds, a page at a time: the newest page first, older ones on request. */
 function BuildsList({ project }: { readonly project: ProjectSummary }): ReactElement {
-  const builds = useQuery({
+  const builds = useInfiniteQuery({
     queryKey: queryKeys.builds(project.id),
-    queryFn: () => listBuilds(project.id),
+    queryFn: ({ pageParam }) => listBuilds(project.id, { cursor: pageParam }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
   });
   if (builds.isPending) return <Skeleton label="Loading builds…" rows={6} />;
-  if (builds.isError) return <ErrorView error={builds.error} />;
-  if (builds.data.builds.length === 0) return <p className="muted">No builds yet.</p>;
+  // Only a failed first page replaces the list; a failed later page is shown beside it.
+  if (builds.isLoadingError) return <ErrorView error={builds.error} />;
+  const items = builds.data.pages.flatMap((page) => page.builds);
+  if (items.length === 0) return <p className="muted">No builds yet.</p>;
   return (
-    <ul className="card list-card">
-      {builds.data.builds.map((item) => (
-        <BuildRow key={item.build.id} item={item} repo={project.repo} />
-      ))}
-    </ul>
+    <>
+      <ul className="card list-card">
+        {items.map((item) => (
+          <BuildRow key={item.build.id} item={item} repo={project.repo} />
+        ))}
+      </ul>
+      {builds.hasNextPage ? (
+        <LoadMoreBuilds
+          loading={builds.isFetchingNextPage}
+          error={builds.isFetchNextPageError ? builds.error : null}
+          onLoadMore={() => void builds.fetchNextPage()}
+        />
+      ) : null}
+    </>
   );
 }
 

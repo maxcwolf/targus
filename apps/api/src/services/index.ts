@@ -6,6 +6,7 @@ import type {
   CreateProjectResponse,
   GetBuildResponse,
   GetLibraryResponse,
+  ListBuildsQuery,
   ListBuildsResponse,
   ListProjectsResponse,
   ListSnapshotsResponse,
@@ -53,7 +54,11 @@ export interface Services {
   logout(sessionId: string): Promise<void>;
   createProject(request: CreateProjectRequest): Promise<CreateProjectResponse>;
   listProjects(reviewer: Reviewer): Promise<ListProjectsResponse>;
-  listBuilds(reviewer: Reviewer, projectId: string, limit?: number): Promise<ListBuildsResponse>;
+  listBuilds(
+    reviewer: Reviewer,
+    projectId: string,
+    query?: ListBuildsQuery,
+  ): Promise<ListBuildsResponse>;
   getLibrary(reviewer: Reviewer, projectId: string): Promise<GetLibraryResponse>;
   createBuild(project: Project, request: CreateBuildRequest): Promise<CreateBuildResponse>;
   getBuild(principal: Principal, buildId: string): Promise<GetBuildResponse>;
@@ -84,7 +89,7 @@ export function bindServices(deps: ServiceDeps): Services {
     logout: (sessionId) => logout(deps, sessionId),
     createProject: (request) => createProject(deps, request),
     listProjects: (reviewer) => listProjects(deps, reviewer),
-    listBuilds: (reviewer, projectId, limit) => listBuilds(deps, reviewer, projectId, limit),
+    listBuilds: (reviewer, projectId, query) => listBuilds(deps, reviewer, projectId, query),
     getLibrary: (reviewer, projectId) => getLibrary(deps, reviewer, projectId),
     createBuild: (project, request) => createBuild(deps, project, request),
     getBuild: (principal, buildId) => getBuild(deps, principal, buildId),

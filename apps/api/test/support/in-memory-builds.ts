@@ -5,6 +5,11 @@ import type {
   BuildRecord,
   SnapshotRecord,
 } from '../../src/repositories/build.repository.js';
+import {
+  checkBuildPageLimit,
+  decodeBuildCursor,
+  toBuildPage,
+} from '../../src/repositories/build-page.js';
 
 // The in-memory double of the builds repository, for service unit tests. The D1 adapter is
 // tested against the same behaviour in src/repositories/build.repository*.test.ts. Each write
@@ -27,7 +32,15 @@ function buildQueries(
   const newestFirst = (projectId: string): BuildRecord[] =>
     builds.filter((b) => b.projectId === projectId).sort((a, b) => b.number - a.number);
   return {
-    listForProject: (projectId, limit) => Promise.resolve(newestFirst(projectId).slice(0, limit)),
+    // As the D1 query: validate first, then `number < cursor`, newest first, one extra build.
+    // A rejected promise, not a throw, for a bad limit or cursor, as the D1 adapter's.
+    listForProject: (projectId, { limit, cursor }) =>
+      Promise.resolve().then(() => {
+        const checked = checkBuildPageLimit(limit);
+        const before = cursor === undefined ? Infinity : decodeBuildCursor(cursor);
+        const older = newestFirst(projectId).filter((b) => b.number < before);
+        return toBuildPage(older.slice(0, checked + 1), checked);
+      }),
     findLatestBaselineOnBranch: (projectId, branch) =>
       Promise.resolve(
         newestFirst(projectId)

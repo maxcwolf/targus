@@ -3,8 +3,11 @@ export { baselineBuildStatuses, Build, BuildStatus, BuildTrigger, GitSha } from 
 export {
   BuildStatusSummary,
   BuildWithSummary,
+  defaultBuildsPageLimit,
   GetBuildResponse,
+  ListBuildsQuery,
   ListBuildsResponse,
+  maxBuildsPageLimit,
   ListSnapshotsResponse,
   SnapshotCounts,
   SubmitResultsResponse,

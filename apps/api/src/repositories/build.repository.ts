@@ -7,10 +7,17 @@ import {
   type ReviewState,
   type SnapshotTally,
 } from '@targus/core';
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
 import { builds, snapshots } from '../db/schema.js';
+import {
+  checkBuildPageLimit,
+  decodeBuildCursor,
+  toBuildPage,
+  type BuildPage,
+  type BuildPageRequest,
+} from './build-page.js';
 import { chunkForD1 } from './d1-limits.js';
 import {
   buildInProgress,
@@ -24,6 +31,7 @@ import {
   type SnapshotRecord,
 } from './build-rows.js';
 
+export type { BuildPage, BuildPageRequest } from './build-page.js';
 export type { BuildRecord, SnapshotRecord } from './build-rows.js';
 
 /** What `completeWithResults` writes on the build when its results arrive. */
@@ -59,8 +67,11 @@ export interface ApiBuildRepository extends BuildRepository {
   ): Promise<BuildRecord | null>;
   /** A build of any project; the caller authorizes it through its project. */
   findAnyById(buildId: string): Promise<BuildRecord | null>;
-  /** The newest `limit` builds of a project, by number descending. */
-  listForProject(projectId: string, limit: number): Promise<BuildRecord[]>;
+  /**
+   * One page of a project's builds, by number descending (see build-page.ts). Throws
+   * `bad_request` for a limit outside 1..`maxBuildsPageLimit` or a cursor it did not issue.
+   */
+  listForProject(projectId: string, page: BuildPageRequest): Promise<BuildPage>;
   /** The newest signed-off build (`baselineBuildStatuses`) of a project on `branch`. */
   findLatestBaselineOnBranch(projectId: string, branch: string): Promise<BuildRecord | null>;
   /**
@@ -130,14 +141,22 @@ export class D1BuildRepository implements ApiBuildRepository {
     return row === undefined ? null : toBuildRecord(row);
   }
 
-  async listForProject(projectId: string, limit: number): Promise<BuildRecord[]> {
+  /** Keyset paging on `builds_project_number_unique`: `number < cursor`, one extra row read. */
+  async listForProject(projectId: string, page: BuildPageRequest): Promise<BuildPage> {
+    const limit = checkBuildPageLimit(page.limit);
+    const before = page.cursor === undefined ? undefined : decodeBuildCursor(page.cursor);
     const rows = await this.db
       .select()
       .from(builds)
-      .where(eq(builds.projectId, projectId))
+      .where(
+        and(
+          eq(builds.projectId, projectId),
+          before === undefined ? undefined : lt(builds.number, before),
+        ),
+      )
       .orderBy(desc(builds.number))
-      .limit(limit);
-    return rows.map(toBuildRecord);
+      .limit(limit + 1);
+    return toBuildPage(rows.map(toBuildRecord), limit);
   }
 
   async findLatestBaselineOnBranch(projectId: string, branch: string): Promise<BuildRecord | null> {

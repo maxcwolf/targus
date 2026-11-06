@@ -89,13 +89,13 @@ describe('D1BuildRepository tallies and unscoped reads (local D1)', () => {
     for (const id of ['l1', 'l2', 'l3']) await repository.create(newBuild(id, projectId));
     await repository.create(newBuild('l-other', otherId));
 
-    const listed = await repository.listForProject(projectId, 2);
+    const listed = await repository.listForProject(projectId, { limit: 2 });
 
-    expect(listed.map((build) => [build.id, build.number])).toEqual([
+    expect(listed.builds.map((build) => [build.id, build.number])).toEqual([
       ['l3', 3],
       ['l2', 2],
     ]);
-    expect(await repository.listForProject('project-none', 10)).toEqual([]);
+    expect(listed.nextCursor).not.toBeNull();
   });
 });
 
