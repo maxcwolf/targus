@@ -1,4 +1,4 @@
-import { TargusError } from '@targus/core';
+import { isTargusError, TargusError } from '@targus/core';
 
 import { execFileBuffer, type Exec } from './exec.adapter.js';
 
@@ -45,6 +45,16 @@ function exitStatus(error: unknown): number | null {
   const cause: unknown = error instanceof Error ? error.cause : undefined;
   if (typeof cause !== 'object' || cause === null || !('code' in cause)) return null;
   return typeof cause.code === 'number' ? cause.code : null;
+}
+
+/** Plumbing answers at once; a fetch may pull a large history over a slow network. */
+export const gitTimeoutMs = 30_000;
+export const gitFetchTimeoutMs = 5 * 60_000;
+
+/** A failed git call as a `bad_request`; a timeout keeps its own error, which names the command. */
+function gitError(error: unknown): TargusError {
+  if (isTargusError(error)) return error;
+  return new TargusError('bad_request', message(error), { cause: error });
 }
 
 function message(error: unknown): string {
@@ -101,26 +111,28 @@ export class GitCli implements GitMetadata {
   async fetchBase(baseBranch: string): Promise<void> {
     // An explicit destination: a single-branch clone's refspec would only update FETCH_HEAD.
     const refspec = `+refs/heads/${baseBranch}:refs/remotes/origin/${baseBranch}`;
-    await this.git(['fetch', '--no-tags', 'origin', refspec]);
+    await this.git(['fetch', '--no-tags', 'origin', refspec], gitFetchTimeoutMs);
   }
 
-  private async git(args: readonly string[]): Promise<Buffer> {
+  private async git(args: readonly string[], timeoutMs = gitTimeoutMs): Promise<Buffer> {
     try {
-      const { stdout } = await this.exec('git', [...this.cwd, ...args]);
+      const { stdout } = await this.exec('git', [...this.cwd, ...args], { timeoutMs });
       return stdout;
     } catch (error) {
-      throw new TargusError('bad_request', message(error), { cause: error });
+      throw gitError(error);
     }
   }
 
   /** Like `git`, but exit status 1 is git's answer "there is none": `null` instead of an error. */
   private async gitOrNull(args: readonly string[]): Promise<Buffer | null> {
     try {
-      const { stdout } = await this.exec('git', [...this.cwd, ...args]);
+      const { stdout } = await this.exec('git', [...this.cwd, ...args], {
+        timeoutMs: gitTimeoutMs,
+      });
       return stdout;
     } catch (error) {
       if (exitStatus(error) === 1) return null;
-      throw new TargusError('bad_request', message(error), { cause: error });
+      throw gitError(error);
     }
   }
 

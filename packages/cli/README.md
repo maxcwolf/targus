@@ -106,6 +106,26 @@ would not show on it:
 
 CircleCI checks out the PR head itself, so `HEAD` is already right there.
 
+### Timeouts and retries
+
+Nothing waits forever, so a hung simulator or a stalled network fails the job with a message
+instead of running into the CI runner's own limit:
+
+- Every `xcrun simctl`, `git` and `plutil` call has a timeout. `bootstatus` gets 5 minutes, an
+  install 3 minutes, `git fetch` 5 minutes, and everything else between 30 seconds and a minute.
+  A call that runs over is killed (SIGTERM, then SIGKILL 5 seconds later) and the run stops with
+  `error: <command> did not finish within <time> and was stopped`.
+- Every API request is aborted after 60 seconds, body included, as
+  `error: <METHOD> <route>: no response from <api url> within 60s`.
+- `--connect-timeout` bounds the wait for the app to connect to the channel.
+- Image uploads, image downloads and the results submission are retried up to four times, 0.5s,
+  1s and 2s apart, on network errors, timeouts, 429 and 5xx; never on any other 4xx. Each retry
+  prints a `warning:` line; when the last one fails the error ends with
+  `(gave up after 4 attempts)`. Uploads are content-addressed, and the server stores a build's
+  results only once, so a resend is safe: if the first submission landed but its response was
+  lost, the retry gets a 409 and the error says so. Opening the build is not retried, since each
+  attempt would open another build.
+
 ## Environment
 
 | Variable         | Used by       | Meaning                                       |

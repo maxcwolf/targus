@@ -37,14 +37,19 @@ export function isolatedGitExec(parent: Env = inheritedEnv()): Exec {
   return (file, args, options = {}) =>
     new Promise((resolve, reject) => {
       const env = { ...isolatedGitEnv(parent), ...options.env };
-      execFile(file, [...args], { encoding: 'buffer', env }, (error, stdout, stderr) => {
-        const stderrText = stderr.toString('utf8');
-        if (error) {
-          const message = `${[file, ...args].join(' ')} failed: ${stderrText.trim() || error.message}`;
-          reject(new ExecError(message, stderrText, { cause: error }));
-          return;
-        }
-        resolve({ stdout, stderr: stderrText });
-      });
+      execFile(
+        file,
+        [...args],
+        { encoding: 'buffer', env, timeout: options.timeoutMs ?? 0 },
+        (error, stdout, stderr) => {
+          const stderrText = stderr.toString('utf8');
+          if (error) {
+            const message = `${[file, ...args].join(' ')} failed: ${stderrText.trim() || error.message}`;
+            reject(new ExecError(message, stderrText, { cause: error }));
+            return;
+          }
+          resolve({ stdout, stderr: stderrText });
+        },
+      );
     });
 }

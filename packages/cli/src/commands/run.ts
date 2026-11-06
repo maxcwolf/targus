@@ -46,7 +46,8 @@ export interface RunCommandDeps {
   readonly log: (line: string) => void;
   readonly capture: (options: CaptureCommandOptions) => Promise<unknown>;
   readonly makeTempDir: () => Promise<string>;
-  readonly createApi: (baseUrl: string, token: string) => TargusApi;
+  /** `log` receives a warning line for each retried request. */
+  readonly createApi: (baseUrl: string, token: string, log: (line: string) => void) => TargusApi;
   readonly createGit: (exec: Exec) => GitMetadata;
   readonly simulatorName: (udid: string, exec: Exec) => Promise<string | null>;
 }
@@ -59,7 +60,7 @@ export const defaultRunDeps: RunCommandDeps = {
   },
   capture: (options) => runCapture(options),
   makeTempDir: () => mkdtemp(path.join(tmpdir(), 'targus-run-')),
-  createApi: (baseUrl, token) => new TargusApiClient({ baseUrl, token }),
+  createApi: (baseUrl, token, log) => new TargusApiClient({ baseUrl, token, onRetry: log }),
   createGit: (exec) => new GitCli({ exec }),
   simulatorName: (udid, exec) => new SimctlDriver({ udid, exec }).deviceName(),
 };
@@ -141,7 +142,7 @@ export async function runRun(
     git: gitInfo,
     ci,
     device,
-    api: deps.createApi(options.apiUrl, config.token),
+    api: deps.createApi(options.apiUrl, config.token, deps.log),
     clock: deps.clock,
     threshold: options.threshold,
     compareImages: compareWithCore,

@@ -1,7 +1,8 @@
 import { isTargusError, type CreateBuildRequest } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { errorCodeForStatus, TargusApiClient, type Fetch } from './api-client.adapter.js';
+import { TargusApiClient, type Fetch } from './api-client.adapter.js';
+import { errorCodeForStatus } from './api-errors.js';
 
 const sha = 'a'.repeat(40);
 const hash = 'b'.repeat(64);
@@ -21,7 +22,12 @@ function stubFetch(respond: (url: string, init: RequestInit) => Response) {
 }
 
 function client(fetch: Fetch): TargusApiClient {
-  return new TargusApiClient({ baseUrl: 'https://targus.test/', token: 'tok', fetch });
+  return new TargusApiClient({
+    baseUrl: 'https://targus.test/',
+    token: 'tok',
+    fetch,
+    sleep: () => Promise.resolve(),
+  });
 }
 
 const buildRequest: CreateBuildRequest = {
@@ -143,6 +149,7 @@ describe('TargusApiClient images', () => {
     expect(stub.calls[0]?.init).toEqual({
       method: 'GET',
       headers: { authorization: 'Bearer tok' },
+      signal: expect.any(AbortSignal) as unknown,
     });
   });
 
@@ -169,6 +176,7 @@ describe('TargusApiClient.submitResults', () => {
     const asString = stubFetch(() => Response.json({ error: 'nope' }, { status: 403 }));
     const asMessage = stubFetch(() => Response.json({ message: 'clash' }, { status: 409 }));
     const empty = stubFetch(() => new Response('', { status: 500, statusText: 'Server Error' }));
+    const lastTry = /500: Server Error \(gave up after 4 attempts\)$/;
     const request = { results: [], durationMs: 0 };
 
     expect((await rejection(client(asString.fetch).submitResults('b', request))).code).toBe(
@@ -178,7 +186,7 @@ describe('TargusApiClient.submitResults', () => {
       /409: clash$/,
     );
     expect((await rejection(client(empty.fetch).submitResults('b', request))).message).toMatch(
-      /500: Server Error$/,
+      lastTry,
     );
   });
 });

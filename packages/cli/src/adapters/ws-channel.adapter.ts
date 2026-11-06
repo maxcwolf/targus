@@ -1,8 +1,15 @@
 import type { AddressInfo } from 'node:net';
 
-import type { StoryIndexEntry, StorybookChannel, StorySelection } from '@targus/core';
+import {
+  TargusError,
+  type StoryIndexEntry,
+  type StorybookChannel,
+  type StorySelection,
+} from '@targus/core';
 import { WebSocket, WebSocketServer, type RawData } from 'ws';
 import { z } from 'zod';
+
+import { formatDuration } from '../duration.js';
 
 /** One message on the Storybook channel: plain JSON `{ type, args }` (ADR 0008). */
 const ChannelEvent = z.object({ type: z.string(), args: z.array(z.unknown()).default([]) });
@@ -31,6 +38,15 @@ export interface WsStorybookChannelOptions {
 }
 
 type Listener = (event: ChannelEvent) => void;
+
+function notConnected(port: number, timeoutMs: number): TargusError {
+  return new TargusError(
+    'internal',
+    `the app did not connect within ${formatDuration(timeoutMs)} on port ${port}: check that ` +
+      'it launched, was bundled with EXPO_PUBLIC_TARGUS=true and uses this port, or raise ' +
+      '--connect-timeout',
+  );
+}
 
 /**
  * `StorybookChannel` adapter: hosts the websocket server Storybook RN's app connects to when
@@ -146,7 +162,7 @@ export class WsStorybookChannel implements StorybookChannel {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.server.off('connection', onConnection);
-        reject(new Error(`the app did not connect within ${this.connectTimeoutMs}ms`));
+        reject(notConnected(this.port, this.connectTimeoutMs));
       }, this.connectTimeoutMs);
       const onConnection = (): void => {
         clearTimeout(timer);

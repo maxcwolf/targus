@@ -1,3 +1,4 @@
+import { isTargusError } from '@targus/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
 
@@ -82,7 +83,13 @@ describe('WsStorybookChannel', () => {
   it('rejects getIndex when the app never connects', async () => {
     const server = await listen(30);
 
-    await expect(server.getIndex()).rejects.toThrow('did not connect within 30ms');
+    const index = server.getIndex();
+
+    await expect(index).rejects.toSatisfy(isTargusError);
+    await expect(index).rejects.toThrow(
+      `the app did not connect within 30ms on port ${server.port}`,
+    );
+    await expect(index).rejects.toThrow('--connect-timeout');
   });
 });
 

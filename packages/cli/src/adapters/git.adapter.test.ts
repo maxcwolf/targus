@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { isTargusError } from '@targus/core';
+import { isTargusError, TargusError } from '@targus/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { ExecError, type Exec } from './exec.adapter.js';
@@ -35,6 +35,31 @@ async function codeOf(promise: Promise<unknown>): Promise<string> {
   }
   return 'resolved';
 }
+
+describe('GitCli timeouts', () => {
+  it('gives plumbing 30s and a fetch 5 minutes', async () => {
+    const timeouts: (number | undefined)[] = [];
+    const exec: Exec = (_file, _args, options) => {
+      timeouts.push(options?.timeoutMs);
+      return Promise.resolve({ stdout: Buffer.from(`${sha}\n`), stderr: '' });
+    };
+    const git = new GitCli({ exec });
+
+    await git.headSha();
+    await git.mergeBase('origin/main');
+    await git.fetchBase('main');
+
+    expect(timeouts).toEqual([30_000, 30_000, 300_000]);
+  });
+
+  it('keeps the timeout error, which names the command, as it is', async () => {
+    const timedOut = new TargusError('internal', 'git fetch did not finish within 5m');
+    const git = new GitCli({ exec: () => Promise.reject(timedOut) });
+
+    await expect(git.fetchBase('main')).rejects.toBe(timedOut);
+    await expect(git.resolveCommit('origin/main')).rejects.toBe(timedOut);
+  });
+});
 
 describe('GitCli commands', () => {
   it('reads HEAD and the current branch', async () => {

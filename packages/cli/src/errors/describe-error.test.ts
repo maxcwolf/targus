@@ -33,12 +33,13 @@ describe('describeError for TargusError', () => {
       baseUrl: 'http://localhost:8787',
       token: 't',
       fetch: () => Promise.reject(new TypeError('fetch failed', { cause: refused })),
+      sleep: () => Promise.resolve(),
     });
     const error: unknown = await api.getImage('abc').catch((caught: unknown) => caught);
 
     expect(describeQuietly(error)).toEqual({
       message:
-        'error: GET /api/images/abc: cannot reach http://localhost:8787\n' +
+        'error: GET /api/images/abc: cannot reach http://localhost:8787 (gave up after 4 attempts)\n' +
         '  connection refused: 127.0.0.1:8787\n' +
         '  check the API URL (TARGUS_API_URL or --api-url) and that the targus API is reachable',
       exitCode: 1,

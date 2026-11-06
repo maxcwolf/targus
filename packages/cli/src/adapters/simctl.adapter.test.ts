@@ -1,7 +1,8 @@
+import { TargusError } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import { ExecError, type Exec, type ExecOptions } from './exec.adapter.js';
-import { SimctlDriver } from './simctl.adapter.js';
+import { SimctlDriver, simctlTimeoutsMs } from './simctl.adapter.js';
 
 const udid = 'SIM-UDID';
 
@@ -26,6 +27,35 @@ function fakeExec(failures: Record<string, string> = {}, stdout = Buffer.alloc(0
 function verb(args: readonly string[]): string {
   return args[1] ?? '';
 }
+
+describe('SimctlDriver timeouts', () => {
+  it('gives every simctl call a timeout, minutes for boot and install', async () => {
+    const fake = fakeExec();
+    const driver = new SimctlDriver({ udid, exec: fake.exec });
+
+    await driver.boot();
+    await driver.install('/apps/ExampleApp.app');
+    await driver.launch('co.example', {});
+    await driver.shutdown();
+
+    expect(fake.calls.map((call) => [call.args[1], call.options?.timeoutMs])).toEqual([
+      ['boot', 60_000],
+      ['bootstatus', 300_000],
+      ['install', 180_000],
+      ['terminate', 30_000],
+      ['launch', 60_000],
+      ['shutdown', 60_000],
+    ]);
+    expect(Object.values(simctlTimeoutsMs).every((ms) => ms > 0)).toBe(true);
+  });
+
+  it('does not mistake a timeout for an already-booted device', async () => {
+    const timedOut = new TargusError('internal', 'xcrun simctl boot did not finish within 1m');
+    const exec: Exec = () => Promise.reject(timedOut);
+
+    await expect(new SimctlDriver({ udid, exec }).boot()).rejects.toBe(timedOut);
+  });
+});
 
 describe('SimctlDriver', () => {
   it('boots and waits for bootstatus', async () => {
@@ -72,7 +102,10 @@ describe('SimctlDriver launch and status bar', () => {
       ['xcrun', 'simctl', 'terminate', udid, 'co.example'],
       ['xcrun', 'simctl', 'launch', udid, 'co.example'],
     ]);
-    expect(fake.calls[1]?.options).toEqual({ env: { SIMCTL_CHILD_MODE: 'targus' } });
+    expect(fake.calls[1]?.options).toEqual({
+      env: { SIMCTL_CHILD_MODE: 'targus' },
+      timeoutMs: simctlTimeoutsMs.launch,
+    });
   });
 
   it('overrides the status bar', async () => {

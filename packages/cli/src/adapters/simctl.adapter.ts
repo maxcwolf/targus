@@ -15,6 +15,27 @@ const DeviceList = z.object({
 const alreadyBooted = 'Unable to boot device in current state: Booted';
 const alreadyShutDown = 'Unable to shutdown device in current state: Shutdown';
 
+const seconds = 1000;
+const minutes = 60 * seconds;
+
+/**
+ * How long each simctl call may run before it is killed. A cold boot, or an install of a large
+ * app, takes minutes; everything else answers in seconds unless the simulator is hung.
+ */
+export const simctlTimeoutsMs = {
+  boot: 1 * minutes,
+  bootstatus: 5 * minutes,
+  install: 3 * minutes,
+  terminate: 30 * seconds,
+  launch: 1 * minutes,
+  status_bar: 30 * seconds,
+  io: 30 * seconds,
+  list: 30 * seconds,
+  shutdown: 1 * minutes,
+} as const;
+
+type SimctlCommand = keyof typeof simctlTimeoutsMs;
+
 export interface SimctlDriverOptions {
   readonly udid: string;
   readonly exec?: Exec;
@@ -112,8 +133,16 @@ export class SimctlDriver implements DeviceDriver {
     await this.tolerate(alreadyShutDown, this.simctl(['shutdown', this.udid]));
   }
 
-  private simctl(args: readonly string[], env?: Readonly<Record<string, string>>) {
-    return this.exec('xcrun', ['simctl', ...args], env ? { env } : {});
+  private simctl(
+    [command, ...args]: readonly [SimctlCommand, ...string[]],
+    env?: Readonly<Record<string, string>>,
+  ) {
+    const timeoutMs = simctlTimeoutsMs[command];
+    return this.exec(
+      'xcrun',
+      ['simctl', command, ...args],
+      env ? { env, timeoutMs } : { timeoutMs },
+    );
   }
 
   private async tolerate(message: string, call: Promise<unknown>): Promise<void> {

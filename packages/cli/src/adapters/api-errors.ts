@@ -1,0 +1,107 @@
+import { TargusError, type TargusErrorCode } from '@targus/core';
+import { z } from 'zod';
+
+const statusCodes: Readonly<Record<number, TargusErrorCode>> = {
+  400: 'bad_request',
+  401: 'unauthorized',
+  403: 'forbidden',
+  404: 'not_found',
+  409: 'conflict',
+  422: 'bad_request',
+  501: 'not_implemented',
+};
+
+/** The TargusError code for a non-2xx HTTP status; anything unlisted is `internal`. */
+export function errorCodeForStatus(status: number): TargusErrorCode {
+  return statusCodes[status] ?? 'internal';
+}
+
+/** A failed API request. `retryable` says whether sending it again could succeed. */
+export class ApiRequestError extends TargusError {
+  override readonly name = 'ApiRequestError';
+  readonly retryable: boolean;
+
+  constructor(
+    code: TargusErrorCode,
+    message: string,
+    options: ErrorOptions & { readonly retryable?: boolean } = {},
+  ) {
+    super(code, message, options);
+    this.retryable = options.retryable ?? false;
+  }
+}
+
+export function isRetryable(error: unknown): boolean {
+  return error instanceof ApiRequestError && error.retryable;
+}
+
+/** 429 and 5xx may pass on a retry; 501 will not, and no other 4xx will either. */
+function retryableStatus(status: number): boolean {
+  return status === 429 || (status >= 500 && status !== 501);
+}
+
+interface Described {
+  readonly method: string;
+  readonly route: string;
+}
+
+const ErrorBody = z.union([
+  z.object({ error: z.object({ message: z.string().min(1) }) }),
+  z.object({ error: z.string().min(1) }),
+  z.object({ message: z.string().min(1) }),
+]);
+
+/** The server's error message when the body carries one, else the status text. */
+export async function errorDetail(response: Response): Promise<string> {
+  const text = await response.text().catch(() => '');
+  try {
+    const body = ErrorBody.parse(JSON.parse(text));
+    if ('message' in body) return body.message;
+    return typeof body.error === 'string' ? body.error : body.error.message;
+  } catch {
+    return text.trim().slice(0, 200) || response.statusText || 'no response body';
+  }
+}
+
+/**
+ * A non-2xx answer. A 409 on a retry most likely means the try before it was applied and only
+ * its response was lost, so the message says so.
+ */
+export function statusError(
+  { method, route }: Described,
+  status: number,
+  detail: string,
+  attempt: number,
+): ApiRequestError {
+  const lostResponse =
+    status === 409 && attempt > 1
+      ? '; an earlier attempt may have succeeded before its response was lost'
+      : '';
+  return new ApiRequestError(
+    errorCodeForStatus(status),
+    `${method} ${route} failed with ${status}: ${detail}${lostResponse}`,
+    { retryable: retryableStatus(status) },
+  );
+}
+
+/** No answer at all: a timeout (`timeout` is its duration) or a network failure. */
+export function transportError(
+  { method, route }: Described,
+  baseUrl: string,
+  timeout: string | null,
+  cause: unknown,
+): ApiRequestError {
+  const message =
+    timeout === null
+      ? `${method} ${route}: cannot reach ${baseUrl}`
+      : `${method} ${route}: no response from ${baseUrl} within ${timeout}`;
+  return new ApiRequestError('internal', message, { cause, retryable: true });
+}
+
+/** The last retryable failure, saying how many tries were made. */
+export function gaveUp(error: unknown, attempts: number): unknown {
+  if (!(error instanceof ApiRequestError) || attempts < 2) return error;
+  return new ApiRequestError(error.code, `${error.message} (gave up after ${attempts} attempts)`, {
+    cause: error,
+  });
+}
