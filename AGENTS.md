@@ -37,8 +37,9 @@ Nothing imports an app. A package is reached only through its `src/index.ts`.
 ## Ports (`packages/core/src/ports/`)
 
 `DeviceDriver`, `StorybookChannel`, `ImageStore`, `BuildRepository`, `GitHubClient`, `Clock`,
-`IdGenerator`. Fakes live beside the port (`clock.fake.ts`, `id-generator.fake.ts`) and are the
-only test doubles; do not `vi.mock` modules except at adapter boundaries. Time and randomness
+`IdGenerator`. Fakes live beside the port (`clock.fake.ts`, `id-generator.fake.ts`) and are
+preferred to any other double; the API's in-memory repositories and GitHub stubs are in
+`apps/api/test/support/`. Do not `vi.mock` modules except at adapter boundaries. Time and randomness
 come from `Clock` and `IdGenerator`; `new Date()`, `Date.now()`, `Math.random()` and
 `crypto.randomUUID()` are lint errors outside `**/adapters/**` and `*.adapter.ts`.
 
@@ -59,6 +60,8 @@ come from `Clock` and `IdGenerator`; `new Date()`, `Date.now()`, `Math.random()`
 - Relative imports name the real file: `./file.ts` or `./file.tsx`, never `.js` (ADR 0017).
 - Commits and PR titles are Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`,
   `test:`, `chore:`, `perf:`, `ci:`, `build:`, `style:`, `revert:`).
+- PRs are squash-merged, never merged with a merge commit: the PR title becomes the commit on
+  `main`, so write it as the Conventional Commit you want in history (ADR 0018).
 - User-facing changes to a published package need a changeset (`yarn changeset`).
 
 ## Commands

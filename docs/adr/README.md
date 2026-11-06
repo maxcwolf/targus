@@ -32,3 +32,4 @@ the same change.
 | [0015](0015-same-origin-session-writes-and-hashed-session-ids.md) | Same-origin checks on session writes, and hashed session ids | accepted |
 | [0016](0016-cli-measures-server-classifies.md) | The CLI measures the diff, the server classifies the story | accepted |
 | [0017](0017-relative-imports-name-the-typescript-file.md) | Relative imports name the TypeScript file | accepted |
+| [0018](0018-squash-merges-only.md) | Squash merges only, so every commit on main is a Conventional Commit | accepted |

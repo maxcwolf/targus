@@ -58,6 +58,14 @@ depends on no other workspace and on no I/O library; nothing depends on an app.
 - `api` layering: `routes/` (HTTP only: parse, call a service, map the result) →
   `services/` (use-cases, the only place rules live outside `core`) → `repositories/` and
   `storage/` (D1 and R2 adapters).
+- `api` authentication is middleware (`apps/api/src/middleware/auth.ts`): `projectAuth` for the
+  CLI's bearer token, `sessionAuth` for the reviewer's cookie. `sessionAuth` also refuses a
+  cookie-authenticated write that is not same-origin, and session ids are stored only as
+  SHA-256 hashes (ADR 0015). `yarn new:route` generates a route behind `sessionAuth`.
+- `cli` starts every subprocess through `packages/cli/src/adapters/exec.adapter.ts` and makes
+  every API request through `TargusApiClient` (`api-client.adapter.ts`). Both apply a timeout
+  when the caller gives none, and the client retries idempotent requests on network errors,
+  timeouts, 429 and 5xx.
 - `web` layering: `features/<name>/` own their components, hooks and tests; data enters only
   through `api-client/`, and `components/` are presentational.
 
@@ -75,7 +83,13 @@ depends on no other workspace and on no I/O library; nothing depends on an app.
 `eslint.config.js` (`targus/web`) bans the `fetch` and `XMLHttpRequest` globals in
 `apps/web/src/` outside `api-client/`, which dependency-cruiser cannot see.
 
-**Review only:** that a route calls exactly one service.
+The same-origin rule is tested in `apps/api/src/services/origin.service.test.ts` and through
+the routes; the timeouts and retries in `exec.adapter.test.ts`, `api-client.retry.test.ts` and
+`retry.test.ts`.
+
+**Review only:** that a route calls exactly one service; that a new review route uses
+`sessionAuth`; that nothing in the CLI spawns a process or calls `fetch` outside those two
+adapters.
 
 ### 1.3 One source of truth for contracts
 
@@ -116,11 +130,13 @@ checks either.
 | Time and randomness come from the `Clock` and `IdGenerator` ports | ESLint `no-restricted-syntax` on `new Date()`, `Date.now()`, `Math.random()` and `*.randomUUID()`, switched off only in `**/adapters/**` and `**/*.adapter.ts` |
 | `process.env` is read only in a `config.ts` | ESLint `no-restricted-properties`, switched off only in `**/config.ts` |
 | Type-only imports are marked | ESLint `@typescript-eslint/consistent-type-imports` |
+| Relative imports name the real file (`./file.ts`, `./file.tsx`), never `.js` | ESLint `no-restricted-imports` on `**/*.{ts,tsx,mts}` (`eslint.config.js`, `targus/import-extensions`). `tsconfig.base.json` sets `allowImportingTsExtensions`, and each package's `tsconfig.lib.json` sets `rewriteRelativeImportExtensions`, so `dist/` keeps `.js` paths (ADR 0017) |
 | No focused or skipped tests | ESLint `vitest/no-focused-tests` and `vitest/no-disabled-tests` on `**/*.test.{ts,tsx}`. In Playwright, `forbidOnly` is on in CI (`e2e/playwright.config.ts`) |
 | React hooks rules in the web app | `eslint-plugin-react-hooks` `recommended-latest` on `apps/web/src/` |
 | Formatting is not discussed | Prettier (`.prettierrc.json`): the lefthook `pre-commit` job writes staged files, and `yarn format:check` in `yarn check` fails on unformatted code. `docs/` and `spike/` are in `.prettierignore` |
 | Commit messages are Conventional Commits | commitlint (`commitlint.config.js`), run by the lefthook `commit-msg` hook |
 | PR titles are Conventional Commits | the `pr-title` job in `.github/workflows/check.yml` |
+| Every commit that lands on `main` is a Conventional Commit | the repository allows squash merges only, and the squash commit's subject is the PR title, which the `pr-title` job checks (ADR 0018). This is a repository setting, not a file in the tree (section 4.2) |
 | No secrets in the tree | the `gitleaks` job in `.github/workflows/check.yml`, with `.gitleaks.toml` |
 | `core` depends only on pure computation libraries (zod, pixelmatch, pngjs) | dependency-cruiser `core-dependency-allowlist` and `core-no-node-builtins` |
 
@@ -163,8 +179,9 @@ job timeout. The `e2e-review` job has a 20-minute timeout.
 
 **Coverage thresholds** are set per workspace in `thresholds` of `packages/core`,
 `packages/cli`, `packages/react-native`, `apps/api` and `apps/web` `vitest.config.ts`, for lines,
-branches, functions and statements. Falling under them fails `yarn test`. The numbers live only
-in those files. `e2e/` and `scripts/` have no coverage threshold.
+branches, functions and statements. Falling under them fails `yarn test`. The numbers are set
+in those files; `AGENTS.md` repeats them, and the files are what runs. `e2e/` and `scripts/`
+have no coverage threshold.
 
 **Review only:** thresholds only go up. `**/vitest.config.ts` is in `.github/CODEOWNERS`
 (see 4.3 for what that does and does not do), the PR template asks for a justification, and
@@ -181,22 +198,33 @@ never left pending; a build whose non-error captures are all approved is never p
 **cli.** The capture loop runs against `createFakeDeviceDriver` and `createFakeStorybookChannel`
 from `packages/core/src/ports/`, covering the doubled-settle retry and the `unstable` path. The
 channel server is tested over a real websocket. The git adapter is tested against real `git` with
-inherited `GIT_*` variables removed. The API client is tested against a stubbed `fetch`. A
+inherited `GIT_*` variables removed. The API client is tested against a stubbed `fetch`, and
+its timeouts and retries with an injected wait, so no test sleeps
+(`api-client.retry.test.ts`, `retry.test.ts`). `src/program.run-failures.test.ts` runs
+`targus run` from argv to exit code and stderr for the three whole-run failures: the app never
+connects, an upload fails, submitting results fails. A
 real-simulator test (`src/commands/capture.simulator.test.ts`) runs only when
 `TARGUS_SIMULATOR_UDID` and `TARGUS_APP` are set. CI sets neither, so it never runs there (6.2).
 
 **api.** Tests run inside workerd with the real local D1 and R2 bindings from `wrangler.jsonc`,
 with the committed migrations applied by `test/apply-migrations.ts`. They cover routes,
 services and repositories: build creation, baseline resolution, image upload records,
-results, review state, retries and races. GitHub is a recording stub
+results, review state, retries and races, builds paging, hashed sessions and the same-origin
+rule for cookie-authenticated writes. One paging suite (`test/support/build-paging-suite.ts`)
+runs against both the D1 build repository and its in-memory double, so the two cannot drift.
+GitHub is a recording stub
 (`test/support/github-recorder.ts`), not MSW. Authorization covers org member, non-member,
 no session and cross-org (`src/routes/cross-org.test.ts`, `src/services/cross-org.test.ts`).
 Full-flow tests live in `src/flows/`. The migration drift test
 (`test/node/migration-drift.test.ts`, run by the workspace's `test:drift` as part of its `test`)
 fails when `drizzle-kit generate` against `src/db/schema.ts` would produce a new migration.
 
-**web.** Testing Library component and feature tests under `src/features/`, with
-network calls answered by MSW handlers (`src/test/msw.ts`).
+**web.** Testing Library component and feature tests under `src/features/` and
+`src/components/`, with network calls answered by MSW handlers (`src/test/msw.ts`). They
+include an expired session and a failed review action
+(`src/features/auth/session-expiry.test.tsx`), builds paging
+(`src/features/projects/builds-paging.test.tsx`) and the crash panel
+(`src/components/components.test.tsx`).
 
 **react-native.** Unit tests for `parameters.targus` and for the `withTargus` decorator,
 rendered with `react-test-renderer` in Node.
@@ -254,9 +282,15 @@ a merge.
 ### 4.2 Branch protection
 
 Not configured. On 2026-11-06 the GitHub API answered "Branch not protected" for `main`, and the
-repository had no rulesets. The repository also allows merge commits, squash and rebase. A pull
-request can therefore merge with any CI job red, without review and with any history shape. The
-intended settings are in 6.3.
+repository had no rulesets. A pull request can therefore merge with any CI job red and without
+review. The intended settings are in 6.3.
+
+One merge setting is in place. Since 2026-11-06 the repository allows squash merges only: merge
+commits and rebase merges are switched off, and the squash commit takes the PR title as its
+subject and the PR's commit messages as its body (ADR 0018). So history on `main` is linear,
+and each commit there carries a title the `pr-title` job has checked. The setting lives in the
+repository's GitHub settings (`allow_squash_merge`, `allow_merge_commit`, `allow_rebase_merge`,
+`squash_merge_commit_title`), not in a file, so nothing in the tree shows a change to it.
 
 ### 4.3 CODEOWNERS
 
@@ -348,8 +382,9 @@ or needs a self-hosted runner.
 ### 6.3 Branch protection on `main`
 
 Require the `check`, `gitleaks`, `pr-title` and `e2e-review` jobs, a changeset check (6.4), one
-human approval and code-owner review (which makes 4.3 a gate). Require linear history, with
-admins not exempt.
+human approval and code-owner review (which makes 4.3 a gate), with admins not exempt. Linear
+history already follows from squash-only merges (4.2); a "require linear history" rule would
+keep it true if the merge settings were ever changed.
 
 ### 6.4 Changeset check on pull requests
 
