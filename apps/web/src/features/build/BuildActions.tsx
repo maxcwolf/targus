@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import type { Snapshot } from '@targus/core';
+import type { Snapshot } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 import { approveAll } from '../../api-client/index.ts';

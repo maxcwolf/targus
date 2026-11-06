@@ -1,4 +1,4 @@
-import type { BuildStatusSummary } from '@targus/core';
+import type { BuildStatusSummary } from '@targus/core/browser';
 import { describe, expect, it } from 'vitest';
 
 import { initialSnapshots } from '../../test/fixtures.ts';

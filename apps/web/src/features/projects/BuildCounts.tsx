@@ -1,4 +1,4 @@
-import type { SnapshotCounts } from '@targus/core';
+import type { SnapshotCounts } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 import { changeCount, plural, storyCount, storyLabel } from '../../components/format.ts';

@@ -1,4 +1,4 @@
-import type { Build, BuildWithSummary } from '@targus/core';
+import type { Build, BuildWithSummary } from '@targus/core/browser';
 import { fireEvent, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';

@@ -1,4 +1,4 @@
-import type { ReviewDecision, ReviewState } from '@targus/core';
+import type { ReviewDecision, ReviewState } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 import { CheckIcon, CloseIcon } from '../../components/icons.tsx';

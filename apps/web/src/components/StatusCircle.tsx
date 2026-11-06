@@ -1,4 +1,4 @@
-import type { BuildStatus } from '@targus/core';
+import type { BuildStatus } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 /** A filled circle in the build status colour (decorative; the status chip carries the text). */

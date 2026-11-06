@@ -1,6 +1,6 @@
 import { type UseQueryResult, useQuery } from '@tanstack/react-query';
 import { useRouterState } from '@tanstack/react-router';
-import type { MeResponse } from '@targus/core';
+import type { MeResponse } from '@targus/core/browser';
 import { createContext, useContext } from 'react';
 
 import { getMe, isSignedOut, queryKeys } from '../../api-client/index.ts';

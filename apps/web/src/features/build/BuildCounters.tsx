@@ -1,4 +1,4 @@
-import type { Snapshot } from '@targus/core';
+import type { Snapshot } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 import {

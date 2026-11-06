@@ -4,7 +4,7 @@ import type {
   ProjectSummary,
   ReviewerUser,
   Snapshot,
-} from '@targus/core';
+} from '@targus/core/browser';
 
 /** A valid sha256 hex digest made of one repeated hex digit, so tests can tell images apart. */
 export function hash(digit: string): string {

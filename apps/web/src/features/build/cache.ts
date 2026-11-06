@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
-import type { BuildWithSummary } from '@targus/core';
+import type { BuildWithSummary } from '@targus/core/browser';
 
 import { queryKeys } from '../../api-client/index.ts';
 

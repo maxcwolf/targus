@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import type { Snapshot } from '@targus/core';
+import type { Snapshot } from '@targus/core/browser';
 import { type ReactElement, useEffect, useRef } from 'react';
 
 import { formatPercent } from '../../components/format.ts';

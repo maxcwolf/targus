@@ -7,7 +7,7 @@ import {
   ReviewRequest,
   type Snapshot,
   tallySnapshots,
-} from '@targus/core';
+} from '@targus/core/browser';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 

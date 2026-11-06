@@ -55,13 +55,43 @@ module.exports = {
       name: 'only-public-package-entry',
       comment:
         'A workspace reaches another only through its src/index.ts (the `exports` entry), never ' +
-        'into its internals.',
+        "into its internals. core's src/browser.ts is its second entry, `@targus/core/browser` " +
+        '(ADR 0025).',
       severity: 'error',
       from: { path: '^((?:packages|apps)/[^/]+)/' },
       to: {
         path: '^(?:packages|apps)/[^/]+/',
-        pathNot: ['^$1/', '^(?:packages|apps)/[^/]+/src/index\\.ts$'],
+        pathNot: [
+          '^$1/',
+          '^(?:packages|apps)/[^/]+/src/index\\.ts$',
+          '^packages/core/src/browser\\.ts$',
+        ],
       },
+    },
+    {
+      name: 'web-uses-core-browser-entry',
+      comment:
+        'The web app imports `@targus/core/browser`, never the root `@targus/core`, whose image ' +
+        'code (pngjs) needs Node builtins and breaks the Vite dev server (ADR 0025).',
+      severity: 'error',
+      from: { path: '^apps/web/' },
+      to: { path: '^packages/core/src/index\\.ts$' },
+    },
+    {
+      name: 'web-never-reaches-node-only-code',
+      comment:
+        'Nothing the web app loads may lead to pngjs, pixelmatch or a Node builtin, directly or ' +
+        'through @targus/core/browser (ADR 0025). Config files run in Node and are exempt.',
+      severity: 'error',
+      from: { path: '^apps/web/src/' },
+      to: { path: ['node_modules/pngjs/', 'node_modules/pixelmatch/'], reachable: true },
+    },
+    {
+      name: 'web-no-node-builtins',
+      comment: 'Browser code imports no Node builtins (ADR 0025).',
+      severity: 'error',
+      from: { path: '^apps/web/src/' },
+      to: { dependencyTypes: ['core'] },
     },
     {
       name: 'api-routes-not-repositories',

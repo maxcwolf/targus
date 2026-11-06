@@ -1,5 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ListSnapshotsResponse, ReviewDecision, ReviewSnapshotResponse } from '@targus/core';
+import type {
+  ListSnapshotsResponse,
+  ReviewDecision,
+  ReviewSnapshotResponse,
+} from '@targus/core/browser';
 
 import { queryKeys, reviewSnapshot } from '../../api-client/index.ts';
 import { applyBuildUpdate } from '../build/index.ts';

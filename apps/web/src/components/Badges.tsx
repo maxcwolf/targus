@@ -1,4 +1,4 @@
-import type { ReviewState, SnapshotState } from '@targus/core';
+import type { ReviewState, SnapshotState } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 const stateLabels: Record<SnapshotState, string> = {

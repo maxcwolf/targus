@@ -1,4 +1,4 @@
-import type { BuildWithSummary, ProjectSummary } from '@targus/core';
+import type { BuildWithSummary, ProjectSummary } from '@targus/core/browser';
 import type { ReactElement, ReactNode } from 'react';
 
 import {

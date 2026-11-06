@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ReviewerUser } from '@targus/core';
+import type { ReviewerUser } from '@targus/core/browser';
 import { type ReactElement, useState } from 'react';
 
 import { logout } from '../../api-client/index.ts';

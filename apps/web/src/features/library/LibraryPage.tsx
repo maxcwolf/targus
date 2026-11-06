@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import type { Build, GetLibraryResponse, ProjectSummary } from '@targus/core';
+import type { Build, GetLibraryResponse, ProjectSummary } from '@targus/core/browser';
 import { type ReactElement, useState } from 'react';
 
 import { getLibrary, queryKeys } from '../../api-client/index.ts';

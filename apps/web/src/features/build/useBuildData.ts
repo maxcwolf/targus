@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { BuildWithSummary, ProjectSummary, Snapshot } from '@targus/core';
+import type { BuildWithSummary, ProjectSummary, Snapshot } from '@targus/core/browser';
 
 import { getBuild, listSnapshots, queryKeys } from '../../api-client/index.ts';
 import { useProjects } from '../projects/index.ts';

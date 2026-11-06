@@ -143,7 +143,8 @@ checks either.
 | No unused files, exports or dependencies | `yarn knip` with `knip.json` |
 | Small units: files ≤ 300 lines, functions ≤ 50 lines (blank lines and comments not counted), cyclomatic complexity ≤ 10, nesting ≤ 3 | ESLint `max-lines`, `max-lines-per-function`, `complexity`, `max-depth` as errors |
 | No import cycles | ESLint `import-x/no-cycle`, and dependency-cruiser `no-circular` |
-| A package is reached only through its entry point | each package's `exports` (`development` → `src/index.ts`, else `dist/`, ADR 0010); dependency-cruiser `only-public-package-entry` |
+| A package is reached only through its entry point | each package's `exports` (`development` → `src/index.ts`, else `dist/`, ADR 0010; core also exports `./browser` → `src/browser.ts`, ADR 0025); dependency-cruiser `only-public-package-entry` |
+| Browser code loads no Node-only code | the web app imports `@targus/core/browser`, never the root entry with its pngjs image code; dependency-cruiser `web-uses-core-browser-entry`, `web-never-reaches-node-only-code` and `web-no-node-builtins`; `scripts/web-dev-server.test.mjs` walks the Vite dev server's client module graph (ADR 0025) |
 | Only `Error` objects are thrown | ESLint `@typescript-eslint/only-throw-error` |
 | Every `TargusError` code has an HTTP status | `statusByCode` in `apps/api/src/errors.ts` `satisfies Record<TargusErrorCode, …>`, so `yarn typecheck` fails on a missing code; `apps/api/src/errors.test.ts` checks every code maps to an error status |
 | Time and randomness come from the `Clock` and `IdGenerator` ports | ESLint `no-restricted-syntax` on `new Date()`, `Date.now()`, `Math.random()` and `*.randomUUID()`, switched off only in `**/adapters/**` and `**/*.adapter.ts` |

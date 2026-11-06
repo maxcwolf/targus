@@ -1,4 +1,4 @@
-import type { BuildStatusSummary } from '@targus/core';
+import type { BuildStatusSummary } from '@targus/core/browser';
 
 import { plural, storyLabel } from '../../components/format.ts';
 

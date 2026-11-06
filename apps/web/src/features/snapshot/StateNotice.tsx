@@ -1,4 +1,4 @@
-import type { SnapshotState } from '@targus/core';
+import type { SnapshotState } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 const notices: Partial<Record<SnapshotState, string>> = {

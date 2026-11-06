@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import type { BuildWithSummary, Snapshot } from '@targus/core';
+import type { BuildWithSummary, Snapshot } from '@targus/core/browser';
 import type { ReactElement, ReactNode } from 'react';
 
 import { ReviewBadge, StateBadge } from '../../components/Badges.tsx';

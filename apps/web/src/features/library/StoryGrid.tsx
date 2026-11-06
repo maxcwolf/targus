@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import type { LibraryStory } from '@targus/core';
+import type { LibraryStory } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 import { imageUrl } from '../../api-client/index.ts';

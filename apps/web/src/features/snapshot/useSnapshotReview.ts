@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import type { BuildWithSummary, ReviewDecision, Snapshot } from '@targus/core';
+import type { BuildWithSummary, ReviewDecision, Snapshot } from '@targus/core/browser';
 import { type RefObject, useEffect, useRef } from 'react';
 
 import {

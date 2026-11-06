@@ -1,4 +1,4 @@
-import type { Snapshot } from '@targus/core';
+import type { Snapshot } from '@targus/core/browser';
 import type { ReactElement, ReactNode } from 'react';
 
 import { ActualSizeIcon, DiffIcon, FitIcon } from '../../components/icons.tsx';

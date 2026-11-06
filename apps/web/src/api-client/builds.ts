@@ -1,4 +1,4 @@
-import { ApproveAllResponse, GetBuildResponse, ListSnapshotsResponse } from '@targus/core';
+import { ApproveAllResponse, GetBuildResponse, ListSnapshotsResponse } from '@targus/core/browser';
 
 import { getJson, postJson } from './http.ts';
 

@@ -1,4 +1,4 @@
-import { MeResponse } from '@targus/core';
+import { MeResponse } from '@targus/core/browser';
 import { z } from 'zod';
 
 import { getJson, postJson } from './http.ts';

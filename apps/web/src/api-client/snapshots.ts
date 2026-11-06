@@ -1,4 +1,8 @@
-import { type ReviewDecision, type ReviewRequest, ReviewSnapshotResponse } from '@targus/core';
+import {
+  type ReviewDecision,
+  type ReviewRequest,
+  ReviewSnapshotResponse,
+} from '@targus/core/browser';
 
 import { postJson } from './http.ts';
 

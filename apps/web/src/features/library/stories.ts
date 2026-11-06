@@ -1,4 +1,4 @@
-import type { LibraryStory } from '@targus/core';
+import type { LibraryStory } from '@targus/core/browser';
 
 import { componentTitle, storyName } from '../build/index.ts';
 

@@ -40,10 +40,17 @@ member, so the review UI refuses to let you review), the project token for your 
 
 Flags: `--port` (default 8900) and `--github-stub-port` (8901), which differ from the e2e
 suite's 8787 and 8788 so both can run at once, and `--public-url`. Open the UI at exactly the
-printed origin: the API refuses review writes from any other origin (ADR 0015). If you serve the
-UI from the Vite dev server instead, pass its origin, for example
-`yarn dev:local --port 8787 --github-stub-port 8902 --public-url http://localhost:5173`, then
-`yarn workspace @targus/web dev`: its `/api` proxy targets port 8787, so stop any e2e run first.
+printed origin: the API refuses review writes from any other origin (ADR 0015). To work on the UI
+with hot reload, serve it from the Vite dev server instead: pass the dev server's origin as
+`--public-url`, and point the dev server's `/api` proxy at the Worker with `TARGUS_API_URL`
+(default `http://localhost:8787`, the port of `yarn workspace @targus/api dev`):
+
+```sh
+yarn dev:local --public-url http://localhost:5173
+TARGUS_API_URL=http://127.0.0.1:8900 yarn workspace @targus/web dev   # in a second terminal
+```
+
+Then open http://localhost:5173.
 
 Scaffolding: `yarn new:route <name>` and `yarn new:adapter <port> <name>` create files in the
 right layer with a test beside them.

@@ -18,7 +18,9 @@ e2e/                   Playwright suites against a local Worker (`yarn e2e`)
 
 Dependencies point inward: apps and cli depend on core; core depends only on zod, pixelmatch
 and pngjs.
-Nothing imports an app. A package is reached only through its `src/index.ts`.
+Nothing imports an app. A package is reached only through its `src/index.ts`, except that the web
+app imports `@targus/core/browser` (`src/browser.ts`), which leaves out the Node-only image code
+(ADR 0025).
 
 ## Where new code goes
 

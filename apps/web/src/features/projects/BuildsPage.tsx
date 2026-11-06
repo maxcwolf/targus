@@ -1,6 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import type { BuildWithSummary, ProjectSummary } from '@targus/core';
+import type { BuildWithSummary, ProjectSummary } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 import { listBuilds, queryKeys } from '../../api-client/index.ts';

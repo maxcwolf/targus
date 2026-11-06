@@ -32,6 +32,15 @@ describe('built packages', () => {
     }
   });
 
+  it('resolve @targus/core/browser to dist/browser.js, loadable without pngjs (ADR 0025)', async () => {
+    const resolved = fileURLToPath(import.meta.resolve('@targus/core/browser'));
+    assert.match(resolved, /\/packages\/core\/dist\/browser\.js$/);
+
+    const browser = await import('@targus/core/browser');
+    assert.equal(typeof browser.needsReview, 'function');
+    assert.ok(!('diffImages' in browser));
+  });
+
   it('runs `targus --version` from dist/bin.js', () => {
     const result = node([bin, '--version']);
 

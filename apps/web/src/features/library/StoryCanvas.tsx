@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import type { LibraryStory } from '@targus/core';
+import type { LibraryStory } from '@targus/core/browser';
 import { type ReactElement, useMemo } from 'react';
 
 import { imageUrl } from '../../api-client/index.ts';

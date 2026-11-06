@@ -2,7 +2,15 @@
 
 ## Status
 
-accepted
+accepted, amended by [0025](0025-browser-entry-for-core.md)
+
+## Amended by
+
+The builds and the `development` condition still hold. One part of the text below was overtaken:
+
+- **One entry per package.** `@targus/core` also exports `./browser` (`src/browser.ts`, built
+  to `dist/browser.js`, same condition shape), everything in core but the pngjs image code. The
+  web app imports that entry, because its dev server runs core's source unbundled (ADR 0025).
 
 ## Date
 

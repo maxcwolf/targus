@@ -3,7 +3,7 @@ import {
   GetLibraryResponse,
   ListBuildsResponse,
   ListProjectsResponse,
-} from '@targus/core';
+} from '@targus/core/browser';
 
 import { getJson } from './http.ts';
 

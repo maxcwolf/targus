@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import type { LibraryStory } from '@targus/core';
+import type { LibraryStory } from '@targus/core/browser';
 import { type ReactElement, useEffect, useRef } from 'react';
 
 import { PathText } from '../../components/PathText.tsx';

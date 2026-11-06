@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from '@tanstack/react-router';
-import type { ProjectSummary } from '@targus/core';
+import type { ProjectSummary } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 import { isSessionExpired, useMe, UserMenu } from '../features/auth/index.ts';

@@ -24,7 +24,7 @@ the same change.
 | [0007](0007-org-scoped-tenancy.md) | Org-scoped tenancy from day one | accepted, amended by [0011](0011-github-login-sessions-and-org-authorization.md), [0012](0012-personal-accounts-as-single-member-orgs.md) and [0014](0014-upload-record-grants-image-access.md) |
 | [0008](0008-storybook-websocket-channel-for-story-selection.md) | Storybook websocket channel for story selection | accepted, amended by [0022](0022-story-parameters-reported-by-the-decorator.md) |
 | [0009](0009-every-standard-has-a-guard.md) | Every standard has a guard | accepted |
-| [0010](0010-package-builds-and-development-condition.md) | Package builds and the development condition | accepted |
+| [0010](0010-package-builds-and-development-condition.md) | Package builds and the development condition | accepted, amended by [0025](0025-browser-entry-for-core.md) |
 | [0011](0011-github-login-sessions-and-org-authorization.md) | GitHub login with cookie sessions and org-membership authorization | accepted |
 | [0012](0012-personal-accounts-as-single-member-orgs.md) | Personal accounts as single-member orgs | accepted, amended by [0024](0024-personal-account-owner-by-github-account-id.md) |
 | [0013](0013-guarded-single-batch-build-writes.md) | Guarded single-batch writes for build results and reviews | accepted |
@@ -39,3 +39,4 @@ the same change.
 | [0022](0022-story-parameters-reported-by-the-decorator.md) | The decorator reports `parameters.targus` over the channel | accepted |
 | [0023](0023-api-built-from-plain-dependencies.md) | The API is built from plain dependencies behind a thin Worker entry | accepted |
 | [0024](0024-personal-account-owner-by-github-account-id.md) | The owner of a personal account is recognised by GitHub account id | accepted |
+| [0025](0025-browser-entry-for-core.md) | A browser entry for core, so the web dev server loads no Node-only code | accepted |

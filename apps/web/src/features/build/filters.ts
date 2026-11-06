@@ -1,4 +1,4 @@
-import { needsReview, type Snapshot } from '@targus/core';
+import { needsReview, type Snapshot } from '@targus/core/browser';
 
 /** Every `?filter=` value. */
 const snapshotFilters = [

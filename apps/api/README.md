@@ -90,8 +90,9 @@ same-origin. Its `Origin` header, when sent, must equal the origin of `PUBLIC_UR
 either check, answers 403 `forbidden`. Reads are not checked, and neither is any request with an
 `Authorization` header (the CLI), since another site cannot make a browser send one. So
 `PUBLIC_URL` must be the origin the browser is on: when the review UI runs from the Vite dev
-server (`yarn workspace @targus/web dev`, which proxies `/api` to the Worker), set
-`PUBLIC_URL=http://localhost:5173` in `.dev.vars`, or approving and denying answer 403.
+server (`yarn workspace @targus/web dev`, which proxies `/api` to `TARGUS_API_URL`, by default
+this Worker on `http://localhost:8787`), set `PUBLIC_URL=http://localhost:5173` in `.dev.vars`,
+or approving and denying answer 403.
 
 Image responses carry `Content-Type: image/png`, set by the route rather than read from R2, and
 `X-Content-Type-Options: nosniff`.
@@ -202,8 +203,9 @@ a fresh local D1 and R2 under `e2e/.wrangler/local-<port>/` (the UI is built the
 as the stub's `octocat`. The pieces are shared with the e2e suite (`e2e/support/local-worker.ts`,
 `e2e/support/github-stub.ts`); the command itself is `e2e/local.ts`, tested by
 `scripts/dev-local.test.mjs`. Its `PUBLIC_URL` is the Worker's own origin
-(`http://127.0.0.1:8900`); with `--public-url http://localhost:5173` it serves the Vite dev server
-instead (CSRF, above).
+(`http://127.0.0.1:8900`). To use the Vite dev server instead, run
+`yarn dev:local --public-url http://localhost:5173` and, beside it,
+`TARGUS_API_URL=http://127.0.0.1:8900 yarn workspace @targus/web dev` (CSRF, above).
 
 To run the Worker by hand against real GitHub, secrets for `wrangler dev` go in `apps/api/.dev.vars`, which is gitignored:
 

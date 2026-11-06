@@ -1,4 +1,4 @@
-import type { BuildStatus } from '@targus/core';
+import type { BuildStatus } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 const labels: Record<BuildStatus, string> = {

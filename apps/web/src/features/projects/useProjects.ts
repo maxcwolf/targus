@@ -1,5 +1,5 @@
 import { type UseQueryResult, useQuery } from '@tanstack/react-query';
-import type { ListProjectsResponse } from '@targus/core';
+import type { ListProjectsResponse } from '@targus/core/browser';
 
 import { listProjects, queryKeys } from '../../api-client/index.ts';
 
