@@ -17,8 +17,10 @@ describe('GET /api/health', () => {
     const response = await exports.default.fetch('http://targus.test/api/nope');
 
     expect(response.status).toBe(404);
+    const requestId = response.headers.get('x-request-id');
+    expect(requestId).toMatch(/^[0-9a-f-]{36}$/);
     expect(await response.json()).toEqual({
-      error: { code: 'not_found', message: 'No route for GET /api/nope' },
+      error: { code: 'not_found', message: 'No route for GET /api/nope', requestId },
     });
   });
 });

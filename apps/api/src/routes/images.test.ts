@@ -51,7 +51,11 @@ describe('PUT and GET /api/images/:hash', () => {
     expect(mismatch.status).toBe(400);
     expect(huge.status).toBe(413);
     expect(await huge.json()).toEqual({
-      error: { code: 'bad_request', message: 'image larger than 10 MB' },
+      error: {
+        code: 'bad_request',
+        message: 'image larger than 10 MB',
+        requestId: huge.headers.get('x-request-id'),
+      },
     });
   });
 

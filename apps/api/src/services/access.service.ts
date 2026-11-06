@@ -1,5 +1,6 @@
 import { TargusError } from '@targus/core';
 
+import { failureReason } from '../logging/request-log.ts';
 import type { BuildRecord } from '../repositories/build.repository.ts';
 import type { CachedMembership } from '../repositories/membership.repository.ts';
 import type { Project } from '../repositories/project.repository.ts';
@@ -65,12 +66,44 @@ export function canAccessProject(
   );
 }
 
+/** An org whose membership could not be checked, and why, for the request's log line. */
+export interface UncheckedOrg {
+  readonly githubOrg: string;
+  readonly reason: string;
+}
+
 /**
- * Authorize a read of `project`: a reviewer outside its org gets `forbidden`; a project token
- * of another project gets `not_found`.
+ * `check`, except that a failure (the org's App installation suspended or revoked, GitHub down)
+ * answers `UncheckedOrg` instead of failing the request. Callers treat it as "no access", the
+ * safe default, and report it with `logUnchecked`.
+ */
+export async function checkOrSkip(
+  githubOrg: string,
+  check: () => Promise<boolean>,
+): Promise<boolean | UncheckedOrg> {
+  try {
+    return await check();
+  } catch (error) {
+    return { githubOrg, reason: failureReason(error) };
+  }
+}
+
+/** One warning on the request's log line for every org this request could not check. */
+export function logUnchecked(deps: Pick<ServiceDeps, 'log'>, unchecked: readonly UncheckedOrg[]) {
+  if (unchecked.length === 0) return;
+  deps.log.warn('org_membership_unchecked', {
+    orgs: unchecked.map((org) => org.githubOrg),
+    reasons: unchecked.map((org) => org.reason),
+  });
+}
+
+/**
+ * Authorize a read of `project`: a reviewer outside its org gets `forbidden`, and so does one
+ * whose membership cannot be checked right now; a project token of another project gets
+ * `not_found`.
  */
 export async function requireProjectAccess(
-  deps: AccessDeps,
+  deps: AccessDeps & Pick<ServiceDeps, 'log'>,
   principal: Principal,
   project: Project,
 ): Promise<void> {
@@ -79,14 +112,19 @@ export async function requireProjectAccess(
     if (principal.project.id !== project.id) throw new TargusError('not_found', 'not found');
     return;
   }
-  if (!(await canAccessProject(deps, principal.reviewer, project))) {
-    throw new TargusError('forbidden', `you are not a member of ${project.org.githubOrg}`);
-  }
+  const { githubOrg } = project.org;
+  const access = await checkOrSkip(githubOrg, () =>
+    canAccessProject(deps, principal.reviewer, project),
+  );
+  if (access === true) return;
+  if (access === false) throw new TargusError('forbidden', `you are not a member of ${githubOrg}`);
+  logUnchecked(deps, [access]);
+  throw new TargusError('forbidden', `your membership of ${githubOrg} cannot be checked right now`);
 }
 
 /** A build the principal may read, with its project; `not_found` when there is no such build. */
 export async function requireBuildAccess(
-  deps: AccessDeps & Pick<ServiceDeps, 'builds' | 'projects'>,
+  deps: AccessDeps & Pick<ServiceDeps, 'builds' | 'log' | 'projects'>,
   principal: Principal,
   buildId: string,
 ): Promise<{ build: BuildRecord; project: Project }> {

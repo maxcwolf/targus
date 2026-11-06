@@ -2,6 +2,9 @@ import { createAppAuth } from '@octokit/auth-app';
 import { request as octokitRequest } from '@octokit/request';
 import type { CheckRunState, CheckRunTarget, GitHubClient } from '@targus/core';
 
+import { InstallationTokenCache, type InstallationToken } from './installation-token-cache.ts';
+import { systemClock } from './system-clock.adapter.ts';
+
 /** The check run name targus reports on every commit (plan.md section 5.2). */
 export const checkRunName = 'targus/ios';
 
@@ -35,22 +38,41 @@ function stateFields(state: CheckRunState) {
     : { status: state.status, conclusion: state.conclusion, output };
 }
 
-function isNotFound(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'status' in error && error.status === 404;
+function hasStatus(error: unknown, status: number): boolean {
+  return (
+    typeof error === 'object' && error !== null && 'status' in error && error.status === status
+  );
 }
 
+/** Request headers carrying the installation token (Octokit's headers are an open record). */
+interface AuthHeaders {
+  [name: string]: string;
+  authorization: string;
+}
+
+/** Installation tokens shared by every client of this isolate (see `InstallationTokenCache`). */
+const isolateTokens = new InstallationTokenCache(systemClock);
+
 /**
- * `GitHubClient` for the targus GitHub App. Every call mints an installation access token from
- * the App's private key (plan.md section 5.2), against the same `baseUrl`. `fetch` is
- * injectable so tests never touch the network.
+ * `GitHubClient` for the targus GitHub App. Calls carry an installation access token minted from
+ * the App's private key (plan.md section 5.2), against the same `baseUrl`. Tokens come from
+ * `tokens`, by default one cache per isolate, so a token is minted about once an hour per
+ * installation rather than per call; a 401 drops the cached token so the next call mints a new
+ * one. `fetch` is injectable so tests never touch the network.
  */
 export class OctokitGitHubClient implements GitHubClient {
   private readonly request: Request;
   private readonly auth;
+  private readonly cacheKey: string;
 
-  constructor(credentials: GitHubAppCredentials, fetchImpl: Fetch = fetch) {
+  constructor(
+    credentials: GitHubAppCredentials,
+    fetchImpl: Fetch = fetch,
+    private readonly tokens: InstallationTokenCache = isolateTokens,
+  ) {
+    const baseUrl = credentials.baseUrl ?? 'https://api.github.com';
     this.request = octokitRequest.defaults({
-      baseUrl: credentials.baseUrl ?? 'https://api.github.com',
+      baseUrl,
       headers: { 'user-agent': 'targus' },
       request: { fetch: fetchImpl },
     });
@@ -59,11 +81,28 @@ export class OctokitGitHubClient implements GitHubClient {
       privateKey: credentials.privateKey,
       request: this.request,
     });
+    this.cacheKey = `${baseUrl} app ${credentials.appId}`;
   }
 
-  private async headers(installationId: number): Promise<{ authorization: string }> {
-    const { token } = await this.auth({ type: 'installation', installationId, refresh: true });
-    return { authorization: `token ${token}` };
+  /** A fresh token, bypassing `@octokit/auth-app`'s own cache, which reads `Date` directly. */
+  private async mint(installationId: number): Promise<InstallationToken> {
+    const auth = await this.auth({ type: 'installation', installationId, refresh: true });
+    return { token: auth.token, expiresAt: new Date(auth.expiresAt) };
+  }
+
+  /** Send a request with the installation's token, dropping the token if GitHub rejects it. */
+  private async withToken<T>(
+    installationId: number,
+    send: (headers: AuthHeaders) => Promise<T>,
+  ): Promise<T> {
+    const key = `${this.cacheKey} installation ${String(installationId)}`;
+    const token = await this.tokens.get(key, () => this.mint(installationId));
+    try {
+      return await send({ authorization: `token ${token}` });
+    } catch (error) {
+      if (hasStatus(error, 401)) this.tokens.evict(key);
+      throw error;
+    }
   }
 
   async createCheckRun(
@@ -71,14 +110,16 @@ export class OctokitGitHubClient implements GitHubClient {
     state: CheckRunState,
     detailsUrl: string,
   ): Promise<{ id: number }> {
-    const response = await this.request('POST /repos/{owner}/{repo}/check-runs', {
-      ...splitRepo(target.repo),
-      headers: await this.headers(target.installationId),
-      name: checkRunName,
-      head_sha: target.headSha,
-      details_url: detailsUrl,
-      ...stateFields(state),
-    });
+    const response = await this.withToken(target.installationId, (headers) =>
+      this.request('POST /repos/{owner}/{repo}/check-runs', {
+        ...splitRepo(target.repo),
+        headers,
+        name: checkRunName,
+        head_sha: target.headSha,
+        details_url: detailsUrl,
+        ...stateFields(state),
+      }),
+    );
     return { id: Number(response.data.id) };
   }
 
@@ -87,24 +128,29 @@ export class OctokitGitHubClient implements GitHubClient {
     checkRunId: number,
     state: CheckRunState,
   ): Promise<void> {
-    await this.request('PATCH /repos/{owner}/{repo}/check-runs/{check_run_id}', {
-      ...splitRepo(target.repo),
-      check_run_id: checkRunId,
-      headers: await this.headers(target.installationId),
-      ...stateFields(state),
-    });
+    await this.withToken(target.installationId, (headers) =>
+      this.request('PATCH /repos/{owner}/{repo}/check-runs/{check_run_id}', {
+        ...splitRepo(target.repo),
+        check_run_id: checkRunId,
+        headers,
+        ...stateFields(state),
+      }),
+    );
   }
 
+  /**
+   * Whether `login` is a public or private member of `org`. A 404 means no, and that includes a
+   * 404 from minting the token, which is what GitHub answers for a deleted installation. Any
+   * other failure (a suspended installation answers 403) is thrown.
+   */
   async isOrgMember(installationId: number, org: string, login: string): Promise<boolean> {
     try {
-      await this.request('GET /orgs/{org}/members/{username}', {
-        org,
-        username: login,
-        headers: await this.headers(installationId),
-      });
+      await this.withToken(installationId, (headers) =>
+        this.request('GET /orgs/{org}/members/{username}', { org, username: login, headers }),
+      );
       return true;
     } catch (error) {
-      if (isNotFound(error)) return false;
+      if (hasStatus(error, 404)) return false;
       throw error;
     }
   }

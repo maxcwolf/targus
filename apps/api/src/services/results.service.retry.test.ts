@@ -77,7 +77,6 @@ describe('submitResults after a failure', () => {
   });
 
   it('keeps the build complete when storing the check run fails, so a retry is a conflict', async () => {
-    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const github: GitHubClient = {
       createCheckRun: vi.fn().mockResolvedValue({ id: 77 }),
       updateCheckRun: vi.fn(),
@@ -94,10 +93,11 @@ describe('submitResults after a failure', () => {
 
     expect(response).toMatchObject({ checkRun: { id: 77 }, summary: { status: 'pending' } });
     expect(deps.builds.builds[0]).toMatchObject({ status: 'pending', checkRunId: null });
-    expect(log).toHaveBeenCalledOnce();
+    expect(deps.log.warnings).toEqual([
+      { event: 'check_run_id_not_stored', reason: 'D1 is unavailable' },
+    ]);
     await expect(submitResults(deps, project, buildId, request)).rejects.toMatchObject({
       code: 'conflict',
     });
-    log.mockRestore();
   });
 });

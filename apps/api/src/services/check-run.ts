@@ -1,5 +1,6 @@
 import type { Build, BuildStatusSummary, CheckRunState } from '@targus/core';
 
+import { failureReason } from '../logging/request-log.ts';
 import type { Project } from '../repositories/project.repository.ts';
 import type { ServiceDeps } from './deps.ts';
 
@@ -37,7 +38,7 @@ export function checkRunState(summary: BuildStatusSummary): CheckRunState {
  * already stored, so a GitHub outage must not lose them.
  */
 export async function reportCheckRun(
-  deps: Pick<ServiceDeps, 'github'>,
+  deps: Pick<ServiceDeps, 'github' | 'log'>,
   project: Project,
   build: Build,
   summary: BuildStatusSummary,
@@ -53,7 +54,7 @@ export async function reportCheckRun(
     );
     return id > 0 ? { id } : null;
   } catch (error) {
-    console.error('creating the check run failed', error);
+    deps.log.warn('check_run_create_failed', { reason: failureReason(error) });
     return null;
   }
 }
@@ -64,7 +65,7 @@ export async function reportCheckRun(
  * review is already stored, so a GitHub outage only leaves the check run stale.
  */
 export async function syncCheckRun(
-  deps: Pick<ServiceDeps, 'github'>,
+  deps: Pick<ServiceDeps, 'github' | 'log'>,
   project: Project,
   build: Build,
   summary: BuildStatusSummary,
@@ -78,6 +79,6 @@ export async function syncCheckRun(
       checkRunState(summary),
     );
   } catch (error) {
-    console.error('updating the check run failed', error);
+    deps.log.warn('check_run_update_failed', { reason: failureReason(error) });
   }
 }

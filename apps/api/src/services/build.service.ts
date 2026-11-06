@@ -157,7 +157,10 @@ export function toSnapshot(record: SnapshotRecord): Snapshot {
   };
 }
 
-type ReadDeps = Pick<ServiceDeps, 'builds' | 'clock' | 'github' | 'memberships' | 'projects'>;
+type ReadDeps = Pick<
+  ServiceDeps,
+  'builds' | 'clock' | 'github' | 'log' | 'memberships' | 'projects'
+>;
 
 /** `GET /api/builds/:id`, for the CLI's project token or a reviewer of the project's org. */
 export async function getBuild(

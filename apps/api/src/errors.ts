@@ -20,25 +20,35 @@ export function httpStatusFor(code: TargusErrorCode): ContentfulStatusCode {
   return statusByCode[code];
 }
 
-/** JSON error body every API error uses. */
+/**
+ * JSON error body every API error uses. `requestId` is the request's `x-request-id`, so a user
+ * reporting an error can quote the id of its log line (ADR 0020).
+ */
 export interface ErrorBody {
-  readonly error: { readonly code: TargusErrorCode; readonly message: string };
+  readonly error: {
+    readonly code: TargusErrorCode;
+    readonly message: string;
+    readonly requestId: string;
+  };
 }
 
-function errorResponse(
+/** An error response in the shared shape, for handlers that answer an error themselves. */
+export function errorResponse(
   c: Context<AppEnv>,
   code: TargusErrorCode,
   message: string,
   status: ContentfulStatusCode = httpStatusFor(code),
 ): Response {
-  return c.json<ErrorBody>({ error: { code, message } }, status);
+  return c.json<ErrorBody>({ error: { code, message, requestId: c.var.log.requestId } }, status);
 }
 
-/** `app.onError`: typed errors map through `statusByCode`; anything else is a 500. */
+/**
+ * `app.onError`: typed errors map through `statusByCode`; anything else is a 500 whose detail
+ * stays out of the response. Hono leaves the error on `c.error`, and `requestLogger` logs it.
+ */
 export const errorHandler: ErrorHandler<AppEnv> = (error, c) => {
   if (isTargusError(error)) return errorResponse(c, error.code, error.message);
   if (error instanceof HTTPException) return error.getResponse();
-  console.error(error);
   return errorResponse(c, 'internal', 'Internal Server Error');
 };
 

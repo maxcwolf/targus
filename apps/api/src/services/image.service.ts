@@ -1,7 +1,7 @@
 import { ImageHash, TargusError, type UploadImageResponse } from '@targus/core';
 
 import { sha256Hex } from '../lib/sha256.ts';
-import { canAccessOrg } from './access.service.ts';
+import { canAccessOrg, checkOrSkip, logUnchecked, type UncheckedOrg } from './access.service.ts';
 import type { Project } from '../repositories/project.repository.ts';
 import type { ServiceDeps } from './deps.ts';
 import type { Principal, Reviewer } from './principal.ts';
@@ -47,13 +47,14 @@ export async function uploadImage(
 
 type ReadImageDeps = Pick<
   ServiceDeps,
-  'clock' | 'github' | 'images' | 'imageStore' | 'memberships'
+  'clock' | 'github' | 'images' | 'imageStore' | 'log' | 'memberships'
 >;
 
 /**
  * Whether a project of an org the reviewer belongs to uploaded the image. One query finds every
  * such org with the reviewer's cached membership. Orgs with a cached answer go first, so GitHub
- * is usually asked only when the cache grants nothing.
+ * is usually asked only when the cache grants nothing. An org whose membership cannot be checked
+ * grants nothing, and the next org is tried; when none grants, those orgs are logged once.
  */
 async function reviewerMayRead(
   deps: ReadImageDeps,
@@ -64,11 +65,15 @@ async function reviewerMayRead(
   const cachedFirst = [...uploaders].sort(
     (a, b) => Number(a.membership === null) - Number(b.membership === null),
   );
+  const unchecked: UncheckedOrg[] = [];
   for (const org of cachedFirst) {
-    if (await canAccessOrg(deps, reviewer, org, () => Promise.resolve(org.membership))) {
-      return true;
-    }
+    const access = await checkOrSkip(org.githubOrg, () =>
+      canAccessOrg(deps, reviewer, org, () => Promise.resolve(org.membership)),
+    );
+    if (access === true) return true;
+    if (access !== false) unchecked.push(access);
   }
+  logUnchecked(deps, unchecked);
   return false;
 }
 

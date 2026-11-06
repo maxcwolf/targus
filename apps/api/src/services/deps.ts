@@ -3,6 +3,7 @@ import type { Clock, GitHubClient, IdGenerator, ImageStore } from '@targus/core'
 import type { GitHubOAuth } from '../adapters/github-oauth.adapter.ts';
 import type { Tokens } from '../adapters/token.adapter.ts';
 import type { ApiConfig } from '../config.ts';
+import type { ServiceLog } from '../logging/request-log.ts';
 import type { ApprovalRepository } from '../repositories/approval.repository.ts';
 import type { ApiBuildRepository } from '../repositories/build.repository.ts';
 import type { ImageRepository } from '../repositories/image.repository.ts';
@@ -29,4 +30,6 @@ export interface ServiceDeps {
   readonly github: GitHubClient;
   /** Null when GitHub login is not configured; `GET /api/auth/github` then answers 501. */
   readonly oauth: GitHubOAuth | null;
+  /** The request's log line, for what a use-case noticed but did not fail on (ADR 0020). */
+  readonly log: ServiceLog;
 }

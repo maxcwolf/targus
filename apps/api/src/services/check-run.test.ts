@@ -1,9 +1,10 @@
 import type { BuildStatusSummary } from '@targus/core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { newBuild, newProject } from '../../test/support/fixtures.ts';
 import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
 import { createInMemoryProjects } from '../../test/support/in-memory.ts';
+import { createRecordingLog } from '../../test/support/logs.ts';
 import { checkRunState, syncCheckRun } from './check-run.ts';
 
 const base: BuildStatusSummary = {
@@ -57,7 +58,7 @@ describe('syncCheckRun', () => {
     const github = createRecordingGitHub();
     const build = { ...newBuild('b1', 'project-sync'), number: 1, checkRunId: 901 };
 
-    await syncCheckRun({ github }, await project(42), build, failed);
+    await syncCheckRun({ github, log: createRecordingLog() }, await project(42), build, failed);
 
     expect(github.updates).toEqual([
       {
@@ -72,21 +73,25 @@ describe('syncCheckRun', () => {
     const github = createRecordingGitHub();
     const build = { ...newBuild('b1', 'project-sync'), number: 1 };
 
-    await syncCheckRun({ github }, await project(42), build, failed);
-    await syncCheckRun({ github }, await project(null), { ...build, checkRunId: 901 }, failed);
+    await syncCheckRun({ github, log: createRecordingLog() }, await project(42), build, failed);
+    await syncCheckRun(
+      { github, log: createRecordingLog() },
+      await project(null),
+      { ...build, checkRunId: 901 },
+      failed,
+    );
 
     expect(github.updates).toEqual([]);
   });
 
   it('logs and carries on when GitHub fails', async () => {
-    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const log = createRecordingLog();
     const github = createRecordingGitHub([], { failUpdates: true });
     const build = { ...newBuild('b1', 'project-sync'), number: 1, checkRunId: 901 };
 
     await expect(
-      syncCheckRun({ github }, await project(42), build, failed),
+      syncCheckRun({ github, log }, await project(42), build, failed),
     ).resolves.toBeUndefined();
-    expect(log).toHaveBeenCalledOnce();
-    log.mockRestore();
+    expect(log.warnings).toEqual([{ event: 'check_run_update_failed', reason: 'GitHub is down' }]);
   });
 });

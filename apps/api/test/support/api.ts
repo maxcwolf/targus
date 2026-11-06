@@ -4,21 +4,33 @@ import type { Hono } from 'hono';
 
 import type { AppEnv } from '../../src/app-env.ts';
 import { createApp } from '../../src/app.ts';
-import { createDeps } from '../../src/composition.ts';
+import { createDeps, createServices } from '../../src/composition.ts';
+import type { Observability } from '../../src/middleware/request-log.ts';
 import type { ServiceDeps } from '../../src/services/deps.ts';
 import { bindServices } from '../../src/services/index.ts';
+import { fakeObservability } from './logs.ts';
 
 /** The admin token the route tests run with (wrangler.jsonc sets none). */
 export const adminToken = 'test-admin-token';
 /** The session secret the route tests run with; `signIn` signs cookies with it. */
 export const sessionSecret = 'test-session-secret';
 
-const defaultApp = createApp();
+// Route tests keep request lines in memory instead of printing one per request.
+const defaultApp = createApp(createServices, fakeObservability());
 const testEnv = { ...env, ADMIN_TOKEN: adminToken, SESSION_SECRET: sessionSecret };
 
-/** The real app with some dependencies replaced, e.g. a GitHub client that knows members. */
-export function appWith(overrides: Partial<ServiceDeps>): Hono<AppEnv> {
-  return createApp((bindings) => bindServices({ ...createDeps(bindings), ...overrides }));
+/**
+ * The real app with some dependencies replaced, e.g. a GitHub client that knows members.
+ * `observe` receives the request lines (see `test/support/logs.ts`).
+ */
+export function appWith(
+  overrides: Partial<ServiceDeps>,
+  observe: Observability = fakeObservability(),
+): Hono<AppEnv> {
+  return createApp(
+    (bindings, log) => bindServices({ ...createDeps(bindings, log), ...overrides }),
+    observe,
+  );
 }
 
 /** Send a request through the full app with the local D1 and R2 bindings. */

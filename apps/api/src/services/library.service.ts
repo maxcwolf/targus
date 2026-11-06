@@ -5,7 +5,10 @@ import { toSnapshot, withSummary } from './build.service.ts';
 import type { ServiceDeps } from './deps.ts';
 import type { Reviewer } from './principal.ts';
 
-type LibraryDeps = Pick<ServiceDeps, 'builds' | 'clock' | 'github' | 'memberships' | 'projects'>;
+type LibraryDeps = Pick<
+  ServiceDeps,
+  'builds' | 'clock' | 'github' | 'log' | 'memberships' | 'projects'
+>;
 
 /**
  * `GET /api/projects/:id/library`: every story of the project as it currently looks on the

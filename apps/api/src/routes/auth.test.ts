@@ -126,7 +126,11 @@ describe('GitHub login configuration', () => {
 
     expect(response.status).toBe(501);
     expect(await response.json()).toEqual({
-      error: { code: 'not_implemented', message: 'GitHub login is not configured' },
+      error: {
+        code: 'not_implemented',
+        message: 'GitHub login is not configured',
+        requestId: response.headers.get('x-request-id'),
+      },
     });
   });
 

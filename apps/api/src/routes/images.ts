@@ -1,9 +1,9 @@
 import { TargusError } from '@targus/core';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 
 import type { AppEnv } from '../app-env.ts';
-import type { ErrorBody } from '../errors.ts';
+import { errorResponse } from '../errors.ts';
 import { projectAuth, readerAuth } from '../middleware/auth.ts';
 
 /** Largest PNG the API accepts; a 3x full-screen capture is a few hundred KB. */
@@ -12,7 +12,7 @@ export const maxImageBytes = 10 * 1024 * 1024;
 const limitImageBody = bodyLimit({
   maxSize: maxImageBytes,
   onError: (c) =>
-    c.json<ErrorBody>({ error: { code: 'bad_request', message: 'image larger than 10 MB' } }, 413),
+    errorResponse(c as Context<AppEnv>, 'bad_request', 'image larger than 10 MB', 413),
 });
 
 /**

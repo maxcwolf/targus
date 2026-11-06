@@ -61,7 +61,10 @@ depends on no other workspace and on no I/O library; nothing depends on an app.
 - `api` authentication is middleware (`apps/api/src/middleware/auth.ts`): `projectAuth` for the
   CLI's bearer token, `sessionAuth` for the reviewer's cookie. `sessionAuth` also refuses a
   cookie-authenticated write that is not same-origin, and session ids are stored only as
-  SHA-256 hashes (ADR 0015). `yarn new:route` generates a route behind `sessionAuth`.
+  SHA-256 hashes (ADR 0015). `yarn new:route` generates a route behind `sessionAuth`. Before
+  any of them, `requestLogger` (`apps/api/src/middleware/request-log.ts`) gives every request
+  an id and writes one JSON line for it, with typed fields only and never a header, cookie,
+  token, session id or body (ADR 0020).
 - `cli` starts every subprocess through `packages/cli/src/adapters/exec.adapter.ts` and makes
   every API request through `TargusApiClient` (`api-client.adapter.ts`). Both apply a timeout
   when the caller gives none, and the client retries idempotent requests on network errors,

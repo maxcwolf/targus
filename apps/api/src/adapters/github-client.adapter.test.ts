@@ -1,11 +1,15 @@
-import type { GitHubClient } from '@targus/core';
+import { createFakeClock, type GitHubClient } from '@targus/core';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { createGitHubStub, generatePrivateKeyPem } from '../../test/support/github-stub.ts';
 import { NoopGitHubClient, OctokitGitHubClient } from './github-client.adapter.ts';
+import { InstallationTokenCache } from './installation-token-cache.ts';
 
 const target = { installationId: 42, repo: 'example-org/example-app', headSha: 'a'.repeat(40) };
 let privateKey = '';
+
+/** A token cache of its own, so each test sees its own token mint. */
+const freshTokens = () => new InstallationTokenCache(createFakeClock());
 
 beforeAll(async () => {
   privateKey = await generatePrivateKeyPem();
@@ -14,7 +18,7 @@ beforeAll(async () => {
 describe('OctokitGitHubClient (stubbed fetch)', () => {
   it('creates a targus/ios check run with an installation token', async () => {
     const stub = createGitHubStub();
-    const client = new OctokitGitHubClient({ appId: '123', privateKey }, stub.fetch);
+    const client = new OctokitGitHubClient({ appId: '123', privateKey }, stub.fetch, freshTokens());
 
     const result = await client.createCheckRun(
       target,
@@ -42,7 +46,7 @@ describe('OctokitGitHubClient (stubbed fetch)', () => {
 
   it('updates a check run to completed with its conclusion', async () => {
     const stub = createGitHubStub();
-    const client = new OctokitGitHubClient({ appId: '123', privateKey }, stub.fetch);
+    const client = new OctokitGitHubClient({ appId: '123', privateKey }, stub.fetch, freshTokens());
 
     await client.updateCheckRun(target, 901, {
       status: 'completed',
@@ -65,7 +69,7 @@ describe('OctokitGitHubClient (stubbed fetch)', () => {
 describe('OctokitGitHubClient.isOrgMember (stubbed fetch)', () => {
   it('answers org membership from the members endpoint', async () => {
     const stub = createGitHubStub();
-    const client = new OctokitGitHubClient({ appId: '123', privateKey }, stub.fetch);
+    const client = new OctokitGitHubClient({ appId: '123', privateKey }, stub.fetch, freshTokens());
 
     expect(await client.isOrgMember(42, 'example-org', 'member')).toBe(true);
     expect(await client.isOrgMember(42, 'example-org', 'stranger')).toBe(false);
@@ -79,7 +83,7 @@ describe('OctokitGitHubClient.isOrgMember (stubbed fetch)', () => {
       if (url.includes('/members/')) return Promise.resolve(new Response('{}', { status: 500 }));
       return stub.fetch(input, init);
     };
-    const client = new OctokitGitHubClient({ appId: '123', privateKey }, failing);
+    const client = new OctokitGitHubClient({ appId: '123', privateKey }, failing, freshTokens());
 
     await expect(client.isOrgMember(42, 'example-org', 'member')).rejects.toThrow();
   });
@@ -96,6 +100,7 @@ describe('OctokitGitHubClient baseUrl', () => {
     const client = new OctokitGitHubClient(
       { appId: '123', privateKey, baseUrl: 'http://github-stub.test:9000' },
       recording,
+      freshTokens(),
     );
 
     await client.isOrgMember(42, 'example-org', 'member');

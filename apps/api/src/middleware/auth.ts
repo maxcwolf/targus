@@ -2,8 +2,15 @@ import type { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
 import type { AppEnv, PrincipalEnv, ProjectEnv, ReviewerEnv } from '../app-env.ts';
+import type { RequestLog } from '../logging/request-log.ts';
 import type { Reviewer, Services } from '../services/index.ts';
 import { readSessionId, requireCookieSettings } from './session-cookie.ts';
+
+/** The request's services and log, which every env puts on the context. */
+interface RequestVars {
+  readonly services: Services;
+  readonly log: RequestLog;
+}
 
 /** The token of an `Authorization: Bearer <token>` header, or null. */
 export function bearerToken(header: string | undefined): string | null {
@@ -15,12 +22,14 @@ export function bearerToken(header: string | undefined): string | null {
 export const projectAuth = createMiddleware<ProjectEnv>(async (c, next) => {
   const token = bearerToken(c.req.header('authorization'));
   c.set('project', await c.var.services.authenticateProjectToken(token));
+  c.var.log.authenticatedAs('project');
   await next();
 });
 
 /** Admin routes: require the `ADMIN_TOKEN` bearer token. */
 export const adminAuth = createMiddleware<AppEnv>(async (c, next) => {
   await c.var.services.authenticateAdmin(bearerToken(c.req.header('authorization')));
+  c.var.log.authenticatedAs('admin');
   await next();
 });
 
@@ -29,9 +38,10 @@ export const adminAuth = createMiddleware<AppEnv>(async (c, next) => {
  * sends, so a cookie-authenticated write must also be same-origin (ADR 0015); bearer-token
  * requests skip this, because no other site can make a browser send that header.
  */
-async function reviewerOf(c: Context, services: Services): Promise<Reviewer> {
+async function reviewerOf(c: Context, { services, log }: RequestVars): Promise<Reviewer> {
   const settings = requireCookieSettings(services, 'unauthorized');
   const reviewer = await services.authenticateSession(await readSessionId(c, settings));
+  log.authenticatedAs('reviewer');
   services.assertSameOrigin({
     method: c.req.method,
     origin: c.req.header('origin'),
@@ -45,7 +55,7 @@ async function reviewerOf(c: Context, services: Services): Promise<Reviewer> {
  * write, else 403. Puts the reviewer on the context.
  */
 export const sessionAuth = createMiddleware<ReviewerEnv>(async (c, next) => {
-  c.set('reviewer', await reviewerOf(c, c.var.services));
+  c.set('reviewer', await reviewerOf(c, c.var));
   await next();
 });
 
@@ -56,9 +66,10 @@ export const sessionAuth = createMiddleware<ReviewerEnv>(async (c, next) => {
 export const readerAuth = createMiddleware<PrincipalEnv>(async (c, next) => {
   const header = c.req.header('authorization');
   if (header === undefined) {
-    c.set('principal', { kind: 'reviewer', reviewer: await reviewerOf(c, c.var.services) });
+    c.set('principal', { kind: 'reviewer', reviewer: await reviewerOf(c, c.var) });
   } else {
     const project = await c.var.services.authenticateProjectToken(bearerToken(header));
+    c.var.log.authenticatedAs('project');
     c.set('principal', { kind: 'project', project });
   }
   await next();

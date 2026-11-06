@@ -29,6 +29,7 @@ import {
 import { compareText, uniqueViolation } from './d1-semantics.ts';
 import { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.ts';
 import { createInMemoryImages, type InMemoryImages } from './in-memory-images.ts';
+import { createRecordingLog, type RecordingLog } from './logs.ts';
 
 export { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.ts';
 
@@ -162,6 +163,7 @@ export interface TestDeps extends ServiceDeps {
   readonly sessions: ReturnType<typeof createInMemorySessions>;
   readonly memberships: ReturnType<typeof createInMemoryMemberships>;
   readonly oauth: FakeOAuth | null;
+  readonly log: RecordingLog;
 }
 
 export function createTestDeps(overrides: Partial<ServiceDeps> = {}): TestDeps {
@@ -188,6 +190,7 @@ export function createTestDeps(overrides: Partial<ServiceDeps> = {}): TestDeps {
     memberships,
     github: new NoopGitHubClient(),
     oauth: createFakeOAuth(),
+    log: createRecordingLog(),
     ...overrides,
   } as TestDeps;
 }

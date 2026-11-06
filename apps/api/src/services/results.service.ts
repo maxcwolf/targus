@@ -11,6 +11,7 @@ import {
   type SubmitResultsResponse,
 } from '@targus/core';
 
+import { failureReason } from '../logging/request-log.ts';
 import type { SnapshotRecord } from '../repositories/build.repository.ts';
 import type { Project } from '../repositories/project.repository.ts';
 import { baselineEntries, requireBuild } from './build.service.ts';
@@ -19,7 +20,7 @@ import type { ServiceDeps } from './deps.ts';
 
 type ResultsDeps = Pick<
   ServiceDeps,
-  'approvals' | 'builds' | 'clock' | 'config' | 'github' | 'ids' | 'images'
+  'approvals' | 'builds' | 'clock' | 'config' | 'github' | 'ids' | 'images' | 'log'
 >;
 
 /** What every story of the build is compared against. */
@@ -188,7 +189,7 @@ async function rememberCheckRun(deps: ResultsDeps, buildId: string, checkRunId: 
   try {
     await deps.builds.setCheckRunId(buildId, checkRunId);
   } catch (error) {
-    console.error('storing the check run id failed', error);
+    deps.log.warn('check_run_id_not_stored', { reason: failureReason(error) });
   }
 }
 

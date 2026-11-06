@@ -278,7 +278,6 @@ describe('submitResults without a check run', () => {
   });
 
   it('keeps the results when GitHub fails', async () => {
-    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const github: GitHubClient = {
       createCheckRun: vi.fn().mockRejectedValue(new Error('GitHub is down')),
       updateCheckRun: vi.fn(),
@@ -291,7 +290,8 @@ describe('submitResults without a check run', () => {
 
     expect(response).toMatchObject({ checkRun: null, summary: { status: 'passed' } });
     expect(deps.builds.builds[0]?.status).toBe('passed');
-    expect(log).toHaveBeenCalledOnce();
-    log.mockRestore();
+    expect(deps.log.warnings).toEqual([
+      { event: 'check_run_create_failed', reason: 'GitHub is down' },
+    ]);
   });
 });

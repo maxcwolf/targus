@@ -6,13 +6,15 @@ under `/api/*` and the built review UI (`apps/web/dist`) for every other path. D
 
 ```
 src/routes/        HTTP only: parse with a core zod contract, call one service, map the result
-src/middleware/    projectAuth / adminAuth (bearer), sessionAuth / readerAuth (cookie), cookies,
-                   JSON body parsing
+src/middleware/    requestLogger (request id, one log line), projectAuth / adminAuth (bearer),
+                   sessionAuth / readerAuth (cookie), cookies, JSON body parsing
+src/logging/       the request log line: its fields, and the ServiceLog services warn through
 src/services/      use-cases; the only place rules live outside packages/core
 src/repositories/  D1 via Drizzle (projects, builds + snapshots, approvals, images, users,
                    sessions, org membership cache)
 src/storage/       R2ImageStore (bytes in R2, "missing" answered by the images table)
-src/adapters/      Clock, IdGenerator, tokens, GitHub App client (Octokit or no-op), GitHub OAuth
+src/adapters/      Clock, IdGenerator, tokens, GitHub App client (Octokit or no-op), GitHub OAuth,
+                   console Logger
 src/composition.ts wires the real adapters for a request's bindings
 ```
 
@@ -43,8 +45,9 @@ snapshots; `counts` is how many snapshots are in each state. Both come from the 
 the build row, so the builds list never reads snapshots. `build.checkRunId` is the `targus/ios`
 check run, or null when none was created. Only `passed` and `accepted` builds (core's
 `baselineBuildStatuses`) serve as baselines, so a build still `pending` review is never the
-baseline of the next one. Errors are `{ "error": { "code", "message" } }`, with the code mapped
-to a status in `src/errors.ts`.
+baseline of the next one. Errors are `{ "error": { "code", "message", "requestId" } }`, with the
+code mapped to a status in `src/errors.ts`; `requestId` is the request's `x-request-id` (see
+[Logging](#logging-and-request-ids)).
 
 "session or project token": a request with an `Authorization` header is authenticated as a
 project token (the CLI), any other by its session cookie (the review UI, including its `<img>`
@@ -90,6 +93,48 @@ server (`yarn workspace @targus/web dev`, which proxies `/api` to the Worker), s
 
 Image responses carry `Content-Type: image/png`, set by the route rather than read from R2, and
 `X-Content-Type-Options: nosniff`.
+
+## Logging and request ids
+
+Every response carries an `x-request-id` header (a UUID from the `IdGenerator`; an id the client
+sends is ignored), and every error body repeats it as `error.requestId`. Each request writes
+exactly one JSON line to `console` (ADR 0020), which Workers Logs indexes by field:
+
+```json
+{
+  "level": "info",
+  "event": "request",
+  "requestId": "6f1c…",
+  "cfRay": "8f00abc-LHR",
+  "method": "GET",
+  "route": "/api/builds/:id",
+  "status": 200,
+  "durationMs": 12,
+  "principal": "reviewer"
+}
+```
+
+`route` is the matched pattern, not the path; `principal` is `none`, `project`, `reviewer` or
+`admin`, never who. A failed request adds `error`: the `TargusError` code, or for an unexpected
+error its message and stack (`level` is `error` for every 5xx). What a use-case noticed without
+failing goes in `warnings`, as an event name with identifiers and counts:
+`org_membership_unchecked` (see below), and `check_run_create_failed`, `check_run_update_failed`
+and `check_run_id_not_stored` for the best-effort GitHub check-run calls. Headers, cookies, tokens, session ids, query strings,
+bodies and image bytes are never logged. Search a user's report with
+`wrangler tail --format json` locally or the Workers Logs query `requestId = "<id>"`.
+
+An org whose membership cannot be checked (its App installation suspended, GitHub failing) never
+breaks a request for other orgs, and never lets a reviewer in: `GET /api/projects` leaves that
+org's projects out and lists the rest, a read of one of its projects or builds answers 403 with
+`your membership of <org> cannot be checked right now`, and an image is served only if another
+of the reviewer's orgs uploaded it (404 otherwise). The request's line carries the orgs once, in
+an `org_membership_unchecked` warning. A deleted installation is different: GitHub answers 404
+when minting its token, which counts as "not a member".
+
+The GitHub App's installation tokens are cached in memory, one per installation, for the life of
+the isolate (`src/adapters/installation-token-cache.ts`). A token is reused until five minutes
+before the expiry GitHub gave it, and dropped after a 401, so a warm isolate mints about one
+token per installation per hour instead of one per GitHub call. A new isolate starts empty.
 
 ## Configuration
 

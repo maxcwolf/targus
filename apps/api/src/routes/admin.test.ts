@@ -36,7 +36,11 @@ describe('POST /api/admin/projects', () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({
-      error: { code: 'unauthorized', message: 'admin API is disabled' },
+      error: {
+        code: 'unauthorized',
+        message: 'admin API is disabled',
+        requestId: response.headers.get('x-request-id'),
+      },
     });
   });
 
@@ -52,7 +56,11 @@ describe('POST /api/admin/projects', () => {
     expect(await invalid.json()).toMatchObject({ error: { code: 'bad_request' } });
     expect(notJson.status).toBe(400);
     expect(await notJson.json()).toEqual({
-      error: { code: 'bad_request', message: 'request body is not valid JSON' },
+      error: {
+        code: 'bad_request',
+        message: 'request body is not valid JSON',
+        requestId: notJson.headers.get('x-request-id'),
+      },
     });
   });
 });

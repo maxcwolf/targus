@@ -5,7 +5,12 @@ import {
   type ListProjectsResponse,
 } from '@targus/core';
 
-import { canAccessProject } from './access.service.ts';
+import {
+  canAccessProject,
+  checkOrSkip,
+  logUnchecked,
+  type UncheckedOrg,
+} from './access.service.ts';
 import type { ServiceDeps } from './deps.ts';
 import type { Reviewer } from './principal.ts';
 
@@ -44,17 +49,29 @@ export async function createProject(
   };
 }
 
+type ListDeps = Pick<ServiceDeps, 'clock' | 'github' | 'log' | 'memberships' | 'projects'>;
+
 /**
  * `GET /api/projects`: the projects whose org the reviewer belongs to. Checked one at a time so
- * projects of the same org share one membership lookup through the cache.
+ * projects of the same org share one membership check. An org whose membership cannot be
+ * checked (its installation suspended, GitHub failing) is left out rather than failing the whole
+ * list, and named once on the request's log line.
  */
 export async function listProjects(
-  deps: Pick<ServiceDeps, 'clock' | 'github' | 'memberships' | 'projects'>,
+  deps: ListDeps,
   reviewer: Reviewer,
 ): Promise<ListProjectsResponse> {
+  const byOrg = new Map<string, boolean | UncheckedOrg>();
   const visible: ListProjectsResponse['projects'] = [];
   for (const project of await deps.projects.listAll()) {
-    if (!(await canAccessProject(deps, reviewer, project))) continue;
+    let access = byOrg.get(project.orgId);
+    if (access === undefined) {
+      access = await checkOrSkip(project.org.githubOrg, () =>
+        canAccessProject(deps, reviewer, project),
+      );
+      byOrg.set(project.orgId, access);
+    }
+    if (access !== true) continue;
     visible.push({
       id: project.id,
       orgId: project.orgId,
@@ -64,5 +81,9 @@ export async function listProjects(
       defaultBranch: project.defaultBranch,
     });
   }
+  logUnchecked(
+    deps,
+    [...byOrg.values()].filter((access) => typeof access !== 'boolean'),
+  );
   return { projects: visible };
 }
