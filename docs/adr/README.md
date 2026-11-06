@@ -16,19 +16,19 @@ the same change.
 | ADR | Title | Status |
 | --- | --- | --- |
 | [0001](0001-hosted-service-with-chromatic-like-review.md) | Hosted service with a Chromatic-like review UI | accepted |
-| [0002](0002-cloudflare-free-tier-hosting.md) | Cloudflare free tier hosting: Workers, R2 and D1 | accepted |
+| [0002](0002-cloudflare-free-tier-hosting.md) | Cloudflare free tier hosting: Workers, R2 and D1 | accepted, amended 2026-11-06 |
 | [0003](0003-diff-on-ci-runner-not-server.md) | Pixel diffing on the CI runner, not the server | accepted, amended by [0014](0014-upload-record-grants-image-access.md) and [0016](0016-cli-measures-server-classifies.md) |
 | [0004](0004-baseline-and-approval-rules.md) | Baseline and approval rules | accepted |
-| [0005](0005-cached-native-build-with-js-rebundle.md) | Cached native build with a per-run JS rebundle | accepted |
-| [0006](0006-ios-only-full-screen-capture-for-v1.md) | iOS only, full-screen capture for v1 | accepted |
+| [0005](0005-cached-native-build-with-js-rebundle.md) | Cached native build with a per-run JS rebundle | accepted, amended 2026-11-06 |
+| [0006](0006-ios-only-full-screen-capture-for-v1.md) | iOS only, full-screen capture for v1 | accepted, amended 2026-11-06 |
 | [0007](0007-org-scoped-tenancy.md) | Org-scoped tenancy from day one | accepted, amended by [0011](0011-github-login-sessions-and-org-authorization.md), [0012](0012-personal-accounts-as-single-member-orgs.md) and [0014](0014-upload-record-grants-image-access.md) |
 | [0008](0008-storybook-websocket-channel-for-story-selection.md) | Storybook websocket channel for story selection | accepted, amended by [0022](0022-story-parameters-reported-by-the-decorator.md) |
-| [0009](0009-every-standard-has-a-guard.md) | Every standard has a guard | accepted |
+| [0009](0009-every-standard-has-a-guard.md) | Every standard has a guard | accepted, amended 2026-11-06 |
 | [0010](0010-package-builds-and-development-condition.md) | Package builds and the development condition | accepted, amended by [0025](0025-browser-entry-for-core.md) |
-| [0011](0011-github-login-sessions-and-org-authorization.md) | GitHub login with cookie sessions and org-membership authorization | accepted |
+| [0011](0011-github-login-sessions-and-org-authorization.md) | GitHub login with cookie sessions and org-membership authorization | accepted, amended by [0015](0015-same-origin-session-writes-and-hashed-session-ids.md), PR #10 and PR #24 |
 | [0012](0012-personal-accounts-as-single-member-orgs.md) | Personal accounts as single-member orgs | accepted, amended by [0024](0024-personal-account-owner-by-github-account-id.md) |
 | [0013](0013-guarded-single-batch-build-writes.md) | Guarded single-batch writes for build results and reviews | accepted |
-| [0014](0014-upload-record-grants-image-access.md) | An upload record, not a hash, grants a project access to an image | accepted |
+| [0014](0014-upload-record-grants-image-access.md) | An upload record, not a hash, grants a project access to an image | accepted, amended by PR #10 and PR #24 |
 | [0015](0015-same-origin-session-writes-and-hashed-session-ids.md) | Same-origin checks on session writes, and hashed session ids | accepted |
 | [0016](0016-cli-measures-server-classifies.md) | The CLI measures the diff, the server classifies the story | accepted |
 | [0017](0017-relative-imports-name-the-typescript-file.md) | Relative imports name the TypeScript file | accepted |

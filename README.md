@@ -85,4 +85,5 @@ parameters need the decorator; without it the CLI applies its defaults.
 
 - `.github/CODEOWNERS` names `@maxcwolf` while the repo lives under that account. Point it at an
   org team when the repo moves, before enabling "require review from code owners".
-- `spike/` is the throwaway M0 capture spike. It is not a workspace and no guard checks it.
+- `spike/` is the throwaway capture spike of 2026-11-04
+  ([docs/capture-spike.md](docs/capture-spike.md)). It is not a workspace and no guard checks it.

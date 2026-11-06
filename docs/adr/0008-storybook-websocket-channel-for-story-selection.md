@@ -6,12 +6,17 @@ accepted, amended by [0022](0022-story-parameters-reported-by-the-decorator.md)
 
 ## Amended by
 
-The channel still drives selection. One part of the text below was overtaken:
+The channel still drives selection. These parts of the text below were overtaken:
 
 - **What a selection waits for.** `storyRendered` arrives before React renders the story, so when
   the app runs `withTargus` the CLI also waits, briefly, for the decorator's
   `targus/storyParameters` or `targus/storyError` report, and applies `parameters.targus`
   before the settle (ADR 0022).
+- **How the CLI hosts the channel** (built this way from the first CLI commit, b9c34aa, with no
+  ADR of its own). The CLI does not load `@storybook/react-native` or its `createChannelServer`.
+  `WsStorybookChannel` (`packages/cli/src/adapters/ws-channel.adapter.ts`) runs its own `ws`
+  server on `--port` (default 7007) and speaks the `{ type, args }` protocol directly, so
+  nothing ties the CLI to the consumer's Storybook RN version.
 
 ## Date
 
@@ -20,7 +25,7 @@ The channel still drives selection. One part of the text below was overtaken:
 ## Context
 
 The capture loop must select each story, know when it has rendered, and read the list of
-stories the app actually loaded. docs/spike-m0.md found that Storybook RN 10 ships the needed
+stories the app actually loaded. docs/capture-spike.md found that Storybook RN 10 ships the needed
 primitive: `@storybook/react-native/node` exports `createChannelServer`. When `enableWebsockets`
 is on, the app connects to it as a websocket client, and every message from one client is
 relayed to the others as plain JSON `{ type, args }`. The package also offers
@@ -38,7 +43,7 @@ server and the app bundle share a protocol version. In the pilot app, `.rnstoryb
 `enableWebsockets` (the spike also passed `onDeviceUI: false` and `shouldPersistSelection:
 false`) when `EXPO_PUBLIC_TARGUS` is set.
 
-Confirmed by the M0 spike (docs/spike-m0.md): 354 the pilot app stories captured with no channel
+Confirmed by the capture spike (docs/capture-spike.md): 354 the pilot app stories captured with no channel
 failures, `storyRendered` arriving within milliseconds of `setCurrentStory`. The deep-link
 fallback (`simctl openurl` with `?STORYBOOK_STORY_ID=`) is not planned. Two limits found:
 `storyRendered` marks React commit, not paint, so a settle delay remains necessary; and

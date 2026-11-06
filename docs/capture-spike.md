@@ -1,4 +1,4 @@
-# M0 spike: capture the pilot app's native Storybook in an iOS simulator
+# Capture spike: the pilot app's native Storybook in an iOS simulator
 
 Started 2026-11-04. Goal from [plan.md](plan.md#11-milestones): prove the capture loop locally
 against `../the pilot app`, measure seconds per story, count unstable stories, and decide whether the
@@ -150,7 +150,7 @@ Storybook RN. Go.
   render "Web only." placeholders.
 - `chatmessage--my-message` renders blank on device; cause not investigated.
 - `weighthistory--with-data` renders its chart's filled area differently between app launches
-  (2.2% of pixels; stable within a run). Found when the M1 CLI run was compared with the spike
+  (2.2% of pixels; stable within a run). Found when the first CLI run was compared with the spike
   run. Needs a look before the check becomes required.
 - `expo-modules-jsi` lockfile bump and an `expo-observe` patch are needed for local builds on
   Xcode 26.2 (see findings above).

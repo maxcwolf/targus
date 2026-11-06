@@ -20,7 +20,7 @@ interface TargusErrorBoundaryState {
 
 /**
  * Per-story error boundary. Storybook RN's own boundary only logs, so the channel says
- * `storyRendered` for a story that shows an error box (docs/spike-m0.md). This one reports the
+ * `storyRendered` for a story that shows an error box (docs/capture-spike.md). This one reports the
  * error once and renders nothing, so the CLI records an error instead of a snapshot.
  */
 export class TargusErrorBoundary extends Component<

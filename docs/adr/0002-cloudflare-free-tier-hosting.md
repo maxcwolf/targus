@@ -2,7 +2,15 @@
 
 ## Status
 
-accepted
+accepted, amended 2026-11-06
+
+## Amended by
+
+The hosting decision still holds. One name in the text below did not match the repository on
+2026-11-06:
+
+- **The Worker test tool** is `@cloudflare/vitest-plugin` (`apps/api/package.json`,
+  `apps/api/vitest.config.ts`), not `@cloudflare/vitest-pool-workers`.
 
 ## Date
 

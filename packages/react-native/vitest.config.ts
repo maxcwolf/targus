@@ -4,9 +4,9 @@ import { defineConfig } from 'vitest/config';
 // Coverage thresholds are a guard (docs/engineering-standards.md section 3.1).
 // They only go up; a PR that lowers one must say why.
 //
-// These tests exercise the pure helpers in plain Node. react-native itself is a peer dependency
-// and is deliberately not installed here; decorator rendering tests with
-// @testing-library/react-native arrive with the error boundary.
+// These tests run in plain Node. react-native itself is a peer dependency and is deliberately
+// not installed here, so the decorator and its error boundary are rendered with
+// react-test-renderer, which needs no react-native.
 // Workspace packages resolve to their TypeScript source through the "development" export condition
 // (ADR 0010), so tests never need a build. Node-environment tests resolve in Vite's ssr
 // environment, so the condition goes in ssr.resolve, not the top-level resolve.

@@ -12,7 +12,7 @@ accepted
 
 `@targus/react-native` typed `parameters.targus.delay` and `parameters.targus.skip`, but nothing
 read them, so a story with a spinner or an entrance animation had no opt-out: it was captured
-mid-motion and came out `unstable` or `changed` (docs/spike-m0.md: 16 of 354 the pilot app stories).
+mid-motion and came out `unstable` or `changed` (docs/capture-spike.md: 16 of 354 the pilot app stories).
 
 The CLI needs both values before it takes a story's first screenshot, and it is the CLI, on the
 CI runner, that waits and screenshots. Two facts from Storybook RN 10.7 (read in its

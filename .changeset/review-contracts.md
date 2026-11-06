@@ -3,7 +3,7 @@
 '@targus/cli': minor
 ---
 
-`@targus/core`: review contracts for the M3 web app (`MeResponse`, `ListProjectsResponse`,
+`@targus/core`: review contracts for the review web app (`MeResponse`, `ListProjectsResponse`,
 `ListBuildsResponse`, `ReviewSnapshotResponse`, `ApproveAllResponse`, `SnapshotCounts`),
 `Snapshot` and `StoryResult` carry the Storybook `title` and `name`, `GetBuildResponse` adds
 `counts`, and `tallySnapshots` / `buildStatusFromTally` let a build's status be folded from

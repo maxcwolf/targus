@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# M0 spike: rebuild only the JS bundle with Storybook enabled and swap it into an already
+# Capture spike (2026-11-04): rebuild only the JS bundle with Storybook enabled and swap it into an already
 # built iOS simulator .app. This is the "cached native + JS rebundle" path from docs/plan.md.
 #
 # Usage (from the consumer project's root):

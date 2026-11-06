@@ -2,7 +2,16 @@
 
 ## Status
 
-accepted
+accepted, amended 2026-11-06
+
+## Amended by
+
+The decision still holds. One statement in the text below was built differently, with no ADR
+of its own:
+
+- **Pinning the device and runtime.** There is no project config file. Each build stores one
+  `device` string (`builds.device`): the simulator's name, or `--device-name` when given
+  (`packages/cli/src/commands/run.ts`). The iOS runtime is not stored.
 
 ## Date
 

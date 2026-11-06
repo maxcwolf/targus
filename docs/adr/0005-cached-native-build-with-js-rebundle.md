@@ -2,7 +2,17 @@
 
 ## Status
 
-accepted
+accepted, amended 2026-11-06
+
+## Amended by
+
+The decision still holds. On 2026-11-06 two statements in the text below were out of date:
+
+- **"The Hermes bytecode question is unresolved until the spike reports."** The capture spike
+  reported on 2026-11-04 (docs/capture-spike.md), and the Decision section records the answer: both
+  a plain JS bundle and a `hermesc` bundle work.
+- **The the pilot app `visual_ios` job** is not built yet (plan.md section 8). The steps in the Decision
+  describe the planned job.
 
 ## Date
 
@@ -27,7 +37,7 @@ JS per run. In the the pilot app `visual_ios` job:
    `EXPO_PUBLIC_TARGUS` set, and `main.jsbundle` and `assets/` are copied into the cached app.
 4. `targus run --app <path>` captures; the CLI takes an explicit app path rather than guessing.
 
-Confirmed by the M0 spike (docs/spike-m0.md): Hermes accepts a plain JS bundle in a release
+Confirmed by the capture spike (docs/capture-spike.md): Hermes accepts a plain JS bundle in a release
 app, and a `hermesc`-compiled bundle works too. Both reproduced the Xcode-built baseline pixel
 for pixel over a 15-story sample. The swap keeps the `hermesc` step (11 s) so CI loads the same
 bytecode form production does; it is optional, not required. The bundling step must run with
@@ -39,7 +49,7 @@ exactly the env (`APP_VARIANT` and friends) the native build used.
 
 - Native rebuilds happen only when the fingerprint changes. Expected cost per PR after the
   first cached build is about 1 to 2 min for the JS bundle plus 3 to 5 min of capture.
-- From docs/spike-m0.md: the pilot app's Xcode "Bundle React Native code and images" phase wraps
+- From docs/capture-spike.md: the pilot app's Xcode "Bundle React Native code and images" phase wraps
   bundling in `datadog-ci`, which fails without `DATADOG_API_KEY`. This path calls
   `expo export:embed` directly and never runs that phase for PR builds. Only the
   fingerprint-miss build touches it, through `eas build --local` with CI's secrets as today.
@@ -48,7 +58,7 @@ exactly the env (`APP_VARIANT` and friends) the native build used.
 
 - The bundle swap is a custom step that must track Expo's embed output layout.
 - The Hermes bytecode question is unresolved until the spike reports.
-- Per docs/spike-m0.md, bundling rewrites `.rnstorybook/storybook.requires.ts` unformatted, so
+- Per docs/capture-spike.md, bundling rewrites `.rnstorybook/storybook.requires.ts` unformatted, so
   the job must run `prettier --write` on it or ignore it to keep the tree clean.
 
 ## Alternatives considered

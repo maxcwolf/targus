@@ -52,7 +52,7 @@ owned by a personal account (ADR 0012).
 ## 4. How it works end to end
 
 ```
-Consumer's CI macOS job (the pilot app: not built, M4)      targus service (Cloudflare)
+Consumer's CI macOS job (the pilot app: not built yet)      targus service (Cloudflare)
 ───────────────────────────────                      ───────────────────────────
 1. fingerprint ─► restore cached .app
    (miss: eas build --local, save cache)
@@ -78,7 +78,7 @@ Merge to main ─► main build ─► changes with a matching PR approval auto-
                               ─► main build becomes the next baseline
 ```
 
-Steps 1 and 2 belong to the consumer's CI (section 8). They were proven by hand in the M0
+Steps 1 and 2 belong to the consumer's CI (section 8). They were proven by hand in the capture
 spike (`spike/rebundle.sh`); targus does not ship them.
 
 ### Why diffing happens on the CI runner, not the server
@@ -137,14 +137,14 @@ Commands (built; `packages/cli/README.md` has every flag):
 
 Internals:
 
-- `DeviceDriver` port: `boot`, `install(appPath)`, `launch(bundleId, env)`, `setStatusBar`,
-  `screenshot`, `shutdown`. One implementation in v1, `SimctlDriver`. An `AdbDriver` lands with
+- `DeviceDriver` port: `boot`, `install(appPath)`, `launch(bundleId, env)`,
+  `isAppRunning(bundleId)`, `setStatusBar`, `screenshot`, `shutdown`. One implementation in v1, `SimctlDriver`. An `AdbDriver` lands with
   Android.
 - `StorybookChannel` port, implemented by `WsStorybookChannel`: a WebSocket server speaking
   Storybook's channel protocol. Storybook RN 10's app connects to it when `enableWebsockets` is
   on. The CLI emits `setCurrentStory` and waits for `storyRendered` or `storyUnchanged`; it
-  asks for the index with `RN_GET_INDEX`. This was proven in the M0 spike
-  ([spike-m0.md](spike-m0.md)), and the deep-link fallback is no longer planned.
+  asks for the index with `RN_GET_INDEX`. This was proven in the capture spike
+  ([capture-spike.md](capture-spike.md)), and the deep-link fallback is no longer planned.
   `storyRendered` fires on React commit, not on paint, so the settle delay below is
   load-bearing.
 - Settle logic (built): after `storyRendered`, wait `--settle` (default 300 ms) and screenshot.
@@ -171,7 +171,7 @@ Internals:
 ### 5.2 API (`apps/api`)
 
 Hono on Workers. Every body and response is a zod contract from `@targus/core`. The route table
-below is the built one; `apps/api/README.md` has the full table with status codes.
+below is the built one; `apps/api/README.md` has the full table.
 
 | Route | Auth | Purpose |
 | --- | --- | --- |
@@ -195,8 +195,9 @@ GitHub integration uses one GitHub App (ADR 0011):
   `sessions` row. A reviewer may read and review a project when GitHub says they are a member
   of the project's org, asked through the App installation and cached per user and org for one
   hour in `org_memberships`. An org row without an installation can be reviewed by nobody.
-- **Check runs** (built): an installation access token is minted per request from the App's
-  private key, which is stored as a Worker secret. The check run is named `targus/ios`. Its
+- **Check runs** (built): an installation access token is minted from the App's private key,
+  which is stored as a Worker secret, and cached in memory per installation until shortly
+  before it expires. The check run is named `targus/ios`. Its
   states: `in_progress` with "N changes awaiting review" while pending; `completed/success` when
   no change is pending or denied; `completed/failure` when any change is denied or a story
   errored. Without the App secrets the client is a no-op.
@@ -255,7 +256,7 @@ approvals        id, project_id, story_id, variant, from_hash, to_hash, approved
 images           hash, size_bytes, width, height, created_at, last_referenced_at
 project_images   project_id, hash, created_at        (who uploaded what; ADR 0014)
 users            id, github_id, login, avatar_url, created_at, last_login_at
-sessions         id, user_id, created_at, expires_at
+sessions         id_hash, user_id, created_at, expires_at   (SHA-256 of the session id; ADR 0015)
 org_memberships  user_id, org_id, member, checked_at  (one-hour membership cache; ADR 0011)
 ```
 
@@ -320,7 +321,7 @@ Native rendering has more noise than react-native-web. Mitigations, cheapest fir
 
 ## 8. the pilot app integration (CircleCI)
 
-**Not built** (M4). Planned job `visual_ios`, run on PRs and on `main`:
+**Not built** (the the pilot app rollout, section 11). Planned job `visual_ios`, run on PRs and on `main`:
 
 1. `checkout`, `js-dependencies`, `setup-env` (reuse existing commands).
 2. `npx expo-updates fingerprint:generate --platform ios` → cache key
@@ -346,7 +347,7 @@ listed is not built.
 The `@targus/*` packages are not published yet (engineering-standards.md 6.5), so the pilot app would
 consume them from a build of this repository until a release workflow exists.
 
-Measured in the M0 spike: the pilot app's native index has 354 stories. The capture loop takes about 7
+Measured in the capture spike: the pilot app's native index has 354 stories. The capture loop takes about 7
 minutes at a median of 1.0 s per story, and the rebundle step about 30 s. With boot, install and
 upload, expect roughly 10 minutes per PR after the first cached native build. The native app is
 rebuilt only when the fingerprint changes. The bundling step must use the same env as the
@@ -390,16 +391,16 @@ its section 6.
 
 ## 11. Milestones
 
-**M0 — Spike. Done 2026-11-04, go.** Results and design changes in
-[spike-m0.md](spike-m0.md): 354 stories captured at ~1.0 s median, bundle swap works with and
-without `hermesc`, channel driving confirmed, error reporting needs the targus decorator.
+**Capture spike. Done 2026-11-04, go.** Results and design changes in
+[capture-spike.md](capture-spike.md): 354 stories captured at ~1.0 s median, bundle swap works
+with and without `hermesc`, channel driving confirmed, error reporting needs the targus decorator.
 
-**M1 — Walking skeleton with guards. Done 2026-11-04, except the GitHub-side guards.** Done:
+**Walking skeleton with guards. Done 2026-11-04, except the GitHub-side guards.** Done:
 `yarn check` and `yarn e2e` green, core domain rules with property tests, `targus capture` and
-`targus compare` ported from the spike (354 the pilot app stories in 345 s), the `withTargus`
+`targus compare` ported from the capture spike (354 the pilot app stories in 345 s), the `withTargus`
 error-reporting decorator, and ADR 0010 on package builds. Not done: branch protection, a
 changeset check, the capture e2e workflow, nightly jobs and a release workflow
-(engineering-standards.md sections 6.2 to 6.8). The migration drift test landed in M2.
+(engineering-standards.md sections 6.2 to 6.8). The migration drift test landed with the service.
 
 Original scope: the monorepo scaffold with every guard from
 [engineering-standards.md](engineering-standards.md) live before any feature code: `yarn check`,
@@ -408,7 +409,7 @@ template, Changesets, one trivial test per package, and the e2e harness running 
 Then `packages/core` and `packages/cli` with `capture` and `compare` producing a local HTML
 report. Already useful without a backend.
 
-**M2 — Service. Built 2026-11-04, deployed 2026-11-05.** `apps/api` has:
+**Service. Built 2026-11-04, deployed 2026-11-05.** `apps/api` has:
 
 - the admin, builds, images and results routes over D1 and R2, with project-token auth;
 - server-side classification with `compareSnapshot` (ADR 0016);
@@ -419,7 +420,7 @@ report. Already useful without a backend.
 results; an e2e runs the built CLI against the local Worker. It is deployed to
 <https://targus.targus-api.workers.dev> (D1 `targus`, R2 `targus-images`). The GitHub App
 `targus-review` is registered with its secrets set; it still has to be installed on the
-example-org org (M4).
+example-org org (the the pilot app rollout, below).
 
 Since then: atomic results and review writes (ADR 0013), image access by upload record
 (ADR 0014), and refusing shallow clones in `targus run`.
@@ -427,7 +428,7 @@ Since then: atomic results and review writes (ADR 0013), image access by upload 
 Original scope: `apps/api` with builds, images, baseline resolution, project tokens, D1
 migrations, Wrangler deploy. `targus run` end to end with the check run created.
 
-**M3 — Review app. Built 2026-11-04, deployed 2026-11-05.** Built:
+**Review app. Built 2026-11-04, deployed 2026-11-05.** Built:
 
 - GitHub login through the App's OAuth flow, with signed cookie sessions and org-membership
   authorization (ADR 0011), extended to personal accounts (ADR 0012);
@@ -438,12 +439,12 @@ migrations, Wrangler deploy. `targus run` end to end with the check run created.
 
 `e2e/review.spec.ts` drives the whole flow in Chromium against the local Worker, with a
 stubbed GitHub (`e2e/support/github-stub.ts`). GitHub login is configured against the
-`targus-review` App. Remaining: installing the App on example-org (M4).
+`targus-review` App. Remaining: installing the App on example-org (the the pilot app rollout, below).
 
 Original scope: GitHub login, build list, snapshot viewer, approve/deny, approve-all, check-run
 updates.
 
-**M4 — the pilot app rollout. Not started.** CircleCI job, EAS profile, decorators and config
+**the pilot app rollout. Not started.** CircleCI job, EAS profile, decorators and config
 (section 8). It needs published packages or another way for the pilot app to install the CLI, and the
 App installed on example-org. Run it informational for a week, then make the check required.
 Before the pilot app, the proof of concept on a personal-account repository (ADR 0012) exercises the
@@ -451,8 +452,7 @@ same path.
 
 **v1.1 candidates.** GitHub Action wrapper and CircleCI orb, the `installation.created` webhook
 for self-serve org onboarding, Android via `AdbDriver`, variants (font scale, dark mode), the
-retention job, Slack summary, per-story `parameters.targus` in the CLI, device-partitioned
-baselines, and review by repository permission for personal accounts (ADR 0012).
+retention job, Slack summary, device-partitioned baselines, and review by repository permission for personal accounts (ADR 0012).
 
 ## 12. Open assumptions
 

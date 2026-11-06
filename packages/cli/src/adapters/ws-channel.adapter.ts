@@ -56,7 +56,7 @@ function notConnected(port: number, timeoutMs: number): TargusError {
 /**
  * `StorybookChannel` adapter: hosts the websocket server Storybook RN's app connects to when
  * `enableWebsockets` is on, and speaks its `{ type, args }` protocol directly. It does not load
- * `@storybook/react-native`; the protocol is small and the spike pinned it down.
+ * `@storybook/react-native`; the protocol is small and the capture spike pinned it down.
  */
 export class WsStorybookChannel implements StorybookChannel {
   private readonly clients = new Set<WebSocket>();

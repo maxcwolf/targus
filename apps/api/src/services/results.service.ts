@@ -63,7 +63,7 @@ function currentOf(result: StoryResult): CompareSnapshotInput['current'] {
 }
 
 /**
- * One stored snapshot per result. The state and review are the server's (ADR 0003 trusts the
+ * One stored snapshot per result. The state and review are the server's (ADR 0016 trusts the
  * CLI's diff ratio, not its classification), so a disagreeing CLI `state` is overwritten.
  */
 function recordFor(

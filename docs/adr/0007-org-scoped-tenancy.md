@@ -28,6 +28,11 @@ org's first project by `POST /api/admin/projects`, not seeded separately. And pr
 are created through that admin API call, not by a `targus admin create-project` command
 (plan.md section 12).
 
+Since PR #24 (commit 40e16aa, 2026-11-06, no ADR of its own), the API does not mint an
+installation access token per request: `apps/api/src/adapters/installation-token-cache.ts`
+keeps one per installation in memory for the life of the isolate and reuses it until five
+minutes before it expires.
+
 ## Date
 
 2026-11-04

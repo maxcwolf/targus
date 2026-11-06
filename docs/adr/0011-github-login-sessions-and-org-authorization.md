@@ -2,7 +2,28 @@
 
 ## Status
 
-accepted
+accepted, amended by [0015](0015-same-origin-session-writes-and-hashed-session-ids.md), PR #10
+and PR #24
+
+## Amended by
+
+The login, session and org-membership rules still hold. These parts of the text below were
+overtaken:
+
+- **The CSRF defence** ([ADR 0015](0015-same-origin-session-writes-and-hashed-session-ids.md)).
+  `SameSite=Lax` plus JSON bodies is no longer the whole defence: a cookie-authenticated write
+  must also be same-origin (`assertSameOrigin`), and the `sessions` table stores the SHA-256 of
+  the session id, not the id.
+- **Which images a reviewer may read** (2026-11-06, by code with no ADR of its own: PR #10,
+  commit 44c9bc8; PR #24, commit 40e16aa). The read is no longer checked through snapshot
+  hashes. A session may read an image when a project of an org the reviewer can access uploaded
+  it, that is, has a `project_images` row for the hash (ADR 0014). `ImageRepository.uploaderOrgs(hash, userId)` lists, in one query,
+  every org with a project that uploaded the hash, each with the reviewer's cached membership,
+  and `canAccessOrg` (`apps/api/src/services/access.service.ts`) decides each org with the
+  membership rule above, orgs with a cached answer first. Since PR #24 an org whose membership
+  cannot be checked grants nothing and the next uploader org is tried
+  (`reviewerMayRead` in `apps/api/src/services/image.service.ts`). A hash the reviewer may not
+  read still answers 404.
 
 ## Date
 

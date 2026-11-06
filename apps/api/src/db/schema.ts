@@ -9,7 +9,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 
-// D1 schema (plan.md section 6). Every table hangs off org_id through projects (ADR 0007), and
+// D1 schema (plan.md section 6). Tenant data hangs off org_id through projects (ADR 0007), and
 // every foreign key and every lookup the repositories run is indexed to keep D1 row reads low
 // (plan.md section 9).
 //

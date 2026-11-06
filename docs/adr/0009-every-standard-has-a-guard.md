@@ -2,7 +2,33 @@
 
 ## Status
 
-accepted
+accepted, amended 2026-11-06
+
+## Amended by
+
+The decision still holds: every rule names its guard, and `yarn check` is the one command.
+On 2026-11-06 several statements in the text below did not match the repository. They were
+never built or were built differently, not changed by a later ADR.
+[docs/engineering-standards.md](../engineering-standards.md) sections 4 and 6 describe what
+exists and what is planned.
+
+- **Item 1, the hooks.** Pre-commit does not run `yarn check`. `lefthook.yml` runs Prettier and
+  ESLint on the staged files before a commit, commitlint on the message, and `yarn check`
+  before a push. CI runs `yarn check`, `gitleaks` and the PR title lint
+  (`.github/workflows/check.yml`) and `yarn e2e` (`.github/workflows/e2e-review.yml`).
+- **Item 2, branch protection.** Not built. `main` has no branch protection and no rulesets
+  (the GitHub API answers "Branch not protected"), so no job, approval or code-owner review is
+  required to merge, and there is no changeset check in CI. Linear history holds because the
+  repository allows squash merges only ([ADR 0018](0018-squash-merges-only.md)).
+- **Item 3, CODEOWNERS.** `.github/CODEOWNERS` also covers `lefthook.yml`, `knip.json` and
+  `.github/`. Without branch protection it requests the owner's review but does not require
+  it, so a guard change is visible in review, not blocked.
+- **Item 5, "an agent that ignores it cannot merge".** Not true while CI does not block a merge
+  (item 2).
+- **The nightly drift jobs.** Not built: there is no nightly workflow and no mutation testing,
+  and knip runs only inside `yarn check`. `renovate.json` is committed with a weekly schedule;
+  whether the Renovate app is installed is not known, and it has opened no pull request. The
+  PR template checklist exists (`.github/PULL_REQUEST_TEMPLATE.md`).
 
 ## Date
 
@@ -35,7 +61,7 @@ explains why; tooling enforces what. The enforcement rests on:
    merge.
 
 A PR template review checklist and nightly drift jobs (mutation score on `core`, Renovate, knip)
-complete the set. All guards go live in M1, before any feature code.
+complete the set. All guards go live with the walking skeleton, before any feature code.
 
 ## Consequences
 
@@ -46,7 +72,7 @@ complete the set. All guards go live in M1, before any feature code.
 
 ### Negative
 
-- Upfront setup cost in M1 before any feature work.
+- Upfront setup cost before any feature work.
 - Known gaps rely on humans: ADR discipline (a PR template checkbox, no automation), naming
   quality, and whether a test asserts behaviour rather than implementation.
 

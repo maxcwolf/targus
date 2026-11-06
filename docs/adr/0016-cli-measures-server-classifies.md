@@ -12,7 +12,7 @@ accepted
 
 ADR 0003 put pixel diffing on the CI runner. Its decision text also had the CLI "submit
 per-story statuses and diff stats" to `POST /api/builds/:id/results`, which reads as if the
-server stores whatever state the CLI computed. That is not what was built in M2, and no ADR
+server stores whatever state the CLI computed. That is not what was built in the API, and no ADR
 records what was built.
 
 Two things make the CLI's classification the wrong one to store:

@@ -2,7 +2,23 @@
 
 ## Status
 
-accepted
+accepted, amended by PR #10 and PR #24
+
+## Amended by
+
+The upload rule for project tokens still holds. One part of the text below was overtaken, by a
+code change that has no ADR of its own:
+
+- **The reviewer rule** (2026-11-06, PR #10, commit 44c9bc8). A reviewer's read no longer goes
+  through snapshots. The upload record now grants reviewers too: a session may read an image when
+  a project of an org the reviewer can access has a `project_images` row for the hash.
+  `ImageRepository.uploaderOrgs(hash, userId)` finds those orgs in one query, with the
+  reviewer's cached membership of each, and `canAccessOrg`
+  (`apps/api/src/services/access.service.ts`) decides each one. Since PR #24 (commit 40e16aa) an
+  org whose membership cannot be checked grants nothing and the reviewer's other uploader orgs
+  are tried (`apps/api/src/services/image.service.ts`). So the sentence "A reviewer's access is
+  unchanged" and the alternative "Derive access from snapshots ... This is the reviewer rule" no
+  longer describe the code, and the rule also uses `ImageRepository.uploaderOrgs`.
 
 ## Date
 

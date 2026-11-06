@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ImageHash, SnapshotState } from './snapshot.ts';
 
 /**
- * One story's outcome as computed by the CLI on the CI runner (ADR 0003). A story whose render
+ * One story's outcome as measured by the CLI on the CI runner (ADR 0016). A story whose render
  * errored has state `error`, a non-empty `error` and no image (ADR 0004, rule 6); every other
  * state has `error` null.
  */

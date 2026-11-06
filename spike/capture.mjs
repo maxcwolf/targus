@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// M0 spike: drive a React Native on-device Storybook running in an iOS simulator and
+// Capture spike (2026-11-04): drive a React Native on-device Storybook running in an iOS simulator and
 // screenshot every story.
 //
 // Run from the consumer project's root (the Storybook index builder reads process.cwd()):

@@ -32,7 +32,7 @@ apps/api               createApp(deps): routes -> services -> repositories/ + st
 apps/web               React review UI: features/ -> api-client/ (components/ are presentational)
 e2e/                   Playwright suites against a local Worker
 scripts/               the yarn new:* generators and their tests
-spike/                 the M0 spike, kept as written (docs/spike-m0.md)
+spike/                 the capture spike of 2026-11-04, kept as written (docs/capture-spike.md)
 ```
 
 The workspaces are listed in the root `package.json` (`packages/*`, `apps/*`, `e2e`).
@@ -365,7 +365,7 @@ targus/
   .github/
     workflows/check.yml  e2e-review.yml
     PULL_REQUEST_TEMPLATE.md  CODEOWNERS
-  docs/  plan.md  engineering-standards.md  spike-m0.md  adr/
+  docs/  plan.md  engineering-standards.md  capture-spike.md  adr/
   packages/core  packages/cli  packages/react-native
   apps/api  apps/web
   e2e/  scripts/  spike/
