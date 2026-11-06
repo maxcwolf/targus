@@ -118,6 +118,7 @@ Hono on Workers. Routes (all JSON, zod-validated at the edge):
 | `GET /api/images/:hash` | session | Streams from R2 after an auth check |
 | `GET /api/auth/github`, `/api/auth/github/callback`, `POST /api/auth/logout` | – | GitHub OAuth via the GitHub App (ADR 0011) |
 | `GET /api/me`, `GET /api/projects`, `GET /api/projects/:id/builds` | session | Review data for the signed-in user |
+| `GET /api/projects/:id/library` | session | Every story of the newest signed-off build on the default branch, with its accepted image |
 | `POST /webhooks/github` | signature | `installation.created` creates an org row (v1.1; v1 seeds manually) |
 
 GitHub integration uses one GitHub App ("targus"):
@@ -132,6 +133,7 @@ Mirror Chromatic's review UX, trimmed to what v1 stores:
 - Project page: builds list with status chips (Pending review, Accepted, Denied, Passed, Failed capture), branch, PR link, commit, counts of changed/new/removed/unstable.
 - Build page: changes grouped by component title, filters for Unreviewed / Approved / Denied / New / Removed, "Verify changes" (primary; opens the first unreviewed change) and "Batch" (approve all, with confirmation).
 - Snapshot page: tabs for Side-by-side, Diff overlay (pixelmatch output tinted), Slider, and Baseline/Current toggle; zoom; Approve and Deny buttons; `j`/`k` to move between changes, `a` to approve.
+- Library page: every story of the newest signed-off build on the default branch, as a searchable grid grouped by component and one story at a time (`j`/`k`). It stands in for Chromatic's published Storybook, which an on-device Storybook cannot provide.
 - Header shows the GitHub user and org.
 
 ### 5.4 Core (`packages/core`)

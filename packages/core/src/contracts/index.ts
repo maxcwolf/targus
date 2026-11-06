@@ -18,6 +18,7 @@ export {
   CreateBuildResponse,
 } from './create-build.js';
 export { HealthResponse } from './health.js';
+export { GetLibraryResponse, LibraryStory } from './library.js';
 export {
   ApproveAllResponse,
   ListProjectsResponse,

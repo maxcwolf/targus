@@ -1,4 +1,4 @@
-import { ListBuildsResponse, ListProjectsResponse } from '@targus/core';
+import { GetLibraryResponse, ListBuildsResponse, ListProjectsResponse } from '@targus/core';
 
 import { getJson } from './http.js';
 
@@ -11,4 +11,9 @@ export function listProjects(): Promise<ListProjectsResponse> {
 export function listBuilds(projectId: string, limit = 50): Promise<ListBuildsResponse> {
   const path = `/api/projects/${encodeURIComponent(projectId)}/builds?limit=${limit}`;
   return getJson(path, ListBuildsResponse);
+}
+
+/** `GET /api/projects/:id/library`: every story of the accepted default-branch build. */
+export function getLibrary(projectId: string): Promise<GetLibraryResponse> {
+  return getJson(`/api/projects/${encodeURIComponent(projectId)}/library`, GetLibraryResponse);
 }

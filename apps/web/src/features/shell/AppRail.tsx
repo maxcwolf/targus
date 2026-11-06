@@ -2,30 +2,50 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import type { ProjectSummary } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { GridIcon, ListIcon } from '../../components/icons.js';
+import { GridIcon, LibraryIcon, ListIcon } from '../../components/icons.js';
 
-/** The thin icon rail on the left: Projects, and the current project's Builds. */
+/** The rail section the current path belongs to. Build and snapshot pages count as Builds. */
+function railSection(pathname: string): 'projects' | 'builds' | 'library' {
+  if (pathname === '/') return 'projects';
+  return pathname.endsWith('/library') ? 'library' : 'builds';
+}
+
+/** The thin icon rail on the left: Projects, and the current project's Builds and Library. */
 export function AppRail({
   project,
 }: {
   readonly project: ProjectSummary | undefined;
 }): ReactElement {
-  const onHome = useRouterState({ select: (state) => state.location.pathname === '/' });
+  const section = useRouterState({ select: (state) => railSection(state.location.pathname) });
+  const itemClass = (name: typeof section): string =>
+    section === name ? 'rail-item active' : 'rail-item';
   return (
     <nav className="rail" aria-label="App">
-      <Link to="/" className={onHome ? 'rail-item active' : 'rail-item'}>
+      <Link to="/" className={itemClass('projects')}>
         <GridIcon />
         <span className="rail-label">Projects</span>
       </Link>
       {project ? (
-        <Link
-          to="/projects/$projectId"
-          params={{ projectId: project.id }}
-          className={onHome ? 'rail-item' : 'rail-item active'}
-        >
-          <ListIcon />
-          <span className="rail-label">Builds</span>
-        </Link>
+        <>
+          {/* Exact, or the router would also mark it active on the library below it. */}
+          <Link
+            to="/projects/$projectId"
+            params={{ projectId: project.id }}
+            activeOptions={{ exact: true }}
+            className={itemClass('builds')}
+          >
+            <ListIcon />
+            <span className="rail-label">Builds</span>
+          </Link>
+          <Link
+            to="/projects/$projectId/library"
+            params={{ projectId: project.id }}
+            className={itemClass('library')}
+          >
+            <LibraryIcon />
+            <span className="rail-label">Library</span>
+          </Link>
+        </>
       ) : null}
     </nav>
   );

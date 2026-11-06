@@ -91,12 +91,12 @@ export function filterTabs(
 }
 
 /** Storybook's component title, else the part of the story id before `--`. */
-export function componentTitle(snapshot: Snapshot): string {
+export function componentTitle(snapshot: Pick<Snapshot, 'title' | 'storyId'>): string {
   return snapshot.title ?? snapshot.storyId.split('--')[0] ?? snapshot.storyId;
 }
 
 /** Storybook's story name, else the story id. */
-export function storyName(snapshot: Snapshot): string {
+export function storyName(snapshot: Pick<Snapshot, 'name' | 'storyId'>): string {
   return snapshot.name ?? snapshot.storyId;
 }
 

@@ -172,6 +172,22 @@ describe('D1BuildRepository snapshots (local D1)', () => {
   });
 });
 
+describe('D1BuildRepository.findLatestBaselineOnBranch', () => {
+  it('finds the newest signed-off build of the branch within the project', async () => {
+    const projectId = await seedProject('library-a');
+    const otherId = await seedProject('library-b');
+    await repository.create(newBuild('lib-1', projectId, { status: 'passed' }));
+    await repository.create(newBuild('lib-2', projectId, { status: 'accepted' }));
+    await repository.create(newBuild('lib-3', projectId, { status: 'pending' }));
+    await repository.create(newBuild('lib-4', projectId, { status: 'accepted', branch: 'dev' }));
+    await repository.create(newBuild('lib-5', otherId, { status: 'failed' }));
+
+    expect((await repository.findLatestBaselineOnBranch(projectId, 'main'))?.id).toBe('lib-2');
+    expect((await repository.findLatestBaselineOnBranch(projectId, 'dev'))?.id).toBe('lib-4');
+    expect(await repository.findLatestBaselineOnBranch(otherId, 'main')).toBeNull();
+  });
+});
+
 describe('D1BuildRepository.findLatestSuccessfulForShas agrees with resolveBaseline', () => {
   it.each(baselineResolutionCases.map((testCase, index) => ({ ...testCase, index })))(
     '$name',

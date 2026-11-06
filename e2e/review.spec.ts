@@ -74,6 +74,18 @@ async function signInOn(page: Page, buildPath: string): Promise<void> {
   await expect(page).toHaveURL(new RegExp(`${buildPath.replaceAll('/', '\\/')}$`));
 }
 
+/** The accepted main build is what the library shows: its three stories, images included. */
+async function expectLibraryOfThreeStories(page: Page): Promise<void> {
+  const rail = page.getByRole('navigation', { name: 'App' });
+  await rail.getByRole('link', { name: 'Library' }).click();
+  await expect(page.locator('.story-card')).toHaveCount(3);
+  await page.getByRole('link', { name: 'Fixture/Solid : Red' }).click();
+  const capture = page.getByRole('img', { name: 'Fixture/Solid : Red' });
+  await expect
+    .poll(() => capture.evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBeGreaterThan(0);
+}
+
 let dir: string;
 
 test.beforeEach(async () => {
@@ -109,6 +121,8 @@ test('a reviewer approves a baseline, then denies and approves a changed story',
     method: 'PATCH',
     body: { status: 'completed', conclusion: 'success' },
   });
+
+  await expectLibraryOfThreeStories(page);
 
   // The accepted main build is the baseline of the PR build: one changed, two unchanged.
   const prBuildId = await publishPrBuild(published, dir);

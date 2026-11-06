@@ -31,3 +31,4 @@ export {
   type ApprovalPair,
   type CompareSnapshotInput,
 } from './snapshots/compare-snapshot.js';
+export { libraryStories } from './snapshots/library-stories.js';

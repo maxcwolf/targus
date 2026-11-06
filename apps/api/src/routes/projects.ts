@@ -17,4 +17,7 @@ export const projectsRoute = new Hono<AppEnv>()
     if (!query.success) throw new TargusError('bad_request', 'limit must be an integer 1..100');
     const { services, reviewer } = c.var;
     return c.json(await services.listBuilds(reviewer, c.req.param('id'), query.data.limit));
-  });
+  })
+  .get('/:id/library', sessionAuth, async (c) =>
+    c.json(await c.var.services.getLibrary(c.var.reviewer, c.req.param('id'))),
+  );

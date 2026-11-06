@@ -60,6 +60,8 @@ export interface ApiBuildRepository extends BuildRepository {
   findAnyById(buildId: string): Promise<BuildRecord | null>;
   /** The newest `limit` builds of a project, by number descending. */
   listForProject(projectId: string, limit: number): Promise<BuildRecord[]>;
+  /** The newest signed-off build (`baselineBuildStatuses`) of a project on `branch`. */
+  findLatestBaselineOnBranch(projectId: string, branch: string): Promise<BuildRecord | null>;
   complete(buildId: string, completion: BuildCompletion): Promise<void>;
   updateReview(buildId: string, update: BuildReviewUpdate): Promise<void>;
   listSnapshots(buildId: string): Promise<SnapshotRecord[]>;
@@ -180,6 +182,23 @@ export class D1BuildRepository implements ApiBuildRepository {
       .orderBy(desc(builds.number))
       .limit(limit);
     return rows.map(toBuildRecord);
+  }
+
+  async findLatestBaselineOnBranch(projectId: string, branch: string): Promise<BuildRecord | null> {
+    const row = await this.db
+      .select()
+      .from(builds)
+      .where(
+        and(
+          eq(builds.projectId, projectId),
+          eq(builds.branch, branch),
+          inArray(builds.status, [...baselineBuildStatuses]),
+        ),
+      )
+      .orderBy(desc(builds.number))
+      .limit(1)
+      .get();
+    return row === undefined ? null : toBuildRecord(row);
   }
 
   /**

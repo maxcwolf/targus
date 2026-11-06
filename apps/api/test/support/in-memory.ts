@@ -1,4 +1,5 @@
 import {
+  baselineBuildStatuses,
   createFakeClock,
   createFakeIdGenerator,
   emptyTally,
@@ -93,6 +94,33 @@ function snapshotReviews(
   };
 }
 
+/** The project-wide build reads of the builds double. */
+function buildQueries(
+  builds: readonly BuildRecord[],
+): Pick<
+  ApiBuildRepository,
+  'listForProject' | 'findLatestBaselineOnBranch' | 'findLatestSuccessfulForShas'
+> {
+  const newestFirst = (projectId: string): BuildRecord[] =>
+    builds.filter((b) => b.projectId === projectId).sort((a, b) => b.number - a.number);
+  return {
+    listForProject: (projectId, limit) => Promise.resolve(newestFirst(projectId).slice(0, limit)),
+    findLatestBaselineOnBranch: (projectId, branch) =>
+      Promise.resolve(
+        newestFirst(projectId)
+          .filter((b) => b.branch === branch)
+          .find((b) => baselineBuildStatuses.some((status) => status === b.status)) ?? null,
+      ),
+    findLatestSuccessfulForShas: (projectId, shas) =>
+      Promise.resolve(
+        resolveBaseline(
+          shas,
+          builds.filter((b) => b.projectId === projectId),
+        ),
+      ),
+  };
+}
+
 export function createInMemoryBuilds(): InMemoryBuilds {
   const builds: BuildRecord[] = [];
   const snapshots = new Map<string, SnapshotRecord[]>();
@@ -115,20 +143,7 @@ export function createInMemoryBuilds(): InMemoryBuilds {
     },
     findById: (projectId, buildId) => find((b) => b.projectId === projectId && b.id === buildId),
     findAnyById: (buildId) => find((b) => b.id === buildId),
-    listForProject: (projectId, limit) =>
-      Promise.resolve(
-        builds
-          .filter((b) => b.projectId === projectId)
-          .sort((a, b) => b.number - a.number)
-          .slice(0, limit),
-      ),
-    findLatestSuccessfulForShas: (projectId, shas) =>
-      Promise.resolve(
-        resolveBaseline(
-          shas,
-          builds.filter((b) => b.projectId === projectId),
-        ),
-      ),
+    ...buildQueries(builds),
     complete: (buildId, { status, tally, completedAt, checkRunId }) =>
       patch(buildId, { status, tally, completedAt: completedAt.toISOString(), checkRunId }),
     updateReview: (buildId, { status, tally }) => patch(buildId, { status, tally }),

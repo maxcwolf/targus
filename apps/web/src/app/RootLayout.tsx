@@ -36,14 +36,16 @@ function TopBar({
   );
 }
 
+const wideRoutes = ['/builds/$buildId/snapshots/$snapshotId', '/projects/$projectId/library'];
+
 /** Top bar, icon rail and the auth gate around every page. */
 export function RootLayout(): ReactElement {
   const me = useMe();
   const project = useProjectContext(me.isSuccess);
-  // The snapshot page uses the whole width for its sidebar and the tall captures.
+  // The snapshot page and the library use the whole width for their sidebar and the captures.
   const wide = useRouterState({
     select: (state) =>
-      state.matches.some((match) => match.routeId === '/builds/$buildId/snapshots/$snapshotId'),
+      state.matches.some((match) => wideRoutes.some((routeId) => routeId === match.routeId)),
   });
   return (
     <>

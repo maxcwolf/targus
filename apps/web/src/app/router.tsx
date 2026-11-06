@@ -9,6 +9,8 @@ import type { ReactElement } from 'react';
 import { BuildPage } from '../features/build/BuildPage.js';
 import { validateFilterSearch } from '../features/build/filters.js';
 import { NotFound } from '../features/errors/ErrorView.js';
+import { LibraryPage } from '../features/library/LibraryPage.js';
+import { validateLibrarySearch } from '../features/library/stories.js';
 import { BuildsPage } from '../features/projects/BuildsPage.js';
 import { ProjectsPage } from '../features/projects/ProjectsPage.js';
 import { SnapshotPage } from '../features/snapshot/SnapshotPage.js';
@@ -35,6 +37,17 @@ const projectRoute = createRoute({
   },
 });
 
+const libraryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/projects/$projectId/library',
+  validateSearch: validateLibrarySearch,
+  component: function LibraryRoute(): ReactElement {
+    const { projectId } = libraryRoute.useParams();
+    const { story } = libraryRoute.useSearch();
+    return <LibraryPage projectId={projectId} story={story} />;
+  },
+});
+
 const buildRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/builds/$buildId',
@@ -57,7 +70,13 @@ const snapshotRoute = createRoute({
   },
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, projectRoute, buildRoute, snapshotRoute]);
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  projectRoute,
+  libraryRoute,
+  buildRoute,
+  snapshotRoute,
+]);
 
 /** The app's router. Tests pass a memory history; the browser uses the default. */
 export function createAppRouter(history?: RouterHistory) {

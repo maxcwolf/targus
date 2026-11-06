@@ -1,9 +1,9 @@
-import { ListBuildsResponse, ListProjectsResponse } from '@targus/core';
+import { GetLibraryResponse, ListBuildsResponse, ListProjectsResponse } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import { call } from '../../test/support/api.js';
 import { storyResult } from '../../test/support/fixtures.js';
-import { getAsReviewer, projectWithBuild } from '../../test/support/review.js';
+import { getAsReviewer, postAsReviewer, projectWithBuild } from '../../test/support/review.js';
 import { signIn } from '../../test/support/session.js';
 
 describe('GET /api/projects', () => {
@@ -54,5 +54,29 @@ describe('GET /api/projects/:id/builds', () => {
     expect((await getAsReviewer(builds, outsider.cookie)).status).toBe(403);
     expect((await getAsReviewer('/api/projects/nope/builds', member.cookie)).status).toBe(404);
     expect((await call(builds)).status).toBe(401);
+  });
+});
+
+describe('GET /api/projects/:id/library', () => {
+  it('lists the stories of the accepted default-branch build', async () => {
+    const { project, buildId } = await projectWithBuild([storyResult('button')]);
+    const member = await signIn('octocat');
+    const outsider = await signIn('outsider');
+    const library = `/api/projects/${project.id}/library`;
+
+    const before = await getAsReviewer(library, member.cookie);
+    expect(GetLibraryResponse.parse(await before.json())).toEqual({ build: null, stories: [] });
+
+    const approved = await postAsReviewer(`/api/builds/${buildId}/approve-all`, member.cookie);
+    expect(approved.status).toBe(200);
+    const after = await getAsReviewer(library, member.cookie);
+
+    expect(after.status).toBe(200);
+    const { build, stories } = GetLibraryResponse.parse(await after.json());
+    expect(build).toMatchObject({ id: buildId, status: 'accepted' });
+    expect(stories).toMatchObject([{ storyId: 'button', variant: 'default' }]);
+    expect((await getAsReviewer(library, outsider.cookie)).status).toBe(403);
+    expect((await getAsReviewer('/api/projects/nope/library', member.cookie)).status).toBe(404);
+    expect((await call(library)).status).toBe(401);
   });
 });

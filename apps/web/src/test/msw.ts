@@ -2,6 +2,7 @@ import {
   type Build,
   buildStatus,
   type BuildWithSummary,
+  type GetLibraryResponse,
   needsReview,
   ReviewRequest,
   type Snapshot,
@@ -10,23 +11,38 @@ import {
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 
-import { initialSnapshots, mainBuild, prBuild, project, reviewer } from './fixtures.js';
+import {
+  initialLibrary,
+  initialSnapshots,
+  mainBuild,
+  prBuild,
+  project,
+  reviewer,
+} from './fixtures.js';
 
 /** An in-memory API: handlers read and write it, `resetApiState` runs after every test. */
 interface ApiState {
   signedIn: boolean;
   builds: Build[];
   snapshots: Snapshot[];
+  library: GetLibraryResponse;
   /** `METHOD /path` of every mutating request, for assertions. */
   calls: string[];
 }
 
-export const apiState: ApiState = { signedIn: true, builds: [], snapshots: [], calls: [] };
+export const apiState: ApiState = {
+  signedIn: true,
+  builds: [],
+  snapshots: [],
+  library: initialLibrary(),
+  calls: [],
+};
 
 export function resetApiState(): void {
   apiState.signedIn = true;
   apiState.builds = [prBuild, mainBuild];
   apiState.snapshots = initialSnapshots();
+  apiState.library = initialLibrary();
   apiState.calls = [];
 }
 resetApiState();
@@ -78,6 +94,10 @@ export const handlers = [
   http.get('*/api/projects/:projectId/builds', ({ params }) => {
     if (params.projectId !== project.id) return apiError(404, 'not_found', 'No project');
     return HttpResponse.json({ builds: apiState.builds.map(withSummary) });
+  }),
+  http.get('*/api/projects/:projectId/library', ({ params }) => {
+    if (params.projectId !== project.id) return apiError(404, 'not_found', 'No project');
+    return HttpResponse.json(apiState.library);
   }),
   http.get('*/api/builds/:buildId', ({ params }) => {
     const build = findBuild(params.buildId);

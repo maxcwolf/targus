@@ -1,4 +1,10 @@
-import type { Build, ProjectSummary, ReviewerUser, Snapshot } from '@targus/core';
+import type {
+  Build,
+  GetLibraryResponse,
+  ProjectSummary,
+  ReviewerUser,
+  Snapshot,
+} from '@targus/core';
 
 /** A valid sha256 hex digest made of one repeated hex digit, so tests can tell images apart. */
 export function hash(digit: string): string {
@@ -160,4 +166,33 @@ const snapshots: readonly Snapshot[] = [
 /** A fresh copy per test, since the MSW API mutates its state. */
 export function initialSnapshots(): Snapshot[] {
   return snapshots.map((snapshot) => ({ ...snapshot }));
+}
+
+/** Build #10: the accepted main build the library shows. */
+const libraryBuild: Build = {
+  ...mainBuild,
+  id: 'build-10',
+  number: 10,
+  status: 'accepted',
+  createdAt: '2026-10-30T10:00:00Z',
+};
+
+/** Four stories of three components; the last has no title, no name and a variant. */
+export function initialLibrary(): GetLibraryResponse {
+  const story = (storyId: string, title: string, name: string, digit: string) => ({
+    storyId,
+    variant: 'default',
+    title,
+    name,
+    imageHash: hash(digit),
+  });
+  return {
+    build: libraryBuild,
+    stories: [
+      story('button--primary', 'Button', 'Primary', '1'),
+      story('button--secondary', 'Button', 'Secondary', '2'),
+      story('card--default', 'Forms/Card', 'Default', '3'),
+      { storyId: 'legacy--old', variant: 'dark', title: null, name: null, imageHash: hash('4') },
+    ],
+  };
 }

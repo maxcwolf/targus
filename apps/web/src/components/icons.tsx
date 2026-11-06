@@ -41,6 +41,17 @@ export function ListIcon(): ReactElement {
   );
 }
 
+/** Three book spines: the project's library of stories. */
+export function LibraryIcon(): ReactElement {
+  return (
+    <Icon size={18}>
+      <path d="M3 2.5v11M6.5 2.5v11" />
+      <path d="M9.6 3.4l3.4 9.9" />
+      <path d="M2 13.5h12" />
+    </Icon>
+  );
+}
+
 export function ChevronLeftIcon(): ReactElement {
   return (
     <Icon>

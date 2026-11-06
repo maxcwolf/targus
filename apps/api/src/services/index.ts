@@ -5,6 +5,7 @@ import type {
   CreateProjectRequest,
   CreateProjectResponse,
   GetBuildResponse,
+  GetLibraryResponse,
   ListBuildsResponse,
   ListProjectsResponse,
   ListSnapshotsResponse,
@@ -24,6 +25,7 @@ import {
 import { createBuild, getBuild, listBuilds, listSnapshots } from './build.service.js';
 import type { ServiceDeps } from './deps.js';
 import { getImage, uploadImage } from './image.service.js';
+import { getLibrary } from './library.service.js';
 import {
   beginLogin,
   completeLogin,
@@ -52,6 +54,7 @@ export interface Services {
   createProject(request: CreateProjectRequest): Promise<CreateProjectResponse>;
   listProjects(reviewer: Reviewer): Promise<ListProjectsResponse>;
   listBuilds(reviewer: Reviewer, projectId: string, limit?: number): Promise<ListBuildsResponse>;
+  getLibrary(reviewer: Reviewer, projectId: string): Promise<GetLibraryResponse>;
   createBuild(project: Project, request: CreateBuildRequest): Promise<CreateBuildResponse>;
   getBuild(principal: Principal, buildId: string): Promise<GetBuildResponse>;
   listSnapshots(principal: Principal, buildId: string): Promise<ListSnapshotsResponse>;
@@ -82,6 +85,7 @@ export function bindServices(deps: ServiceDeps): Services {
     createProject: (request) => createProject(deps, request),
     listProjects: (reviewer) => listProjects(deps, reviewer),
     listBuilds: (reviewer, projectId, limit) => listBuilds(deps, reviewer, projectId, limit),
+    getLibrary: (reviewer, projectId) => getLibrary(deps, reviewer, projectId),
     createBuild: (project, request) => createBuild(deps, project, request),
     getBuild: (principal, buildId) => getBuild(deps, principal, buildId),
     listSnapshots: (principal, buildId) => listSnapshots(deps, principal, buildId),
