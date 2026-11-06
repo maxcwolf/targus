@@ -5,15 +5,19 @@ import { pathToFileURL } from 'node:url';
 
 import { requireKebab, runCli, toPascal, writeNewFiles } from './lib/scaffold.mjs';
 
-/** Where each port's adapters live by default (docs/engineering-standards.md section 1.2). */
+/**
+ * Each port's type as @targus/core exports it, and where its adapters live by default
+ * (docs/engineering-standards.md section 1.2). Type names are spelled out: \`GitHubClient\` is
+ * not the PascalCase of \`github-client\`.
+ */
 const layers = {
-  'device-driver': { in: 'cli', dir: 'packages/cli/src/adapters' },
-  'storybook-channel': { in: 'cli', dir: 'packages/cli/src/adapters' },
-  'image-store': { in: 'api', dir: 'apps/api/src/storage' },
-  'build-repository': { in: 'api', dir: 'apps/api/src/repositories' },
-  'github-client': { in: 'api', dir: 'apps/api/src/adapters' },
-  clock: { in: 'api', dir: 'apps/api/src/adapters' },
-  'id-generator': { in: 'api', dir: 'apps/api/src/adapters' },
+  'device-driver': { type: 'DeviceDriver', in: 'cli', dir: 'packages/cli/src/adapters' },
+  'storybook-channel': { type: 'StorybookChannel', in: 'cli', dir: 'packages/cli/src/adapters' },
+  'image-store': { type: 'ImageStore', in: 'api', dir: 'apps/api/src/storage' },
+  'build-repository': { type: 'BuildRepository', in: 'api', dir: 'apps/api/src/repositories' },
+  'github-client': { type: 'GitHubClient', in: 'api', dir: 'apps/api/src/adapters' },
+  clock: { type: 'Clock', in: 'api', dir: 'apps/api/src/adapters' },
+  'id-generator': { type: 'IdGenerator', in: 'api', dir: 'apps/api/src/adapters' },
 };
 
 /** @type {Record<string, string>} */
@@ -82,8 +86,8 @@ export function main(args, root) {
   const { port, name, target } = parseArgs(args);
   const layer = layers[port];
   const dir = target === undefined || target === layer.in ? layer.dir : adapterDirs[target];
-  const portType = toPascal(port);
-  const adapterType = toPascal(`${name}-${port}`);
+  const portType = layer.type;
+  const adapterType = `${toPascal(name)}${portType}`;
   const base = `${name}-${port}.adapter`;
   const { source, test } = templates(portType, adapterType, base);
 

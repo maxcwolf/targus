@@ -1,11 +1,14 @@
 // @ts-check
-// Runs the generators as `yarn new:*` would, in a throwaway directory.
+// Runs the generators as `yarn new:*` would: in a throwaway directory for their behaviour, and
+// in the real tree for their output, which must pass the same checks as hand-written code.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
+
+import { generateAndCheck } from './lib/check-generated.mjs';
 
 const scriptsDir = import.meta.dirname;
 /** @type {string} */
@@ -41,12 +44,19 @@ describe('yarn new:route', () => {
 
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /created apps\/api\/src\/routes\/builds\.ts/);
-    assert.match(result.stdout, /app\.route\('\/api\/builds', buildsRoute\)/);
+    assert.match(
+      result.stdout,
+      /mount it in apps\/api\/src\/app\.ts with app\.route\('\/api\/builds', buildsRoute\)/,
+    );
+    assert.match(result.stdout, /apps\/api\/src\/services\/index\.ts/);
+    assert.match(result.stdout, /apps\/api\/README\.md/);
     assert.match(
       read('apps/api/src/routes/builds.ts'),
       /export const buildsRoute = new Hono<AppEnv>\(\)/,
     );
-    assert.match(read('apps/api/src/routes/builds.test.ts'), /from '\.\/builds\.js'/);
+    const test = read('apps/api/src/routes/builds.test.ts');
+    assert.match(test, /from '\.\.\/\.\.\/test\/support\/api\.js'/);
+    assert.match(test, /call\('\/api\/builds'/);
   });
 
   it('refuses names that are not kebab-case', () => {
@@ -66,6 +76,48 @@ describe('yarn new:route', () => {
 
   it('prints usage without a name', () => {
     assert.match(run('new-route.mjs', []).stderr, /usage: yarn new:route <name>/);
+  });
+});
+
+describe('yarn new:route output', () => {
+  it('type-checks with the API config, lints and is formatted', () => {
+    const result = generateAndCheck({
+      script: 'new-route.mjs',
+      runs: [['generator-probe']],
+      tsconfig: 'apps/api/tsconfig.worker.json',
+    });
+
+    assert.equal(result.failures.join('\n'), '');
+    assert.deepEqual(result.files, [
+      'apps/api/src/routes/generator-probe.ts',
+      'apps/api/src/routes/generator-probe.test.ts',
+    ]);
+    assert.ok(result.files.every((file) => !existsSync(path.join(scriptsDir, '..', file))));
+  });
+});
+
+describe('yarn new:adapter output', () => {
+  // Every port, generated into apps/api so the check never races package-builds.test.mjs, which
+  // builds packages/cli at the same time. The template is the same text in both layers.
+  it('type-checks for every port, lints and is formatted', () => {
+    const ports = [
+      'device-driver',
+      'storybook-channel',
+      'image-store',
+      'build-repository',
+      'github-client',
+      'clock',
+      'id-generator',
+    ];
+    const result = generateAndCheck({
+      script: 'new-adapter.mjs',
+      runs: ports.map((port) => [port, 'generator-probe', '--in', 'api']),
+      tsconfig: 'apps/api/tsconfig.worker.json',
+    });
+
+    assert.equal(result.failures.join('\n'), '');
+    assert.equal(result.files.length, ports.length * 2);
+    assert.ok(result.files.every((file) => !existsSync(path.join(scriptsDir, '..', file))));
   });
 });
 
