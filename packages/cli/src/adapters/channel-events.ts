@@ -39,11 +39,25 @@ function storyErrorReport(event: ChannelEvent): TargusReport | undefined {
   return { storyId: error.data.storyId, selection: { kind: 'error', message: error.data.message } };
 }
 
+/**
+ * Storybook's channel serialises with telejson, which has no `undefined` and sends it as this
+ * string instead (an app on an older decorator sends `targus: undefined` for every story that
+ * sets no parameters). Put the value back before validating.
+ */
+const telejsonUndefined = '_undefined_';
+
+function fromTelejson(value: unknown): unknown {
+  if (value === telejsonUndefined) return undefined;
+  if (Array.isArray(value)) return value.map(fromTelejson);
+  if (typeof value !== 'object' || value === null) return value;
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, fromTelejson(item)]));
+}
+
 function parametersReport(event: ChannelEvent): TargusReport | undefined {
   if (event.type !== storyParametersEvent) return undefined;
   const payload = StoryParametersPayload.safeParse(event.args[0]);
   if (!payload.success) return undefined;
-  const parsed = parseStoryParameters(payload.data.targus);
+  const parsed = parseStoryParameters(fromTelejson(payload.data.targus));
   return {
     storyId: payload.data.storyId,
     selection: parsed.ok

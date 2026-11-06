@@ -124,14 +124,17 @@ describe('createWithTargus', () => {
     );
   });
 
-  it('renders a healthy story unchanged and reports only its parameters', async () => {
+  it('renders a healthy story unchanged and reports only its story id', async () => {
     const emit = vi.fn();
 
     const renderer = await render(createWithTargus({ emit })(Healthy, { id: 'ok' }));
 
     expect(renderer.toJSON()).toMatchObject({ type: 'Text' });
     expect(emit).toHaveBeenCalledTimes(1);
-    expect(emit).toHaveBeenCalledWith(storyParametersEvent, { storyId: 'ok', targus: undefined });
+    // No `targus` key at all: telejson would turn an undefined value into the string
+    // `_undefined_` on the wire.
+    expect(emit).toHaveBeenCalledWith(storyParametersEvent, { storyId: 'ok' });
+    expect(emit.mock.calls[0]?.[1]).not.toHaveProperty('targus');
   });
 });
 
@@ -149,7 +152,7 @@ describe('createWithTargus parameters', () => {
       [storyParametersEvent, { storyId: 'a', targus: { skip: true } }],
       [storyParametersEvent, { storyId: 'b', targus: { delay: 500 } }],
       [storyParametersEvent, { storyId: 'c', targus: { delay: -1 } }],
-      [storyParametersEvent, { storyId: 'd', targus: undefined }],
+      [storyParametersEvent, { storyId: 'd' }],
     ]);
   });
 

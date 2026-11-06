@@ -2,7 +2,10 @@
 
 ## Status
 
-accepted
+accepted, amended 2026-11-06: the first run on a device showed that Storybook's channel
+serialises with telejson, which sends `undefined` as the string `_undefined_`, so every story
+without `parameters.targus` was rejected. The decorator now leaves `targus` out of the payload
+when the story sets none, and the CLI decodes `_undefined_` before validating.
 
 ## Date
 

@@ -61,4 +61,8 @@ describe('StoryParametersPayload', () => {
     });
     expect(StoryParametersPayload.safeParse({ storyId: '' }).success).toBe(false);
   });
+
+  it('accepts a payload without a targus key, as the decorator sends for a story with none', () => {
+    expect(StoryParametersPayload.parse({ storyId: 's' })).toEqual({ storyId: 's' });
+  });
 });

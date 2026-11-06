@@ -36,7 +36,7 @@ the same change.
 | [0019](0019-web-features-meet-through-their-index.md) | Web features meet only through their index.ts | accepted |
 | [0020](0020-one-structured-log-line-per-request.md) | One structured log line per request, with a request id and no secrets | accepted |
 | [0021](0021-stop-the-capture-when-the-app-dies.md) | Stop the capture as soon as the app dies | accepted |
-| [0022](0022-story-parameters-reported-by-the-decorator.md) | The decorator reports `parameters.targus` over the channel | accepted |
+| [0022](0022-story-parameters-reported-by-the-decorator.md) | The decorator reports `parameters.targus` over the channel | accepted, amended 2026-11-06 |
 | [0023](0023-api-built-from-plain-dependencies.md) | The API is built from plain dependencies behind a thin Worker entry | accepted |
 | [0024](0024-personal-account-owner-by-github-account-id.md) | The owner of a personal account is recognised by GitHub account id | accepted |
 | [0025](0025-browser-entry-for-core.md) | A browser entry for core, so the web dev server loads no Node-only code | accepted |

@@ -202,6 +202,33 @@ describe('WsStorybookChannel parameters reports', () => {
   });
 });
 
+describe('WsStorybookChannel payloads without parameters', () => {
+  it('reads a report without a targus key, and a telejson-encoded undefined, as defaults', async () => {
+    const server = await listen();
+    const app = await connectApp(server.port);
+    const none = server.selectStory('chat--none', 1000);
+    await app.nextMessage();
+    // What the decorator sends for a story that sets no `parameters.targus`.
+    app.send('targus/storyParameters', { storyId: 'chat--none' });
+    expect(await none).toEqual({ kind: 'rendered', parameters: { delay: null, skip: false } });
+
+    const first = server.selectStory('chat--mine', 1000);
+    await app.nextMessage();
+    // What Storybook's channel sends for `{ storyId, targus: undefined }` and for a story whose
+    // `parameters.targus` is `{ delay: undefined, skip: true }`.
+    app.send('targus/storyParameters', { storyId: 'chat--mine', targus: '_undefined_' });
+    expect(await first).toEqual({ kind: 'rendered', parameters: { delay: null, skip: false } });
+
+    const second = server.selectStory('chat--other', 1000);
+    await app.nextMessage();
+    app.send('targus/storyParameters', {
+      storyId: 'chat--other',
+      targus: { delay: '_undefined_', skip: true, nested: ['_undefined_'] },
+    });
+    expect(await second).toEqual({ kind: 'rendered', parameters: { delay: null, skip: true } });
+  });
+});
+
 describe('WsStorybookChannel disconnect during the report wait', () => {
   it('never reports rendered once the app drops, and close() ends the wait', async () => {
     const graceMs = 50;

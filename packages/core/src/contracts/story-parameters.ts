@@ -20,11 +20,12 @@ export type StoryParameters = z.infer<typeof StoryParameters>;
 
 /**
  * The `targus/storyParameters` payload: the story id and its raw `parameters.targus`. The app
- * forwards the value unvalidated so the CLI, which owns the bounds, can reject it by name.
+ * forwards the value unvalidated so the CLI, which owns the bounds, can reject it by name, and
+ * leaves the key out when the story sets none (a `z.unknown()` field is still required by zod).
  */
 export const StoryParametersPayload = z.object({
   storyId: z.string().min(1),
-  targus: z.unknown(),
+  targus: z.unknown().optional(),
 });
 export type StoryParametersPayload = z.infer<typeof StoryParametersPayload>;
 

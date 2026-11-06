@@ -17,10 +17,14 @@ export const storyErrorEvent = 'targus/storyError';
  */
 export const storyParametersEvent = 'targus/storyParameters';
 
-/** The `targus/storyParameters` payload. `targus` is forwarded as the story set it. */
+/**
+ * The `targus/storyParameters` payload. `targus` is forwarded as the story set it, and left out
+ * when the story sets none: Storybook's channel serialises with telejson, which would send an
+ * `undefined` value as the string `_undefined_`.
+ */
 export interface StoryParametersReport {
   readonly storyId: string;
-  readonly targus: unknown;
+  readonly targus?: unknown;
 }
 
 /** Sends one event to the CLI over the Storybook channel. */
@@ -50,7 +54,7 @@ interface ParametersReporterProps {
  */
 function ParametersReporter({ storyId, targus, emit, children }: ParametersReporterProps) {
   useEffect(() => {
-    emit(storyParametersEvent, { storyId, targus });
+    emit(storyParametersEvent, targus === undefined ? { storyId } : { storyId, targus });
   }, [emit, storyId, targus]);
   return children;
 }
