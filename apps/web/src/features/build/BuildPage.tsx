@@ -2,7 +2,7 @@ import { useNavigate } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
 import { Skeleton } from '../../components/Skeleton.tsx';
-import { ErrorView } from '../errors/ErrorView.tsx';
+import { ErrorView } from '../errors/index.ts';
 import { BuildActions } from './BuildActions.tsx';
 import { BuildCounters } from './BuildCounters.tsx';
 import { BuildHeader } from './BuildHeader.tsx';

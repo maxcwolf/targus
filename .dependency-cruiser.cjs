@@ -101,6 +101,36 @@ module.exports = {
       to: { path: '^apps/web/src/(api-client|features)/' },
     },
     {
+      name: 'web-features-through-index',
+      comment:
+        "A feature reaches another feature only through that feature's index.ts, never into its " +
+        'files (ADR 0019). Files inside one feature import each other directly.',
+      severity: 'error',
+      from: { path: '^apps/web/src/features/([^/]+)/' },
+      to: {
+        path: '^apps/web/src/features/',
+        pathNot: ['^apps/web/src/features/$1/', '^apps/web/src/features/[^/]+/index\\.ts$'],
+      },
+    },
+    {
+      name: 'web-app-uses-feature-index',
+      comment:
+        'Outside features/ (app/, main.tsx, test/), a feature is reached only through its ' +
+        'index.ts (ADR 0019).',
+      severity: 'error',
+      from: { path: '^apps/web/src/', pathNot: '^apps/web/src/features/' },
+      to: { path: '^apps/web/src/features/', pathNot: '^apps/web/src/features/[^/]+/index\\.ts$' },
+    },
+    {
+      name: 'web-feature-index-exports-own-files',
+      comment:
+        'A feature index.ts re-exports only files of its own feature, so it never becomes a hub ' +
+        'that ties other features together (ADR 0019).',
+      severity: 'error',
+      from: { path: '^apps/web/src/features/([^/]+)/index\\.ts$' },
+      to: { path: '^apps/web/src/', pathNot: '^apps/web/src/features/$1/' },
+    },
+    {
       name: 'no-test-code-in-production',
       comment: 'Production modules never import tests or test helpers.',
       severity: 'error',

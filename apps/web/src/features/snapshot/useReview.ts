@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ListSnapshotsResponse, ReviewDecision, ReviewSnapshotResponse } from '@targus/core';
 
 import { queryKeys, reviewSnapshot } from '../../api-client/index.ts';
-import { applyBuildUpdate } from '../build/cache.ts';
+import { applyBuildUpdate } from '../build/index.ts';
 
 interface ReviewVariables {
   readonly snapshotId: string;

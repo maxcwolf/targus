@@ -1,6 +1,6 @@
 import type { LibraryStory } from '@targus/core';
 
-import { componentTitle, storyName } from '../build/filters.ts';
+import { componentTitle, storyName } from '../build/index.ts';
 
 /** The `?story=` search param of the library route. */
 export interface LibrarySearch {

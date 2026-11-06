@@ -5,7 +5,7 @@ import { type ReactElement, useMemo } from 'react';
 import { imageUrl } from '../../api-client/index.ts';
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons.tsx';
 import { SnapshotImage } from '../../components/SnapshotImage.tsx';
-import { useHotkeys } from '../snapshot/useHotkeys.ts';
+import { useHotkeys } from '../snapshot/index.ts';
 import { storyKey, storyTitle } from './stories.ts';
 
 export interface StoryCanvasProps {

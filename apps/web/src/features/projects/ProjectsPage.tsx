@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
 import { Skeleton } from '../../components/Skeleton.tsx';
-import { ErrorView } from '../errors/ErrorView.tsx';
+import { ErrorView } from '../errors/index.ts';
 import { useProjects } from './useProjects.ts';
 
 /** `/`: every project the reviewer can see, as cards. Never auto-redirects. */

@@ -8,7 +8,7 @@ import { commitUrl, formatDateTime, pullRequestUrl, shortSha } from '../../compo
 import { Skeleton } from '../../components/Skeleton.tsx';
 import { StatusChip } from '../../components/StatusChip.tsx';
 import { StatusCircle } from '../../components/StatusCircle.tsx';
-import { ErrorView, NotFound } from '../errors/ErrorView.tsx';
+import { ErrorView, NotFound } from '../errors/index.ts';
 import { BuildCounts } from './BuildCounts.tsx';
 import { LoadMoreBuilds } from './LoadMoreBuilds.tsx';
 import { useProjects } from './useProjects.ts';

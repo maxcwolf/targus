@@ -7,7 +7,7 @@ import { formatDateTime } from '../../components/format.ts';
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons.tsx';
 import { StatusCircle } from '../../components/StatusCircle.tsx';
 import { Tabs } from '../../components/Tabs.tsx';
-import { componentTitle, isReviewable, type SnapshotFilter, storyName } from '../build/filters.ts';
+import { componentTitle, isReviewable, type SnapshotFilter, storyName } from '../build/index.ts';
 import type { ViewerMode, ViewerState } from './useViewer.ts';
 
 const modes: readonly { id: ViewerMode; label: string }[] = [

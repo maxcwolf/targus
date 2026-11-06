@@ -66,7 +66,8 @@ depends on no other workspace and on no I/O library; nothing depends on an app.
   every API request through `TargusApiClient` (`api-client.adapter.ts`). Both apply a timeout
   when the caller gives none, and the client retries idempotent requests on network errors,
   timeouts, 429 and 5xx.
-- `web` layering: `features/<name>/` own their components, hooks and tests; data enters only
+- `web` layering: `features/<name>/` own their components, hooks and tests and meet only
+  through each other's `index.ts`; data enters only
   through `api-client/`, and `components/` are presentational.
 
 **Guard:** `.dependency-cruiser.cjs`:
@@ -78,6 +79,10 @@ depends on no other workspace and on no I/O library; nothing depends on an app.
   `index.ts`.
 - `web-components-are-presentational`: `components/` imports neither `api-client/` nor
   `features/`.
+- `web-features-through-index` and `web-app-uses-feature-index`: a feature is reached from
+  another feature, `app/` or `test/` only through its `features/<name>/index.ts`;
+  `web-feature-index-exports-own-files`: that index re-exports only its own feature's files
+  (ADR 0019).
 - `no-test-code-in-production`, `not-to-unresolvable`, `not-to-dev-dep`.
 
 `eslint.config.js` (`targus/web`) bans the `fetch` and `XMLHttpRequest` globals in

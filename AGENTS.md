@@ -29,7 +29,9 @@ Nothing imports an app. A package is reached only through its `src/index.ts`.
 - D1 or R2 access: `apps/api/src/repositories/` or `apps/api/src/storage/`.
 - An implementation of a port: `yarn new:adapter <port> <name>` puts it in the right layer.
 - Anything the web app fetches: `apps/web/src/api-client/`, validated with the core schema.
-  UI belongs to `apps/web/src/features/<name>/`. No `fetch` anywhere else.
+  UI belongs to `apps/web/src/features/<name>/`. No `fetch` anywhere else. Another feature or
+  `app/` imports a feature only through its `index.ts`, and the feature graph has no cycle
+  (ADR 0019).
 - Config: read env or bindings only in a file named `config.ts`, validated with zod.
 - Packages build to `dist/` with `tsc -b`; tests and dev servers resolve their `src/` through the
   `development` export condition (ADR 0010). Import another package only through its exports.

@@ -3,7 +3,7 @@ import { useRouterState } from '@tanstack/react-router';
 import type { ProjectSummary } from '@targus/core';
 
 import { getBuild, queryKeys } from '../../api-client/index.ts';
-import { useProjects } from '../projects/useProjects.ts';
+import { useProjects } from '../projects/index.ts';
 
 /** The route params of the deepest match, whichever route it is. */
 function useRouteIds(): { projectId?: string; buildId?: string } {

@@ -6,14 +6,11 @@ import {
 } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
-import { BuildPage } from '../features/build/BuildPage.tsx';
-import { validateFilterSearch } from '../features/build/filters.ts';
-import { NotFound, RouteCrash } from '../features/errors/ErrorView.tsx';
-import { LibraryPage } from '../features/library/LibraryPage.tsx';
-import { validateLibrarySearch } from '../features/library/stories.ts';
-import { BuildsPage } from '../features/projects/BuildsPage.tsx';
-import { ProjectsPage } from '../features/projects/ProjectsPage.tsx';
-import { SnapshotPage } from '../features/snapshot/SnapshotPage.tsx';
+import { BuildPage, validateFilterSearch } from '../features/build/index.ts';
+import { NotFound, RouteCrash } from '../features/errors/index.ts';
+import { LibraryPage, validateLibrarySearch } from '../features/library/index.ts';
+import { BuildsPage, ProjectsPage } from '../features/projects/index.ts';
+import { SnapshotPage } from '../features/snapshot/index.ts';
 import { RootLayout } from './RootLayout.tsx';
 
 // Route components here only read params and search; the pages live in features/.

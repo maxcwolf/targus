@@ -2,11 +2,9 @@ import { Link, Outlet, useRouterState } from '@tanstack/react-router';
 import type { ProjectSummary } from '@targus/core';
 import type { ReactElement } from 'react';
 
-import { AuthGate } from '../features/auth/AuthGate.tsx';
-import { UserMenu } from '../features/auth/UserMenu.tsx';
-import { isSessionExpired, useMe } from '../features/auth/useMe.ts';
-import { AppRail } from '../features/shell/AppRail.tsx';
-import { useProjectContext } from '../features/shell/useProjectContext.ts';
+import { isSessionExpired, useMe, UserMenu } from '../features/auth/index.ts';
+import { AppRail, useProjectContext } from '../features/shell/index.ts';
+import { AuthGate } from './AuthGate.tsx';
 
 function TopBar({
   project,

@@ -5,7 +5,7 @@ import type { ReactElement } from 'react';
 import { imageUrl } from '../../api-client/index.ts';
 import { PathText } from '../../components/PathText.tsx';
 import { SnapshotImage } from '../../components/SnapshotImage.tsx';
-import { storyName } from '../build/filters.ts';
+import { storyName } from '../build/index.ts';
 import { groupStories, storyKey, storyTitle } from './stories.ts';
 
 export interface StoryGridProps {

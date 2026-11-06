@@ -3,7 +3,7 @@ import type { LibraryStory } from '@targus/core';
 import { type ReactElement, useEffect, useRef } from 'react';
 
 import { PathText } from '../../components/PathText.tsx';
-import { storyName } from '../build/filters.ts';
+import { storyName } from '../build/index.ts';
 import { groupStories, storyKey } from './stories.ts';
 
 export interface LibrarySidebarProps {

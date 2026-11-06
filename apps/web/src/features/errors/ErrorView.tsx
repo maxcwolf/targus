@@ -3,8 +3,7 @@ import type { ReactElement } from 'react';
 
 import { ApiRequestError, isSignedOut } from '../../api-client/index.ts';
 import { CrashPanel } from '../../components/CrashPanel.tsx';
-import { SignIn } from '../auth/SignIn.tsx';
-import { useSessionExpired } from '../auth/useMe.ts';
+import { SignIn, useSessionExpired } from '../auth/index.ts';
 
 /** A page-level "this does not exist" message. */
 export function NotFound({ message }: { readonly message?: string }): ReactElement {

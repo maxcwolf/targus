@@ -4,7 +4,7 @@ import { type ReactElement, useEffect, useRef } from 'react';
 
 import { formatPercent } from '../../components/format.ts';
 import { PathText } from '../../components/PathText.tsx';
-import { groupByTitle, isReviewable, type SnapshotFilter, storyName } from '../build/filters.ts';
+import { groupByTitle, isReviewable, type SnapshotFilter, storyName } from '../build/index.ts';
 
 export interface SnapshotSidebarProps {
   readonly buildId: string;

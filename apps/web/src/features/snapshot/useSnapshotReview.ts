@@ -8,7 +8,7 @@ import {
   navigationList,
   type SnapshotFilter,
   storyName,
-} from '../build/filters.ts';
+} from '../build/index.ts';
 import { useReview } from './useReview.ts';
 import { useHotkeys } from './useHotkeys.ts';
 

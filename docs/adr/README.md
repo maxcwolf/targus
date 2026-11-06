@@ -33,3 +33,4 @@ the same change.
 | [0016](0016-cli-measures-server-classifies.md) | The CLI measures the diff, the server classifies the story | accepted |
 | [0017](0017-relative-imports-name-the-typescript-file.md) | Relative imports name the TypeScript file | accepted |
 | [0018](0018-squash-merges-only.md) | Squash merges only, so every commit on main is a Conventional Commit | accepted |
+| [0019](0019-web-features-meet-through-their-index.md) | Web features meet only through their index.ts | accepted |
