@@ -1,4 +1,10 @@
-import { createFakeClock, diffImages, isBlankPng, isTargusError } from '@targus/core';
+import {
+  createFakeClock,
+  createFakeIdGenerator,
+  diffImages,
+  isBlankPng,
+  isTargusError,
+} from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import type { CaptureReport, CaptureResult } from '../capture/capture-stories.ts';
@@ -59,6 +65,7 @@ function input(
     device: 'iPhone 16',
     api,
     clock: createFakeClock(),
+    ids: createFakeIdGenerator('run'),
     threshold: 0.001,
     compareImages: compareWithCore,
     hash: sha256Hex,
@@ -89,6 +96,7 @@ describe('runBuild', () => {
       snapshots: [
         { storyId: 'a', variant: 'default', imageHash: sha256Hex(whitePng), width: 10, height: 10 },
       ],
+      idempotencyKey: 'run-1',
     });
   });
 

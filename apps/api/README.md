@@ -73,6 +73,13 @@ orgs share the hash. Baselines and diffs pass the same way: the CLI uploads ever
 is an earlier capture of the same project, and migration 0003 backfilled all three hashes of every
 snapshot recorded before `project_images` existed.
 
+`POST /api/builds` is safe to retry when the body carries an `idempotencyKey` (ADR 0027), as
+`targus run`'s always does: a key the project already used answers 201 with the build it opened,
+that build's baseline and the hashes still missing now, and opens nothing; the same key with
+another sha, branch, PR, merge base, trigger or device answers 409 `conflict`. The key is stored
+in `builds.idempotency_key`, unique per project (migration 0007). Without a key every request
+opens a new build.
+
 Reviews: only `changed` and `new` snapshots of a build that has its results can be reviewed (409
 otherwise); repeating a decision is a no-op. Approving records the snapshot's hash pair in
 `approvals`, so later builds carry it forward (plan.md section 6, rule 3); denying removes that

@@ -45,31 +45,25 @@ export async function requireBuild(
   return build;
 }
 
+/** The fields of a stored build that a replay under its idempotency key must repeat. */
+const replayedFields = ['sha', 'branch', 'prNumber', 'mergeBaseSha', 'trigger', 'device'] as const;
+
 /**
- * `POST /api/builds`: open a build. Resolves the baseline (plan.md section 6, rule 1), returns
- * its accepted images and the hashes the CLI still has to upload, and stores the build as
- * `in_progress` until results arrive. "Still has to upload" is per project: an image only
- * another tenant sent is asked for again, so the answer never says what other tenants hold.
+ * The build `request` opens: a new `in_progress` one, or the build the project already opened
+ * under its `idempotencyKey`, in which case it must be the same build (ADR 0027).
  */
-export async function createBuild(
-  deps: Pick<ServiceDeps, 'builds' | 'clock' | 'ids' | 'images'>,
+async function openBuild(
+  deps: Pick<ServiceDeps, 'builds' | 'ids'>,
   project: Project,
   request: CreateBuildRequest,
-): Promise<CreateBuildResponse> {
+  now: Date,
+): Promise<BuildRecord> {
   const shas = baselineShaOrder(request.mergeBaseSha, request.ancestors);
   const baseline = await deps.builds.findLatestSuccessfulForShas(project.id, shas);
-  const baselines =
-    baseline === null ? [] : baselineEntries(await deps.builds.listSnapshots(baseline.id));
-
-  const hashes = [...new Set(request.snapshots.map((snapshot) => snapshot.imageHash))];
-  const missing = await deps.images.notUploadedBy(project.id, hashes);
-  const now = deps.clock.now();
-  const present = hashes.filter((hash) => !missing.includes(hash));
-  await deps.images.touch([...present, ...baselines.map((entry) => entry.imageHash)], now);
-
+  const id = deps.ids.next();
   const build = await deps.builds.create(
     {
-      id: deps.ids.next(),
+      id,
       projectId: project.id,
       sha: request.sha,
       branch: request.branch,
@@ -82,9 +76,45 @@ export async function createBuild(
       createdAt: now.toISOString(),
       completedAt: null,
       checkRunId: null,
+      idempotencyKey: request.idempotencyKey ?? null,
     },
     emptyTally,
   );
+  const differs = replayedFields.filter((field) => build[field] !== request[field]);
+  if (build.id !== id && differs.length > 0) {
+    throw new TargusError(
+      'conflict',
+      `this idempotency key already opened build ${build.id} with another ` +
+        `${differs.join(', ')}: send a new key for a new build`,
+    );
+  }
+  return build;
+}
+
+/**
+ * `POST /api/builds`: open a build. Resolves the baseline (plan.md section 6, rule 1), returns
+ * its accepted images and the hashes the CLI still has to upload, and stores the build as
+ * `in_progress` until results arrive. "Still has to upload" is per project: an image only
+ * another tenant sent is asked for again, so the answer never says what other tenants hold.
+ * A replay under the same idempotency key answers for the build it opened, with that build's
+ * baseline and the hashes still missing now (ADR 0027).
+ */
+export async function createBuild(
+  deps: Pick<ServiceDeps, 'builds' | 'clock' | 'ids' | 'images'>,
+  project: Project,
+  request: CreateBuildRequest,
+): Promise<CreateBuildResponse> {
+  const now = deps.clock.now();
+  const build = await openBuild(deps, project, request, now);
+  const baselines =
+    build.baselineBuildId === null
+      ? []
+      : baselineEntries(await deps.builds.listSnapshots(build.baselineBuildId));
+
+  const hashes = [...new Set(request.snapshots.map((snapshot) => snapshot.imageHash))];
+  const missing = await deps.images.notUploadedBy(project.id, hashes);
+  const present = hashes.filter((hash) => !missing.includes(hash));
+  await deps.images.touch([...present, ...baselines.map((entry) => entry.imageHash)], now);
   return {
     build: { id: build.id, number: build.number },
     baselineBuildId: build.baselineBuildId,

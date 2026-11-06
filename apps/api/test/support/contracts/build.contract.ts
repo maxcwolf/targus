@@ -45,6 +45,35 @@ async function rejectsTakenId(harness: BuildHarness): Promise<void> {
   expect((await repository.create(newBuild('bc-taken-2', projectId))).number).toBe(2);
 }
 
+async function oneBuildPerKey({ repository, seedProject }: BuildHarness): Promise<void> {
+  const projectA = await seedProject('bc-key-a');
+  const projectB = await seedProject('bc-key-b');
+  const keyed = (id: string, projectId: string, idempotencyKey: string | null = 'run-1') => ({
+    ...newBuild(id, projectId),
+    idempotencyKey,
+  });
+
+  const first = await repository.create(keyed('bc-key-1', projectA));
+  const replays = await Promise.all([
+    repository.create({ ...keyed('bc-key-2', projectA), branch: 'other' }, tally),
+    repository.create(keyed('bc-key-3', projectA)),
+    repository.create(keyed('bc-key-1', projectA)),
+  ]);
+  const other = await repository.create(keyed('bc-key-4', projectB));
+  const unkeyed = [
+    await repository.create(keyed('bc-key-5', projectA, null)),
+    await repository.create(newBuild('bc-key-6', projectA)),
+    await repository.create(keyed('bc-key-7', projectA, 'run-2')),
+  ];
+
+  expect(replays).toEqual([first, first, first]);
+  expect(await repository.findById(projectA, 'bc-key-2')).toBeNull();
+  expect(await repository.findById(projectA, 'bc-key-3')).toBeNull();
+  expect([other.id, other.number]).toEqual(['bc-key-4', 1]);
+  expect(unkeyed.map((build) => build.number)).toEqual([2, 3, 4]);
+  await expect(repository.create(keyed('bc-key-1', projectA, 'run-3'))).rejects.toThrow();
+}
+
 async function storesCompletionAndCheckRun(harness: BuildHarness): Promise<void> {
   const { repository } = harness;
   const { projectId, buildId } = await openBuild(harness, 'bc-status');
@@ -133,6 +162,8 @@ export function describeBuildContract(name: string, harness: Harness): void {
       numbersPerProject(harness()));
     it('rejects a build whose id is taken, keeping the first and its number', () =>
       rejectsTakenId(harness()));
+    it('opens one build per idempotency key and project, returning it to every replay', () =>
+      oneBuildPerKey(harness()));
     it('stores the completion, its tally and the check run id', () =>
       storesCompletionAndCheckRun(harness()));
     it('finds the newest signed-off build of a branch within the project', () =>

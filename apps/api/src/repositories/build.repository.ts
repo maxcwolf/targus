@@ -57,9 +57,19 @@ export interface ReviewCommit {
   readonly tally: SnapshotTally;
 }
 
+/** A build to open, with the caller's idempotency key when it sent one (ADR 0027). */
+export interface NewApiBuild extends NewBuild {
+  readonly idempotencyKey?: string | null;
+}
+
 /** `BuildRepository` plus the reads and writes the API's use-cases need. */
 export interface ApiBuildRepository extends BuildRepository {
-  create(build: NewBuild, tally?: SnapshotTally): Promise<BuildRecord>;
+  /**
+   * Store a new build with the next number of its project. When the project already has a build
+   * under `build.idempotencyKey`, nothing is written and that build is returned instead, so the
+   * caller tells a replay by the id (ADR 0027). Throws when the id is taken.
+   */
+  create(build: NewApiBuild, tally?: SnapshotTally): Promise<BuildRecord>;
   findById(projectId: string, buildId: string): Promise<BuildRecord | null>;
   findLatestSuccessfulForShas(
     projectId: string,
@@ -110,8 +120,10 @@ export class D1BuildRepository implements ApiBuildRepository {
     this.db = drizzle(database);
   }
 
-  async create(build: NewBuild, tally: SnapshotTally = emptyTally): Promise<BuildRecord> {
-    // One statement, so concurrent creates cannot both take the same number.
+  async create(build: NewApiBuild, tally: SnapshotTally = emptyTally): Promise<BuildRecord> {
+    // One statement, so concurrent creates cannot both take the same number. On a key the
+    // project already used, the upsert leaves the stored build as it is and returns it, so
+    // concurrent replays open one build between them (ADR 0027).
     const nextNumber = sql<number>`(SELECT COALESCE(MAX(${builds.number}), 0) + 1 FROM ${builds} WHERE ${builds.projectId} = ${build.projectId})`;
     const row = await this.db
       .insert(builds)
@@ -121,6 +133,10 @@ export class D1BuildRepository implements ApiBuildRepository {
         number: nextNumber,
         createdAt: new Date(build.createdAt),
         completedAt: build.completedAt === null ? null : new Date(build.completedAt),
+      })
+      .onConflictDoUpdate({
+        target: [builds.projectId, builds.idempotencyKey],
+        set: { idempotencyKey: sql`${builds.idempotencyKey}` },
       })
       .returning()
       .get();

@@ -80,6 +80,20 @@ describe('/api/builds authorization', () => {
     });
     expect(errorWithImage.status).toBe(400);
   });
+
+  it('answers a repeated idempotency key with the same build, and another build with 409', async () => {
+    const { token } = await createTestProject();
+    const request = createBuildRequest(sha('c'), { idempotencyKey: 'run-route-1' });
+
+    const first = await postJson('/api/builds', token, request);
+    const again = await postJson('/api/builds', token, request);
+    const changed = await postJson('/api/builds', token, { ...request, sha: sha('d') });
+
+    expect([first.status, again.status, changed.status]).toEqual([201, 201, 409]);
+    const opened = CreateBuildResponse.parse(await first.json()).build;
+    expect(CreateBuildResponse.parse(await again.json()).build).toEqual(opened);
+    expect(await changed.json()).toMatchObject({ error: { code: 'conflict' } });
+  });
 });
 
 describe('/api/builds for reviewers', () => {

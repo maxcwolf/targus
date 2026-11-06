@@ -5,6 +5,7 @@ import path from 'node:path';
 import {
   createFakeClock,
   createFakeDeviceDriver,
+  createFakeIdGenerator,
   CreateBuildRequest,
   SubmitResultsRequest,
   type FakeDeviceDriver,
@@ -100,6 +101,7 @@ function deps(override: Override = () => null): RunCommandDeps {
   return {
     exec,
     clock: createFakeClock(),
+    ids: createFakeIdGenerator('run'),
     log,
     capture: (options) =>
       runCapture(options, {

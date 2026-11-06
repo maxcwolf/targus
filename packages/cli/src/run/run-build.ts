@@ -5,6 +5,7 @@ import {
   type BaselineEntry,
   type Clock,
   type CreateBuildResponse,
+  type IdGenerator,
   type StoryResult,
   type SubmitResultsResponse,
 } from '@targus/core';
@@ -39,6 +40,8 @@ export interface RunBuildInput extends Omit<StoryJudge, 'api'> {
   readonly device: string;
   readonly api: TargusApi;
   readonly clock: Clock;
+  /** Gives the run its idempotency key, so a retried `POST /api/builds` opens one build. */
+  readonly ids: IdGenerator;
 }
 
 export type StateCounts = Record<SnapshotState, number>;
@@ -58,7 +61,11 @@ export interface RunBuildOutput {
   readonly uploaded: readonly string[];
 }
 
-/** The `POST /api/builds` body. Errored stories have no image, so they are not snapshots. */
+/**
+ * The `POST /api/builds` body. Errored stories have no image, so they are not snapshots. Each
+ * call takes a new idempotency key: the client resends this body as it is, so every attempt of
+ * one run names the same build (ADR 0027).
+ */
 export function createBuildRequest(input: RunBuildInput): CreateBuildRequest {
   const { branch, prNumber, trigger } = input.ci;
   if (branch === null) {
@@ -79,6 +86,7 @@ export function createBuildRequest(input: RunBuildInput): CreateBuildRequest {
       width: story.width,
       height: story.height,
     })),
+    idempotencyKey: input.ids.next(),
   });
   if (!parsed.success) {
     throw new TargusError('bad_request', `invalid build:\n${z.prettifyError(parsed.error)}`);

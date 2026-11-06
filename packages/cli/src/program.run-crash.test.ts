@@ -2,7 +2,12 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { createFakeClock, createFakeDeviceDriver, type FakeDeviceDriver } from '@targus/core';
+import {
+  createFakeClock,
+  createFakeDeviceDriver,
+  createFakeIdGenerator,
+  type FakeDeviceDriver,
+} from '@targus/core';
 import { CommanderError } from 'commander';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
@@ -59,6 +64,7 @@ function deps(app: AppScript): RunCommandDeps {
   return {
     exec,
     clock: createFakeClock(),
+    ids: createFakeIdGenerator('run'),
     log,
     capture: (options) =>
       runCapture(options, {

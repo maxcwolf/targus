@@ -88,12 +88,18 @@ export const builds = sqliteTable(
     removedCount: integer('removed_count').notNull().default(0),
     unstableCount: integer('unstable_count').notNull().default(0),
     errorCount: integer('error_count').notNull().default(0),
+    // The CLI's key for this build, so a retried `POST /api/builds` returns this build instead
+    // of opening another (ADR 0027). Null for a build opened without one.
+    idempotencyKey: text('idempotency_key'),
   },
   (table) => [
     // Covers the project_id foreign key and the baseline lookup by project and sha.
     index('builds_project_sha_idx').on(table.projectId, table.sha, table.createdAt),
     uniqueIndex('builds_project_number_unique').on(table.projectId, table.number),
     index('builds_baseline_build_id_idx').on(table.baselineBuildId),
+    // One build per key and project. SQLite treats NULLs as distinct, so unkeyed builds never
+    // collide; the D1 adapter names these columns in `ON CONFLICT`.
+    uniqueIndex('builds_project_idempotency_key_unique').on(table.projectId, table.idempotencyKey),
   ],
 );
 

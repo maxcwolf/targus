@@ -126,13 +126,14 @@ launch: look for its crash report in ~/Library/Logs/DiagnosticReports`, rather t
 stories`, or `closed its Storybook channel connection after ...` when the process is still up.
   The stories captured before the crash are discarded: `targus capture` writes no output and
   `targus run` opens no build, since a partial build would show the rest as removed.
-- Image uploads, image downloads and the results submission are retried up to four times, 0.5s,
-  1s and 2s apart, on network errors, timeouts, 429 and 5xx; never on any other 4xx. Each retry
-  prints a `warning:` line; when the last one fails the error ends with
+- Opening the build, image uploads, image downloads and the results submission are retried up
+  to four times, 0.5s, 1s and 2s apart, on network errors, timeouts, 429 and 5xx; never on any
+  other 4xx. Each retry prints a `warning:` line; when the last one fails the error ends with
   `(gave up after 4 attempts)`. Uploads are content-addressed, and the server stores a build's
   results only once, so a resend is safe: if the first submission landed but its response was
-  lost, the retry gets a 409 and the error says so. Opening the build is not retried, since each
-  attempt would open another build.
+  lost, the retry gets a 409 and the error says so. Each run sends one idempotency key with every
+  attempt to open its build, so a retry after a lost response gets the build the first attempt
+  opened instead of opening another (ADR 0027).
 
 ## Environment
 

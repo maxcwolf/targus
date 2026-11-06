@@ -14,9 +14,22 @@ export const CapturedSnapshot = z.object({
 export type CapturedSnapshot = z.infer<typeof CapturedSnapshot>;
 
 /**
+ * A caller-chosen key that makes opening a build safe to retry (ADR 0027): one per `targus run`,
+ * sent with every attempt. Printable ASCII, so it is never mistaken for anything else in a log.
+ */
+const IdempotencyKey = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[\x21-\x7e]+$/, 'printable ASCII without spaces');
+
+/**
  * `POST /api/builds` request body (plan.md section 5.2). Authenticated by project token.
  * `ancestors` is the first-parent ancestor list of the merge base, nearest first, so the server
- * can pick the nearest ancestor that has a build (plan.md section 6, rule 1).
+ * can pick the nearest ancestor that has a build (plan.md section 6, rule 1). A request with the
+ * `idempotencyKey` of a build the project already opened returns that build; the same key with a
+ * different build (sha, branch, PR, merge base, trigger or device) is a `conflict` (ADR 0027).
+ * Without a key every request opens a new build.
  */
 export const CreateBuildRequest = z.object({
   sha: GitSha,
@@ -27,6 +40,7 @@ export const CreateBuildRequest = z.object({
   trigger: BuildTrigger,
   device: z.string().min(1),
   snapshots: z.array(CapturedSnapshot),
+  idempotencyKey: IdempotencyKey.optional(),
 });
 export type CreateBuildRequest = z.infer<typeof CreateBuildRequest>;
 

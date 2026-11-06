@@ -2,9 +2,10 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { isBlankPng, TargusError, type Clock } from '@targus/core';
+import { isBlankPng, TargusError, type Clock, type IdGenerator } from '@targus/core';
 
 import { TargusApiClient } from '../adapters/api-client.adapter.ts';
+import { cryptoIdGenerator } from '../adapters/crypto-id-generator.adapter.ts';
 import { execFileBuffer, type Exec } from '../adapters/exec.adapter.ts';
 import { GitCli, type GitMetadata } from '../adapters/git.adapter.ts';
 import { SimctlDriver } from '../adapters/simctl.adapter.ts';
@@ -43,6 +44,7 @@ export interface RunCommandOptions extends CaptureFlags {
 export interface RunCommandDeps {
   readonly exec: Exec;
   readonly clock: Clock;
+  readonly ids: IdGenerator;
   readonly log: (line: string) => void;
   readonly capture: (options: CaptureCommandOptions) => Promise<unknown>;
   readonly makeTempDir: () => Promise<string>;
@@ -55,6 +57,7 @@ export interface RunCommandDeps {
 export const defaultRunDeps: RunCommandDeps = {
   exec: execFileBuffer,
   clock: systemClock,
+  ids: cryptoIdGenerator,
   log: (line) => {
     process.stdout.write(`${line}\n`);
   },
@@ -151,6 +154,7 @@ export async function runRun(
     device,
     api: deps.createApi(options.apiUrl, config.token, deps.log),
     clock: deps.clock,
+    ids: deps.ids,
     threshold: options.threshold,
     compareImages: compareWithCore,
     hash: sha256Hex,

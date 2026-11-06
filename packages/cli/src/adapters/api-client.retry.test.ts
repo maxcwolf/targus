@@ -1,4 +1,4 @@
-import { isTargusError, type CreateBuildRequest } from '@targus/core';
+import { CreateBuildRequest, isTargusError } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import { TargusApiClient, type Fetch, type TargusApiClientOptions } from './api-client.adapter.ts';
@@ -129,7 +129,7 @@ describe('TargusApiClient retries by request', () => {
     expect(waits).toEqual([]);
   });
 
-  it('does not retry opening a build, which is not idempotent', async () => {
+  it('does not retry opening a build without an idempotency key', async () => {
     const stub = scripted(unavailable());
     const { api } = client(stub.fetch);
 
@@ -161,6 +161,47 @@ describe('TargusApiClient retries by request', () => {
 
     expect((await api.submitResults('b1', { results: [], durationMs: 1 })).build.id).toBe('b1');
     expect(waits).toEqual([]);
+  });
+});
+
+describe('TargusApiClient opening a build under an idempotency key', () => {
+  it('retries after a timeout with the same key, and the server opens one build', async () => {
+    const opened = new Map<string, string>();
+    const keys: (string | undefined)[] = [];
+    const controllers: AbortController[] = [];
+    // Opens one build per key, as the API does, but loses the first response.
+    const fetch: Fetch = (_url, init) => {
+      const { idempotencyKey } = CreateBuildRequest.parse(
+        JSON.parse(typeof init.body === 'string' ? init.body : '{}'),
+      );
+      keys.push(idempotencyKey);
+      const id = opened.get(String(idempotencyKey)) ?? `b${opened.size + 1}`;
+      opened.set(String(idempotencyKey), id);
+      if (keys.length === 1) {
+        const timeout = new DOMException('timed out', 'TimeoutError');
+        controllers.at(-1)?.abort(timeout);
+        return Promise.reject(timeout);
+      }
+      const build = { build: { id, number: 1 }, baselineBuildId: null, baselines: [] };
+      return Promise.resolve(Response.json({ ...build, missingImageHashes: [] }));
+    };
+    const timeoutSignal = () => {
+      const controller = new AbortController();
+      controllers.push(controller);
+      return controller.signal;
+    };
+    const { api, waits, warnings } = client(fetch, { timeoutSignal, timeoutMs: 30_000 });
+
+    const response = await api.createBuild({ ...buildRequest, idempotencyKey: 'run-1' });
+
+    expect(response.build.id).toBe('b1');
+    expect([...opened.values()]).toEqual(['b1']);
+    expect(keys).toEqual(['run-1', 'run-1']);
+    expect(waits).toEqual([500]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatch(
+      /^warning: POST \/api\/builds: no response .* within 30s; retrying/,
+    );
   });
 });
 

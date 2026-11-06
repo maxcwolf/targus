@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { createFakeClock, isTargusError } from '@targus/core';
+import { createFakeClock, createFakeIdGenerator, isTargusError } from '@targus/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Exec } from '../adapters/exec.adapter.ts';
@@ -40,6 +40,7 @@ function deps(overrides: Partial<RunCommandDeps> = {}): RunCommandDeps {
   return {
     exec,
     clock: createFakeClock(),
+    ids: createFakeIdGenerator('run'),
     log: (line) => lines.push(line),
     capture: async (options) => {
       captures.push(options);
@@ -114,6 +115,7 @@ describe('runRun --from-capture', () => {
       ancestors: [ancestor],
       trigger: 'pr',
       device: 'iPhone 16 Pro',
+      idempotencyKey: 'run-1',
     });
     expect(api.callsOf('uploadImage')).toHaveLength(3);
     expect(output.counts.new).toBe(3);

@@ -48,7 +48,10 @@ interface ApiRequest {
   readonly route: string;
   readonly body?: RequestInit['body'];
   readonly contentType?: string;
-  /** Safe to send twice: uploads are content-addressed, submissions are guarded on the server. */
+  /**
+   * Safe to send twice: uploads are content-addressed, submissions are guarded on the server, and
+   * a build opened under an idempotency key is opened once (ADR 0027).
+   */
   readonly idempotent: boolean;
 }
 
@@ -77,9 +80,14 @@ export class TargusApiClient implements TargusApi {
     this.onRetry = options.onRetry ?? (() => undefined);
   }
 
-  /** Not retried: every POST opens a new build, so a retry could leave a stray one behind. */
+  /**
+   * Retried when the request carries an idempotency key, as `targus run`'s always does: the
+   * server answers every attempt with the build the first one opened (ADR 0027). Without a key
+   * each POST opens a new build, so a retry could leave a stray one behind; it is sent once.
+   */
   async createBuild(request: CreateBuildRequest): Promise<CreateBuildResponse> {
-    const send = { method: 'POST', route: '/api/builds', idempotent: false };
+    const idempotent = request.idempotencyKey !== undefined;
+    const send = { method: 'POST', route: '/api/builds', idempotent };
     return this.json(send, request, CreateBuildResponse);
   }
 

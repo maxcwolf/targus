@@ -118,6 +118,25 @@ function snapshotReviews(
   };
 }
 
+/**
+ * `create` of the builds double. As the D1 upsert, a key the project already used returns its
+ * build, unchanged, before the id is checked (`builds_project_idempotency_key_unique`).
+ */
+function createBuild(builds: BuildRecord[]): ApiBuildRepository['create'] {
+  const keys = new Map<string, string>();
+  return ({ idempotencyKey, ...build }, tally = emptyTally) => {
+    const key = idempotencyKey == null ? null : `${build.projectId}\u0000${idempotencyKey}`;
+    const replayed = key === null ? undefined : builds.find((b) => b.id === keys.get(key));
+    if (replayed !== undefined) return Promise.resolve(replayed);
+    if (builds.some((other) => other.id === build.id)) return uniqueViolation('builds.id');
+    const number = builds.filter((other) => other.projectId === build.projectId).length + 1;
+    const created = { ...build, number, tally };
+    builds.push(created);
+    if (key !== null) keys.set(key, build.id);
+    return Promise.resolve(created);
+  };
+}
+
 export function createInMemoryBuilds(): InMemoryBuilds {
   const builds: BuildRecord[] = [];
   const snapshots = new Map<string, SnapshotRecord[]>();
@@ -133,13 +152,7 @@ export function createInMemoryBuilds(): InMemoryBuilds {
     builds,
     snapshots,
     versions,
-    create(build, tally = emptyTally) {
-      if (builds.some((other) => other.id === build.id)) return uniqueViolation('builds.id');
-      const number = builds.filter((other) => other.projectId === build.projectId).length + 1;
-      const created = { ...build, number, tally };
-      builds.push(created);
-      return Promise.resolve(created);
-    },
+    create: createBuild(builds),
     findById: (projectId, buildId) => find((b) => b.projectId === projectId && b.id === buildId),
     findAnyById: (buildId) => find((b) => b.id === buildId),
     ...buildQueries(builds),
