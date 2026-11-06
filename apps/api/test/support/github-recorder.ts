@@ -1,6 +1,11 @@
 import type { CheckRunState, CheckRunTarget, GitHubClient } from '@targus/core';
 
-/** A `GitHubClient` that records what it was asked and knows a fixed set of org members. */
+import { isMemberOf, type OrgMembers } from './org-members.js';
+
+/**
+ * A `GitHubClient` that records what it was asked and knows a fixed set of org members, per org
+ * (see `OrgMembers`).
+ */
 export interface RecordingGitHub extends GitHubClient {
   readonly membershipChecks: { readonly org: string; readonly login: string }[];
   readonly updates: {
@@ -11,8 +16,15 @@ export interface RecordingGitHub extends GitHubClient {
 }
 
 export function createRecordingGitHub(
-  members: readonly string[] = ['octocat'],
-  options: { readonly failUpdates?: boolean } = {},
+  members: OrgMembers = ['octocat'],
+  options: {
+    readonly failUpdates?: boolean;
+    /**
+     * Each org's App installation. When an org is listed here, a membership check through any
+     * other installation answers false, as GitHub only lets an installation see its own org.
+     */
+    readonly installations?: Readonly<Record<string, number>>;
+  } = {},
 ): RecordingGitHub {
   const membershipChecks: RecordingGitHub['membershipChecks'] = [];
   const updates: RecordingGitHub['updates'] = [];
@@ -25,9 +37,11 @@ export function createRecordingGitHub(
       updates.push({ target, checkRunId, state });
       return Promise.resolve();
     },
-    isOrgMember(_installationId, org, login) {
+    isOrgMember(installationId, org, login) {
       membershipChecks.push({ org, login });
-      return Promise.resolve(members.includes(login));
+      const installation = options.installations?.[org];
+      const reachable = installation === undefined || installation === installationId;
+      return Promise.resolve(reachable && isMemberOf(members, org, login));
     },
   };
 }

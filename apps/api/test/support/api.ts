@@ -45,15 +45,30 @@ export function postJson(path: string, token: string, body: unknown): Promise<Re
 
 let projectCounter = 0;
 
-/** Create a project through the admin route and return it with its token. */
+/** A random suffix, so names stay unique across test files sharing the local D1. */
+function randomSuffix(): string {
+  return crypto.getRandomValues(new Uint32Array(1)).join('');
+}
+
+/** A GitHub org name no other test uses, for tests that need orgs of their own. */
+export function uniqueOrg(prefix: string): string {
+  return `${prefix}-${randomSuffix()}`;
+}
+
+/**
+ * Create a project through the admin route and return it with its token. Projects land in the
+ * org `example-org` unless `githubOrg` names another; a non-null `installationId` becomes that
+ * org's App installation.
+ */
 export async function createTestProject(
   installationId: number | null = null,
+  githubOrg = 'example-org',
 ): Promise<CreateProjectResponse> {
   projectCounter += 1;
   const response = await postJson('/api/admin/projects', adminToken, {
-    githubOrg: 'example-org',
+    githubOrg,
     installationId,
-    repo: `example-org/app-${projectCounter}-${crypto.getRandomValues(new Uint32Array(1)).join('')}`,
+    repo: `${githubOrg}/app-${projectCounter}-${randomSuffix()}`,
     name: `app ${projectCounter}`,
   });
   if (response.status !== 201) throw new Error(`createTestProject: ${response.status}`);

@@ -15,9 +15,13 @@ export const reviewApp = appWith({ github: createRecordingGitHub(['octocat']) })
 /**
  * A project with an installation (so membership can be checked) and one completed build. The
  * results' made-up hashes are marked as uploaded by the project, since nothing uploads them.
+ * The project is in `example-org` with installation 42 unless `org` says otherwise.
  */
-export async function projectWithBuild(results: StoryResult[]) {
-  const { token, project } = await createTestProject(42);
+export async function projectWithBuild(
+  results: StoryResult[],
+  org: { readonly githubOrg?: string; readonly installationId?: number } = {},
+) {
+  const { token, project } = await createTestProject(org.installationId ?? 42, org.githubOrg);
   const created = await postJson('/api/builds', token, createBuildRequest(sha('a')));
   const { build } = CreateBuildResponse.parse(await created.json());
   await markUploaded(createImageRepository(env.DB), project.id, results);
