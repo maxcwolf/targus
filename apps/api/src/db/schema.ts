@@ -137,10 +137,8 @@ export const snapshots = sqliteTable(
       table.storyId,
       table.variant,
     ),
-    // "Which projects reference this image", for authorizing a reviewer's image read.
-    index('snapshots_image_hash_idx').on(table.imageHash),
-    index('snapshots_baseline_hash_idx').on(table.baselineHash),
-    index('snapshots_diff_hash_idx').on(table.diffHash),
+    // No hash indexes: image access is scoped by project_images (ADR 0014), never by a snapshot
+    // lookup, so indexing image_hash, baseline_hash or diff_hash would only slow every write.
   ],
 );
 
