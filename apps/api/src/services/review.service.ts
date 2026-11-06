@@ -4,6 +4,7 @@ import {
   tallySnapshots,
   TargusError,
   type ApproveAllResponse,
+  type BuildStatusSummary,
   type ReviewDecision,
   type ReviewSnapshotResponse,
   type ReviewState,
@@ -49,7 +50,7 @@ function pairOf(project: Project, snapshot: SnapshotRecord) {
   ] as const;
 }
 
-/** Record the approval of each snapshot's hash pair that the project does not have yet. */
+/** Record the approval of each snapshot's hash pair; a pair already approved stays as it is. */
 async function recordApprovals(
   deps: ReviewDeps,
   reviewer: Reviewer,
@@ -58,9 +59,7 @@ async function recordApprovals(
 ): Promise<void> {
   const approvedAt = deps.clock.now().toISOString();
   for (const snapshot of snapshots) {
-    const pair = pairOf(project, snapshot);
-    if (await deps.approvals.exists(...pair)) continue;
-    const [projectId, storyId, variant, fromHash, toHash] = pair;
+    const [projectId, storyId, variant, fromHash, toHash] = pairOf(project, snapshot);
     await deps.approvals.create(deps.ids.next(), {
       projectId,
       storyId,
@@ -73,23 +72,56 @@ async function recordApprovals(
   }
 }
 
-/** Re-fold the build after a decision, store it, and move its check run along. */
-async function refreshBuild(
+/** How often a decision is re-read and retried when another review of the build commits first. */
+const commitAttempts = 5;
+
+interface Decision {
+  readonly review: ReviewState;
+  readonly reviewedBy: string;
+  readonly reviewedAt: Date;
+}
+
+/** What a committed decision changed. */
+interface Committed {
+  readonly build: BuildRecord;
+  readonly summary: BuildStatusSummary;
+  /** The snapshots the decision applied to, as they now are. */
+  readonly decided: SnapshotRecord[];
+}
+
+/**
+ * Apply `decision` to the snapshots `pick` chooses and fold the build's tally and status from
+ * all of them, committing only if no other review changed the build since they were read
+ * (ADR 0013). Otherwise read again and redo it, so two reviewers acting at once cannot leave
+ * a tally computed before the other's change.
+ */
+async function commitDecision(
   deps: ReviewDeps,
-  project: Project,
   build: BuildRecord,
-): Promise<BuildRecord> {
-  const tally = tallySnapshots(await deps.builds.listSnapshots(build.id));
-  const summary = buildStatusFromTally(tally);
-  await deps.builds.updateReview(build.id, { status: summary.status, tally });
-  const updated = { ...build, status: summary.status, tally };
-  await syncCheckRun(deps, project, updated, summary);
-  return updated;
+  pick: (snapshots: readonly SnapshotRecord[]) => SnapshotRecord[],
+  decision: Decision,
+): Promise<Committed> {
+  const reviewed = { ...decision, reviewedAt: decision.reviewedAt.toISOString() };
+  for (let attempt = 0; attempt < commitAttempts; attempt += 1) {
+    const { version, snapshots } = await deps.builds.readForReview(build.id);
+    const ids = new Set(pick(snapshots).map((snapshot) => snapshot.id));
+    const after = snapshots.map((s) => (ids.has(s.id) ? { ...s, ...reviewed } : s));
+    const tally = tallySnapshots(after);
+    const summary = buildStatusFromTally(tally);
+    const commit = { ...decision, snapshotIds: [...ids], status: summary.status, tally };
+    if (await deps.builds.commitReview(build.id, version, commit)) {
+      const decided = after.filter((snapshot) => ids.has(snapshot.id));
+      return { build: { ...build, status: summary.status, tally }, summary, decided };
+    }
+  }
+  throw new TargusError('conflict', `build ${build.id} is being reviewed concurrently; retry`);
 }
 
 /**
  * `POST /api/snapshots/:id/review`. Approving records the hash-pair approval so later builds
  * carry it forward; denying withdraws that pair's approval. Repeating a decision is a no-op.
+ * The approval changes after the decision commits, so a decision that never commits leaves
+ * the approvals alone.
  */
 export async function reviewSnapshot(
   deps: ReviewDeps,
@@ -105,16 +137,19 @@ export async function reviewSnapshot(
   }
   const review: ReviewState = decision === 'approve' ? 'approved' : 'denied';
   if (snapshot.review === review) return { snapshot: toSnapshot(snapshot), ...withSummary(build) };
+  const pair = pairOf(project, snapshot);
 
+  const committed = await commitDecision(
+    deps,
+    build,
+    (snapshots) => snapshots.filter((s) => s.id === snapshot.id),
+    { review, reviewedBy: reviewer.user.login, reviewedAt: deps.clock.now() },
+  );
   if (review === 'approved') await recordApprovals(deps, reviewer, project, [snapshot]);
-  else await deps.approvals.delete(...pairOf(project, snapshot));
-  const reviewedAt = deps.clock.now();
-  const reviewedBy = reviewer.user.login;
-  await deps.builds.updateSnapshotReview([snapshot.id], { review, reviewedBy, reviewedAt });
-
-  const refreshed = await refreshBuild(deps, project, build);
-  const reviewed = { ...snapshot, review, reviewedBy, reviewedAt: reviewedAt.toISOString() };
-  return { snapshot: toSnapshot(reviewed), ...withSummary(refreshed) };
+  else await deps.approvals.delete(...pair);
+  await syncCheckRun(deps, project, committed.build, committed.summary);
+  const [reviewed = snapshot] = committed.decided;
+  return { snapshot: toSnapshot(reviewed), ...withSummary(committed.build) };
 }
 
 /** `POST /api/builds/:id/approve-all`: approve every reviewable snapshot still pending. */
@@ -124,16 +159,19 @@ export async function approveAll(
   buildId: string,
 ): Promise<ApproveAllResponse> {
   const { build, project } = await requireReviewableBuild(deps, reviewer, buildId);
-  const pending = (await deps.builds.listSnapshots(build.id)).filter(
-    (snapshot) => needsReview(snapshot.state) && snapshot.review === 'pending',
-  );
+  const pendingOf = (snapshots: readonly SnapshotRecord[]) =>
+    snapshots.filter((snapshot) => needsReview(snapshot.state) && snapshot.review === 'pending');
+  const pending = pendingOf(await deps.builds.listSnapshots(build.id));
   if (pending.length === 0) return { ...withSummary(build), approvedCount: 0 };
+  // Refuse before anything is written if one of them cannot be approved.
+  pending.forEach((snapshot) => pairOf(project, snapshot));
 
-  await recordApprovals(deps, reviewer, project, pending);
-  await deps.builds.updateSnapshotReview(
-    pending.map((snapshot) => snapshot.id),
-    { review: 'approved', reviewedBy: reviewer.user.login, reviewedAt: deps.clock.now() },
-  );
-  const refreshed = await refreshBuild(deps, project, build);
-  return { ...withSummary(refreshed), approvedCount: pending.length };
+  const committed = await commitDecision(deps, build, pendingOf, {
+    review: 'approved',
+    reviewedBy: reviewer.user.login,
+    reviewedAt: deps.clock.now(),
+  });
+  await recordApprovals(deps, reviewer, project, committed.decided);
+  await syncCheckRun(deps, project, committed.build, committed.summary);
+  return { ...withSummary(committed.build), approvedCount: committed.decided.length };
 }

@@ -1,51 +1,52 @@
 import {
   baselineBuildStatuses,
   emptyTally,
-  type Build,
   type BuildRepository,
   type BuildStatus,
   type NewBuild,
   type ReviewState,
-  type Snapshot,
   type SnapshotTally,
 } from '@targus/core';
-import { and, asc, desc, eq, getTableColumns, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
 import { builds, snapshots } from '../db/schema.js';
 import { chunkForD1 } from './d1-limits.js';
+import {
+  buildInProgress,
+  guardedSnapshotInserts,
+  runBatch,
+  tallyColumns,
+  toBuildRecord,
+  toSnapshotRecord,
+  toSnapshotRow,
+  type BuildRecord,
+  type SnapshotRecord,
+} from './build-rows.js';
 
-/** A stored snapshot: the wire `Snapshot` plus the capture-hygiene fields only D1 keeps. */
-export interface SnapshotRecord extends Snapshot {
-  readonly blank: boolean;
-  /** The render error of an `error` snapshot, else null. */
-  readonly error: string | null;
-}
+export type { BuildRecord, SnapshotRecord } from './build-rows.js';
 
-/** A stored build: the wire `Build` plus its persisted snapshot tally. */
-export interface BuildRecord extends Build {
-  readonly tally: SnapshotTally;
-}
-
-/** What `complete` writes when a build's results arrive. */
+/** What `completeWithResults` writes on the build when its results arrive. */
 export interface BuildCompletion {
   readonly status: BuildStatus;
   readonly tally: SnapshotTally;
   readonly completedAt: Date;
-  readonly checkRunId: number | null;
 }
 
-/** What `updateReview` writes after a reviewer's decision. */
-export interface BuildReviewUpdate {
-  readonly status: BuildStatus;
-  readonly tally: SnapshotTally;
+/** A build's snapshots as of one read, and the review version they were read at. */
+export interface BuildReviewRead {
+  readonly version: number;
+  readonly snapshots: SnapshotRecord[];
 }
 
-/** What `updateSnapshotReview` writes on each snapshot. */
-export interface SnapshotReviewUpdate {
+/** A reviewer's decision on some snapshots of a build, and the status it folds the build to. */
+export interface ReviewCommit {
+  readonly snapshotIds: readonly string[];
   readonly review: ReviewState;
   readonly reviewedBy: string;
   readonly reviewedAt: Date;
+  readonly status: BuildStatus;
+  readonly tally: SnapshotTally;
 }
 
 /** `BuildRepository` plus the reads and writes the API's use-cases need. */
@@ -62,74 +63,29 @@ export interface ApiBuildRepository extends BuildRepository {
   listForProject(projectId: string, limit: number): Promise<BuildRecord[]>;
   /** The newest signed-off build (`baselineBuildStatuses`) of a project on `branch`. */
   findLatestBaselineOnBranch(projectId: string, branch: string): Promise<BuildRecord | null>;
-  complete(buildId: string, completion: BuildCompletion): Promise<void>;
-  updateReview(buildId: string, update: BuildReviewUpdate): Promise<void>;
+  /**
+   * Store a build's snapshots and move it out of `in_progress`, in one transaction, only if it
+   * is still `in_progress` when the transaction runs. False, with nothing written, when it is
+   * not: another submission got there first. Throws, with nothing written, when a snapshot is
+   * rejected (such as a duplicate story and variant).
+   */
+  completeWithResults(
+    buildId: string,
+    records: readonly SnapshotRecord[],
+    completion: BuildCompletion,
+  ): Promise<boolean>;
+  /** Remember the check run created for a completed build. */
+  setCheckRunId(buildId: string, checkRunId: number): Promise<void>;
   listSnapshots(buildId: string): Promise<SnapshotRecord[]>;
-  saveSnapshots(buildId: string, records: readonly SnapshotRecord[]): Promise<void>;
   findSnapshotById(snapshotId: string): Promise<SnapshotRecord | null>;
-  updateSnapshotReview(snapshotIds: readonly string[], update: SnapshotReviewUpdate): Promise<void>;
-}
-
-type BuildRow = typeof builds.$inferSelect;
-type SnapshotRow = typeof snapshots.$inferSelect;
-
-/** The tally as the eight `builds` count columns. */
-function tallyColumns(tally: SnapshotTally) {
-  return {
-    pendingCount: tally.pendingCount,
-    deniedCount: tally.deniedCount,
-    unchangedCount: tally.counts.unchanged,
-    changedCount: tally.counts.changed,
-    newCount: tally.counts.new,
-    removedCount: tally.counts.removed,
-    unstableCount: tally.counts.unstable,
-    errorCount: tally.counts.error,
-  };
-}
-
-function toTally(row: BuildRow): SnapshotTally {
-  return {
-    counts: {
-      unchanged: row.unchangedCount,
-      changed: row.changedCount,
-      new: row.newCount,
-      removed: row.removedCount,
-      unstable: row.unstableCount,
-      error: row.errorCount,
-    },
-    pendingCount: row.pendingCount,
-    deniedCount: row.deniedCount,
-  };
-}
-
-/** Every `Build` column with ISO timestamps, plus the tally. */
-function toBuildRecord(row: BuildRow): BuildRecord {
-  return {
-    id: row.id,
-    projectId: row.projectId,
-    number: row.number,
-    sha: row.sha,
-    branch: row.branch,
-    prNumber: row.prNumber,
-    mergeBaseSha: row.mergeBaseSha,
-    baselineBuildId: row.baselineBuildId,
-    trigger: row.trigger,
-    device: row.device,
-    status: row.status,
-    createdAt: row.createdAt.toISOString(),
-    completedAt: row.completedAt === null ? null : row.completedAt.toISOString(),
-    checkRunId: row.checkRunId,
-    tally: toTally(row),
-  };
-}
-
-function toSnapshotRecord(row: SnapshotRow): SnapshotRecord {
-  return { ...row, reviewedAt: row.reviewedAt === null ? null : row.reviewedAt.toISOString() };
-}
-
-function toSnapshotRow(buildId: string, record: SnapshotRecord): SnapshotRow {
-  const reviewedAt = record.reviewedAt === null ? null : new Date(record.reviewedAt);
-  return { ...record, buildId, reviewedAt };
+  /** The build's snapshots and its review version, read together. */
+  readForReview(buildId: string): Promise<BuildReviewRead>;
+  /**
+   * Write a review decision and the build's new status and tally in one transaction, only if
+   * the build is still at `readVersion`, and move it to the next version. False, with nothing
+   * written, when another review committed first; the caller re-reads and decides again.
+   */
+  commitReview(buildId: string, readVersion: number, commit: ReviewCommit): Promise<boolean>;
 }
 
 /**
@@ -139,7 +95,7 @@ function toSnapshotRow(buildId: string, record: SnapshotRecord): SnapshotRow {
 export class D1BuildRepository implements ApiBuildRepository {
   private readonly db;
 
-  constructor(database: D1Database) {
+  constructor(private readonly database: D1Database) {
     this.db = drizzle(database);
   }
 
@@ -232,19 +188,34 @@ export class D1BuildRepository implements ApiBuildRepository {
     return row === undefined ? null : toBuildRecord(row);
   }
 
-  async complete(buildId: string, completion: BuildCompletion): Promise<void> {
-    const { status, tally, completedAt, checkRunId } = completion;
-    await this.db
+  /**
+   * One D1 batch, which D1 runs as a transaction. Every statement is guarded by the build still
+   * being `in_progress`, and the status change comes last, so either all of it applies or none.
+   * The first statement clears snapshots an `in_progress` build should not have; only builds
+   * wedged by the non-atomic write this replaced have any.
+   */
+  async completeWithResults(
+    buildId: string,
+    records: readonly SnapshotRecord[],
+    completion: BuildCompletion,
+  ): Promise<boolean> {
+    const { status, tally, completedAt } = completion;
+    const rows = records.map((record) => toSnapshotRow(buildId, record));
+    const clear = this.db
+      .delete(snapshots)
+      .where(and(eq(snapshots.buildId, buildId), buildInProgress(buildId)));
+    const inserts = guardedSnapshotInserts(rows, buildInProgress(buildId), 2);
+    const complete = this.db
       .update(builds)
-      .set({ status, completedAt, checkRunId, ...tallyColumns(tally) })
-      .where(eq(builds.id, buildId));
+      .set({ status, completedAt, ...tallyColumns(tally) })
+      .where(and(eq(builds.id, buildId), eq(builds.status, 'in_progress')))
+      .returning({ id: builds.id });
+    const results = await runBatch(this.database, [clear.toSQL(), ...inserts, complete.toSQL()]);
+    return results.at(-1)?.results.length === 1;
   }
 
-  async updateReview(buildId: string, update: BuildReviewUpdate): Promise<void> {
-    await this.db
-      .update(builds)
-      .set({ status: update.status, ...tallyColumns(update.tally) })
-      .where(eq(builds.id, buildId));
+  async setCheckRunId(buildId: string, checkRunId: number): Promise<void> {
+    await this.db.update(builds).set({ checkRunId }).where(eq(builds.id, buildId));
   }
 
   async listSnapshots(buildId: string): Promise<SnapshotRecord[]> {
@@ -256,30 +227,45 @@ export class D1BuildRepository implements ApiBuildRepository {
     return rows.map(toSnapshotRecord);
   }
 
-  async saveSnapshots(buildId: string, records: readonly SnapshotRecord[]): Promise<void> {
-    const rows = records.map((record) => toSnapshotRow(buildId, record));
-    const columns = Object.keys(getTableColumns(snapshots)).length;
-    const [first, ...rest] = chunkForD1(rows, columns).map((chunk) =>
-      this.db.insert(snapshots).values(chunk),
-    );
-    if (first === undefined) return;
-    await this.db.batch([first, ...rest]);
-  }
-
   async findSnapshotById(snapshotId: string): Promise<SnapshotRecord | null> {
     const row = await this.db.select().from(snapshots).where(eq(snapshots.id, snapshotId)).get();
     return row === undefined ? null : toSnapshotRecord(row);
   }
 
-  async updateSnapshotReview(
-    snapshotIds: readonly string[],
-    update: SnapshotReviewUpdate,
-  ): Promise<void> {
-    // Each chunk binds its ids plus the three SET values; two per id keeps it under the limit.
-    const [first, ...rest] = chunkForD1(snapshotIds, 2).map((ids) =>
-      this.db.update(snapshots).set(update).where(inArray(snapshots.id, ids)),
+  async readForReview(buildId: string): Promise<BuildReviewRead> {
+    const [versions, rows] = await this.db.batch([
+      this.db.select({ version: builds.reviewVersion }).from(builds).where(eq(builds.id, buildId)),
+      this.db
+        .select()
+        .from(snapshots)
+        .where(eq(snapshots.buildId, buildId))
+        .orderBy(asc(snapshots.storyId), asc(snapshots.variant)),
+    ]);
+    return { version: versions[0]?.version ?? 0, snapshots: rows.map(toSnapshotRecord) };
+  }
+
+  /**
+   * One D1 batch (one transaction): the snapshot updates first, each guarded by the build still
+   * being at `readVersion`, then the build's update, which bumps the version under the same
+   * guard. So the tally written is always the one of the snapshots as stored at commit time.
+   */
+  async commitReview(buildId: string, readVersion: number, commit: ReviewCommit): Promise<boolean> {
+    const { snapshotIds, review, reviewedBy, reviewedAt, status, tally } = commit;
+    const atVersion = sql`EXISTS (SELECT 1 FROM ${builds} WHERE ${builds.id} = ${buildId} AND ${builds.reviewVersion} = ${readVersion})`;
+    // Each chunk binds its ids, the three SET values, the build id and the two guard values.
+    const decisions = chunkForD1(snapshotIds, 1, 6).map((ids) =>
+      this.db
+        .update(snapshots)
+        .set({ review, reviewedBy, reviewedAt })
+        .where(and(inArray(snapshots.id, ids), eq(snapshots.buildId, buildId), atVersion)),
     );
-    if (first === undefined) return;
-    await this.db.batch([first, ...rest]);
+    const fold = this.db
+      .update(builds)
+      .set({ status, ...tallyColumns(tally), reviewVersion: sql`${builds.reviewVersion} + 1` })
+      .where(and(eq(builds.id, buildId), eq(builds.reviewVersion, readVersion)))
+      .returning({ id: builds.id });
+    const statements = [...decisions, fold].map((statement) => statement.toSQL());
+    const results = await runBatch(this.database, statements);
+    return results.at(-1)?.results.length === 1;
   }
 }

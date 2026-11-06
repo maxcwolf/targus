@@ -103,8 +103,11 @@ describe('createBuild with a baseline', () => {
   it('resolves the baseline and returns the accepted image of each of its stories', async () => {
     const { deps, project } = await setup();
     const baselineId = (await createBuild(deps, project, createBuildRequest(sha('b')))).build.id;
-    await deps.builds.complete(baselineId, completion('accepted', deps.clock.now()));
-    await deps.builds.saveSnapshots(baselineId, baselineRecords(baselineId));
+    await deps.builds.completeWithResults(
+      baselineId,
+      baselineRecords(baselineId),
+      completion('accepted', deps.clock.now()),
+    );
 
     const response = await createBuild(
       deps,
@@ -148,8 +151,7 @@ describe('getBuild and listSnapshots', () => {
     const { deps, project } = await setup();
     const { build } = await createBuild(deps, project, createBuildRequest(sha('a')));
     const record = snapshotRecord('s1', build.id, { blank: true });
-    await deps.builds.saveSnapshots(build.id, [record]);
-    await deps.builds.complete(build.id, {
+    await deps.builds.completeWithResults(build.id, [record], {
       ...completion('pending', deps.clock.now()),
       tally: tallySnapshots([record]),
     });
@@ -208,7 +210,10 @@ describe('build reads for reviewers', () => {
     const first = (await createBuild(deps, project, createBuildRequest(sha('a')))).build;
     await createBuild(deps, project, createBuildRequest(sha('b')));
     const tally = { ...emptyTally, counts: { ...emptyTally.counts, changed: 2 }, pendingCount: 2 };
-    await deps.builds.complete(first.id, { ...completion('pending', deps.clock.now()), tally });
+    await deps.builds.completeWithResults(first.id, [], {
+      ...completion('pending', deps.clock.now()),
+      tally,
+    });
 
     const response = await listBuilds(deps, member, project.id);
 

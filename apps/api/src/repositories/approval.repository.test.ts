@@ -5,6 +5,19 @@ import { imageHash, newProject } from '../../test/support/fixtures.js';
 import { createApprovalRepository } from './approval.repository.js';
 import { createProjectRepository } from './project.repository.js';
 
+/** An approval of the `new` story `card` (no previous image) moving to image 2. */
+function approval(projectId: string) {
+  return {
+    projectId,
+    storyId: 'card',
+    variant: 'default',
+    fromHash: null,
+    toHash: imageHash('2'),
+    approvedBy: 'octocat',
+    approvedAt: '2026-01-01T00:00:00.000Z',
+  };
+}
+
 describe('createApprovalRepository (local D1)', () => {
   it('creates approvals and lists those of one project, oldest first', async () => {
     const projects = createProjectRepository(env.DB);
@@ -30,33 +43,49 @@ describe('createApprovalRepository (local D1)', () => {
     expect(await repository.listForProject('project-none')).toEqual([]);
   });
 
-  it('tells whether a hash pair is approved and deletes exactly that pair', async () => {
+  it('deletes exactly the given hash pair', async () => {
     await createProjectRepository(env.DB).create(newProject('appr-pair'));
     const repository = createApprovalRepository(env.DB);
-    const changed = {
-      projectId: 'project-appr-pair',
-      storyId: 'card',
-      variant: 'default',
-      fromHash: imageHash('1'),
-      toHash: imageHash('2'),
-      approvedBy: 'octocat',
-      approvedAt: '2026-01-01T00:00:00.000Z',
-    };
+    const changed = { ...approval('project-appr-pair'), fromHash: imageHash('1') };
     const fresh = { ...changed, fromHash: null };
+    const dark = { ...fresh, variant: 'dark' };
     await repository.create('pair-1', changed);
     await repository.create('pair-2', fresh);
+    await repository.create('pair-3', dark);
 
-    const pair = ['project-appr-pair', 'card', 'default'] as const;
-    expect(await repository.exists(...pair, imageHash('1'), imageHash('2'))).toBe(true);
-    expect(await repository.exists(...pair, null, imageHash('2'))).toBe(true);
-    expect(await repository.exists(...pair, imageHash('3'), imageHash('2'))).toBe(false);
-    expect(await repository.exists('project-appr-pair', 'card', 'dark', null, imageHash('2'))).toBe(
-      false,
-    );
+    await repository.delete('project-appr-pair', 'card', 'default', null, imageHash('2'));
 
-    await repository.delete(...pair, null, imageHash('2'));
+    expect(await repository.listForProject('project-appr-pair')).toEqual([changed, dark]);
+  });
+});
 
-    expect(await repository.exists(...pair, null, imageHash('2'))).toBe(false);
-    expect(await repository.listForProject('project-appr-pair')).toEqual([changed]);
+describe('createApprovalRepository identity (local D1)', () => {
+  it('keeps the first approval of a hash pair and ignores a repeat', async () => {
+    await createProjectRepository(env.DB).create(newProject('appr-dup'));
+    const repository = createApprovalRepository(env.DB);
+    const first = { ...approval('project-appr-dup'), fromHash: imageHash('1') };
+
+    await repository.create('dup-1', first);
+    await repository.create('dup-2', { ...first, approvedBy: 'hubot' });
+
+    expect(await repository.listForProject('project-appr-dup')).toEqual([first]);
+  });
+
+  it('also ignores a repeated approval of a new story, whose fromHash is null', async () => {
+    await createProjectRepository(env.DB).create(newProject('appr-null'));
+    const repository = createApprovalRepository(env.DB);
+    const first = approval('project-appr-null');
+    const otherImage = { ...first, toHash: imageHash('3') };
+
+    await Promise.all([
+      repository.create('null-1', first),
+      repository.create('null-2', { ...first, approvedBy: 'hubot' }),
+    ]);
+    await repository.create('null-3', otherImage);
+
+    const stored = await repository.listForProject('project-appr-null');
+    expect(stored).toHaveLength(2);
+    expect(stored.filter((row) => row.toHash === imageHash('2'))).toHaveLength(1);
+    expect(stored).toContainEqual(otherImage);
   });
 });

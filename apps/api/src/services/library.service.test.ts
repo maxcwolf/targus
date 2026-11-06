@@ -31,8 +31,9 @@ describe('getLibrary', () => {
     await deps.builds.create(newBuild('old', project.id, { status: 'passed' }));
     await deps.builds.create(newBuild('latest', project.id, { status: 'accepted' }));
     await deps.builds.create(newBuild('unreviewed', project.id, { status: 'pending' }));
-    await deps.builds.saveSnapshots('old', [snapshotRecord('o1', 'old')]);
-    await deps.builds.saveSnapshots('latest', [
+    // Seeded directly: these builds were created already signed off.
+    deps.builds.snapshots.set('old', [snapshotRecord('o1', 'old')]);
+    deps.builds.snapshots.set('latest', [
       snapshotRecord('l1', 'latest', {
         storyId: 'button--primary',
         title: 'Button',

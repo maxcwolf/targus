@@ -29,6 +29,13 @@
       "when": 1793929460771,
       "tag": "0003_project_images",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793931887982,
+      "tag": "0004_approval_identity_review_version",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,9 @@
-import { SubmitResultsResponse, type GitHubClient, type SubmitResultsRequest } from '@targus/core';
+import {
+  emptyTally,
+  SubmitResultsResponse,
+  type GitHubClient,
+  type SubmitResultsRequest,
+} from '@targus/core';
 import { describe, expect, it, vi } from 'vitest';
 
 import { OctokitGitHubClient } from '../adapters/github-client.adapter.js';
@@ -12,12 +17,7 @@ import {
 } from '../../test/support/fixtures.js';
 import { createGitHubStub, generatePrivateKeyPem } from '../../test/support/github-stub.js';
 import { markUploaded } from '../../test/support/in-memory-images.js';
-import {
-  asProject,
-  completion,
-  createTestDeps,
-  type TestDeps,
-} from '../../test/support/in-memory.js';
+import { asProject, createTestDeps, type TestDeps } from '../../test/support/in-memory.js';
 import { createBuild, getBuild } from './build.service.js';
 import { submitResults } from './results.service.js';
 
@@ -105,11 +105,14 @@ describe('submitResults against a baseline', () => {
         storyResult('wobbly', { imageHash: imageHash('4') }),
       ],
     });
-    await deps.builds.complete(first, completion('accepted', deps.clock.now()));
-    deps.builds.snapshots.set(
-      first,
-      (deps.builds.snapshots.get(first) ?? []).map((s) => ({ ...s, review: 'approved' })),
-    );
+    await deps.builds.commitReview(first, 0, {
+      snapshotIds: (await deps.builds.listSnapshots(first)).map((snapshot) => snapshot.id),
+      review: 'approved',
+      reviewedBy: 'octocat',
+      reviewedAt: deps.clock.now(),
+      status: 'accepted',
+      tally: emptyTally,
+    });
 
     const second = await openBuild(deps, project, sha('b'), sha('a'));
     const response = await submit(deps, project, second, {

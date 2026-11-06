@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
 import { imageHash, newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.js';
+import { completion } from '../../test/support/in-memory.js';
 import { D1BuildRepository } from './build.repository.js';
 import { createImageRepository } from './image.repository.js';
 import { createProjectRepository } from './project.repository.js';
@@ -61,16 +62,25 @@ describe('createImageRepository.projectIdsReferencing (local D1)', () => {
       await builds.create(newBuild(`build-${key}`, `project-${key}`));
     }
     const [current, baseline, diff] = [imageHash('7'), imageHash('8'), imageHash('9')];
-    await builds.saveSnapshots('build-ref-a', [
-      snapshotRecord('ref-1', 'build-ref-a', { imageHash: current, baselineHash: baseline }),
-      snapshotRecord('ref-2', 'build-ref-a', { imageHash: current }),
-    ]);
-    await builds.saveSnapshots('build-ref-b', [
-      snapshotRecord('ref-3', 'build-ref-b', { imageHash: imageHash('6'), diffHash: diff }),
-    ]);
-    await builds.saveSnapshots('build-ref-c', [
-      snapshotRecord('ref-4', 'build-ref-c', { imageHash: baseline }),
-    ]);
+    const done = completion('pending', at);
+    await builds.completeWithResults(
+      'build-ref-a',
+      [
+        snapshotRecord('ref-1', 'build-ref-a', { imageHash: current, baselineHash: baseline }),
+        snapshotRecord('ref-2', 'build-ref-a', { imageHash: current }),
+      ],
+      done,
+    );
+    await builds.completeWithResults(
+      'build-ref-b',
+      [snapshotRecord('ref-3', 'build-ref-b', { imageHash: imageHash('6'), diffHash: diff })],
+      done,
+    );
+    await builds.completeWithResults(
+      'build-ref-c',
+      [snapshotRecord('ref-4', 'build-ref-c', { imageHash: baseline })],
+      done,
+    );
 
     expect(await repository.projectIdsReferencing(current)).toEqual(['project-ref-a']);
     expect((await repository.projectIdsReferencing(baseline)).sort()).toEqual([

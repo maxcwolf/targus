@@ -180,8 +180,23 @@ async function requireUploaded(
 }
 
 /**
+ * Remember the check run's id so reviews can move it along. Best effort, like creating it: the
+ * results are stored and the build is complete, so failing here would only make the CLI retry
+ * into a conflict.
+ */
+async function rememberCheckRun(deps: ResultsDeps, buildId: string, checkRunId: number) {
+  try {
+    await deps.builds.setCheckRunId(buildId, checkRunId);
+  } catch (error) {
+    console.error('storing the check run id failed', error);
+  }
+}
+
+/**
  * `POST /api/builds/:id/results`: classify every story against the baseline and the project's
- * approvals, store the snapshots, fold the build status, and create the check run.
+ * approvals, store the snapshots and the folded build status in one write, then create the
+ * check run. The write applies only while the build is `in_progress`, so a retry or a racing
+ * second submission is a `conflict`, never a half-stored build.
  */
 export async function submitResults(
   deps: ResultsDeps,
@@ -190,9 +205,8 @@ export async function submitResults(
   request: SubmitResultsRequest,
 ): Promise<SubmitResultsResponse> {
   const build = await requireBuild(deps, project, buildId);
-  if (build.status !== 'in_progress') {
-    throw new TargusError('conflict', `build ${buildId} already has results`);
-  }
+  const alreadyDone = () => new TargusError('conflict', `build ${buildId} already has results`);
+  if (build.status !== 'in_progress') throw alreadyDone();
   await requireUploaded(deps, project, request.results);
   const records = classify(
     deps,
@@ -200,17 +214,13 @@ export async function submitResults(
     request.results,
     await loadComparison(deps, project, build),
   );
-  await deps.builds.saveSnapshots(build.id, records);
-
   const tally = tallySnapshots(records);
   const summary = buildStatusFromTally(tally);
+  const completion = { status: summary.status, tally, completedAt: deps.clock.now() };
+  if (!(await deps.builds.completeWithResults(build.id, records, completion))) throw alreadyDone();
+
   const reviewUrl = `${deps.config.publicUrl}/builds/${build.id}`;
   const checkRun = await reportCheckRun(deps, project, build, summary, reviewUrl);
-  await deps.builds.complete(build.id, {
-    status: summary.status,
-    tally,
-    completedAt: deps.clock.now(),
-    checkRunId: checkRun?.id ?? null,
-  });
+  if (checkRun !== null) await rememberCheckRun(deps, build.id, checkRun.id);
   return { build: { id: build.id, number: build.number }, summary, reviewUrl, checkRun };
 }

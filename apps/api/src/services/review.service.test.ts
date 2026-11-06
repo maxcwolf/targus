@@ -35,14 +35,13 @@ async function setup() {
   const project = await deps.projects.create(newProject('review', { installationId: 42 }));
   const { build } = await createBuild(deps, project, createBuildRequest(sha('a')));
   const snapshots = records(build.id);
-  await deps.builds.saveSnapshots(build.id, snapshots);
   const tally = tallySnapshots(snapshots);
-  await deps.builds.complete(build.id, {
+  await deps.builds.completeWithResults(build.id, snapshots, {
     status: 'pending',
     tally,
     completedAt: deps.clock.now(),
-    checkRunId: 901,
   });
+  await deps.builds.setCheckRunId(build.id, 901);
   const reviewer = await signInReviewer(deps, 'octocat');
   return { deps, github, project, buildId: build.id, reviewer };
 }
@@ -154,7 +153,8 @@ describe('reviewSnapshot refusals', () => {
   it('rejects a snapshot of a build still waiting for its results', async () => {
     const { deps, project, reviewer } = await setup();
     const { build } = await createBuild(deps, project, createBuildRequest(sha('b')));
-    await deps.builds.saveSnapshots(build.id, [snapshotRecord('early', build.id)]);
+    // Only a build wedged before results were stored atomically can be in this state.
+    deps.builds.snapshots.set(build.id, [snapshotRecord('early', build.id)]);
 
     await expect(reviewSnapshot(deps, reviewer, 'early', 'approve')).rejects.toMatchObject({
       code: 'conflict',
@@ -164,7 +164,8 @@ describe('reviewSnapshot refusals', () => {
 
   it('refuses to approve a reviewable snapshot that somehow has no image', async () => {
     const { deps, buildId, reviewer } = await setup();
-    await deps.builds.saveSnapshots(buildId, [
+    deps.builds.snapshots.set(buildId, [
+      ...(await deps.builds.listSnapshots(buildId)),
       snapshotRecord('blank', buildId, { state: 'new', imageHash: null }),
     ]);
 

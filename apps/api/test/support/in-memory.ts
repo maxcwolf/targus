@@ -1,10 +1,8 @@
 import {
-  baselineBuildStatuses,
   createFakeClock,
   createFakeIdGenerator,
   emptyTally,
   type BuildStatus,
-  resolveBaseline,
   type Approval,
   type FakeClock,
 } from '@targus/core';
@@ -13,12 +11,7 @@ import { NoopGitHubClient } from '../../src/adapters/github-client.adapter.js';
 import { webCryptoTokens } from '../../src/adapters/token.adapter.js';
 import type { ApiConfig } from '../../src/config.js';
 import type { ApprovalRepository } from '../../src/repositories/approval.repository.js';
-import type {
-  ApiBuildRepository,
-  BuildCompletion,
-  BuildRecord,
-  SnapshotRecord,
-} from '../../src/repositories/build.repository.js';
+import type { BuildCompletion } from '../../src/repositories/build.repository.js';
 import type { Project, ProjectRepository } from '../../src/repositories/project.repository.js';
 import type { ServiceDeps } from '../../src/services/deps.js';
 import type { Principal } from '../../src/services/principal.js';
@@ -29,7 +22,10 @@ import {
   createInMemoryUsers,
   type FakeOAuth,
 } from './in-memory-auth.js';
+import { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.js';
 import { createInMemoryImages, type InMemoryImages } from './in-memory-images.js';
+
+export { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.js';
 
 // In-memory doubles of the API's repositories, for service unit tests. The D1 adapters are
 // tested against the same behaviour in src/repositories/*.test.ts.
@@ -62,99 +58,6 @@ export function createInMemoryProjects(): ProjectRepository & { readonly all: Pr
   };
 }
 
-export interface InMemoryBuilds extends ApiBuildRepository {
-  readonly builds: BuildRecord[];
-  readonly snapshots: Map<string, SnapshotRecord[]>;
-}
-
-/** The snapshot-review half of the builds double. */
-function snapshotReviews(
-  snapshots: Map<string, SnapshotRecord[]>,
-): Pick<ApiBuildRepository, 'findSnapshotById' | 'updateSnapshotReview'> {
-  return {
-    findSnapshotById: (snapshotId) =>
-      Promise.resolve(
-        [...snapshots.values()].flat().find((snapshot) => snapshot.id === snapshotId) ?? null,
-      ),
-    updateSnapshotReview(snapshotIds, { review, reviewedBy, reviewedAt }) {
-      const ids = new Set(snapshotIds);
-      for (const [buildId, records] of snapshots) {
-        snapshots.set(
-          buildId,
-          records.map((record) =>
-            ids.has(record.id)
-              ? { ...record, review, reviewedBy, reviewedAt: reviewedAt.toISOString() }
-              : record,
-          ),
-        );
-      }
-      return Promise.resolve();
-    },
-  };
-}
-
-/** The project-wide build reads of the builds double. */
-function buildQueries(
-  builds: readonly BuildRecord[],
-): Pick<
-  ApiBuildRepository,
-  'listForProject' | 'findLatestBaselineOnBranch' | 'findLatestSuccessfulForShas'
-> {
-  const newestFirst = (projectId: string): BuildRecord[] =>
-    builds.filter((b) => b.projectId === projectId).sort((a, b) => b.number - a.number);
-  return {
-    listForProject: (projectId, limit) => Promise.resolve(newestFirst(projectId).slice(0, limit)),
-    findLatestBaselineOnBranch: (projectId, branch) =>
-      Promise.resolve(
-        newestFirst(projectId)
-          .filter((b) => b.branch === branch)
-          .find((b) => baselineBuildStatuses.some((status) => status === b.status)) ?? null,
-      ),
-    findLatestSuccessfulForShas: (projectId, shas) =>
-      Promise.resolve(
-        resolveBaseline(
-          shas,
-          builds.filter((b) => b.projectId === projectId),
-        ),
-      ),
-  };
-}
-
-export function createInMemoryBuilds(): InMemoryBuilds {
-  const builds: BuildRecord[] = [];
-  const snapshots = new Map<string, SnapshotRecord[]>();
-  const find = (match: (build: BuildRecord) => boolean) =>
-    Promise.resolve(builds.find(match) ?? null);
-  const patch = (buildId: string, fields: Partial<BuildRecord>) => {
-    const index = builds.findIndex((build) => build.id === buildId);
-    const build = builds[index];
-    if (build !== undefined) builds[index] = { ...build, ...fields };
-    return Promise.resolve();
-  };
-  return {
-    builds,
-    snapshots,
-    create(build, tally = emptyTally) {
-      const number = builds.filter((other) => other.projectId === build.projectId).length + 1;
-      const created = { ...build, number, tally };
-      builds.push(created);
-      return Promise.resolve(created);
-    },
-    findById: (projectId, buildId) => find((b) => b.projectId === projectId && b.id === buildId),
-    findAnyById: (buildId) => find((b) => b.id === buildId),
-    ...buildQueries(builds),
-    complete: (buildId, { status, tally, completedAt, checkRunId }) =>
-      patch(buildId, { status, tally, completedAt: completedAt.toISOString(), checkRunId }),
-    updateReview: (buildId, { status, tally }) => patch(buildId, { status, tally }),
-    listSnapshots: (buildId) => Promise.resolve([...(snapshots.get(buildId) ?? [])]),
-    saveSnapshots(buildId, records) {
-      snapshots.set(buildId, [...(snapshots.get(buildId) ?? []), ...records]);
-      return Promise.resolve();
-    },
-    ...snapshotReviews(snapshots),
-  };
-}
-
 /** Whether an approval is of this story's hash pair. */
 const samePair =
   (projectId: string, storyId: string, variant: string, fromHash: string | null, toHash: string) =>
@@ -171,10 +74,11 @@ export function createInMemoryApprovals(): ApprovalRepository & { readonly all: 
     all,
     listForProject: (projectId) => Promise.resolve(all.filter((a) => a.projectId === projectId)),
     create(_id, approval) {
-      all.push(approval);
+      // The unique indexes on an approval's identity, a null fromHash included.
+      const { projectId, storyId, variant, fromHash, toHash } = approval;
+      if (!all.some(samePair(projectId, storyId, variant, fromHash, toHash))) all.push(approval);
       return Promise.resolve();
     },
-    exists: (...pair) => Promise.resolve(all.some(samePair(...pair))),
     delete(...pair) {
       const keep = all.filter((approval) => !samePair(...pair)(approval));
       all.splice(0, all.length, ...keep);
@@ -235,7 +139,7 @@ export function asProject(project: Project): Principal {
   return { kind: 'project', project };
 }
 
-/** A `complete` call with an empty tally and no check run. */
+/** A `completeWithResults` completion with an empty tally. */
 export function completion(status: BuildStatus, completedAt: Date): BuildCompletion {
-  return { status, tally: emptyTally, completedAt, checkRunId: null };
+  return { status, tally: emptyTally, completedAt };
 }

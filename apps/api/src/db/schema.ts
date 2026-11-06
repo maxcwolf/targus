@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   index,
   integer,
@@ -68,6 +69,9 @@ export const builds = sqliteTable(
     checkRunId: integer('check_run_id'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
     completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
+    // Bumped by every review write. A review commits only if it is still the version it read
+    // the snapshots at, so its tally is never computed from a stale copy (ADR 0013).
+    reviewVersion: integer('review_version').notNull().default(0),
     // The persisted `SnapshotTally` of core, so the builds list and the build page derive the
     // status and counts without reading snapshots.
     pendingCount: integer('pending_count').notNull().default(0),
@@ -144,14 +148,20 @@ export const approvals = sqliteTable(
     approvedAt: integer('approved_at', { mode: 'timestamp_ms' }).notNull(),
   },
   (table) => [
-    // Covers the project_id foreign key and the carry-forward match (plan.md section 6, rule 3).
-    index('approvals_project_story_hashes_idx').on(
+    // An approval's identity, so a hash pair is approved at most once. Also covers the
+    // project_id foreign key and the carry-forward match (plan.md section 6, rule 3).
+    uniqueIndex('approvals_identity_unique').on(
       table.projectId,
       table.storyId,
       table.variant,
       table.fromHash,
       table.toHash,
     ),
+    // SQLite treats NULLs as distinct in a unique index, so the index above never stops a second
+    // approval of a `new` story (from_hash NULL). This one does.
+    uniqueIndex('approvals_new_story_identity_unique')
+      .on(table.projectId, table.storyId, table.variant, table.toHash)
+      .where(sql`${table.fromHash} IS NULL`),
   ],
 );
 

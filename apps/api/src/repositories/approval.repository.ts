@@ -7,16 +7,11 @@ import { approvals } from '../db/schema.js';
 export interface ApprovalRepository {
   /** Every approval of a project, oldest first. */
   listForProject(projectId: string): Promise<Approval[]>;
-  /** Record an approval; `id` comes from the `IdGenerator` port. */
+  /**
+   * Record an approval unless the project already has one of the same story, variant and hash
+   * pair, in which case the existing one stands. `id` comes from the `IdGenerator` port.
+   */
   create(id: string, approval: Approval): Promise<void>;
-  /** Whether the project has an approval of this story moving `fromHash` to `toHash`. */
-  exists(
-    projectId: string,
-    storyId: string,
-    variant: string,
-    fromHash: string | null,
-    toHash: string,
-  ): Promise<boolean>;
   /** Remove every approval of this story moving `fromHash` to `toHash`. */
   delete(
     projectId: string,
@@ -66,18 +61,12 @@ export function createApprovalRepository(database: D1Database): ApprovalReposito
       }));
     },
     async create(id, approval) {
+      // No conflict target: either unique index (approvals_identity_unique, or
+      // approvals_new_story_identity_unique for a null fromHash) makes this a no-op.
       await db
         .insert(approvals)
-        .values({ ...approval, id, approvedAt: new Date(approval.approvedAt) });
-    },
-    async exists(...pair) {
-      const row = await db
-        .select({ id: approvals.id })
-        .from(approvals)
-        .where(pairOf(...pair))
-        .limit(1)
-        .get();
-      return row !== undefined;
+        .values({ ...approval, id, approvedAt: new Date(approval.approvedAt) })
+        .onConflictDoNothing();
     },
     async delete(...pair) {
       await db.delete(approvals).where(pairOf(...pair));
