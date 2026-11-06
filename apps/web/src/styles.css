@@ -1342,6 +1342,14 @@ p {
   margin-bottom: 14px;
   color: var(--muted);
 }
+.panel .request-id {
+  font-size: 12px;
+}
+.request-id code {
+  font-family: var(--mono);
+  user-select: all;
+  overflow-wrap: anywhere;
+}
 
 /* Toast */
 .toast {

@@ -48,11 +48,18 @@ export function resetApiState(): void {
 resetApiState();
 
 interface ErrorBody {
-  error: { code: string; message: string };
+  error: { code: string; message: string; requestId?: string };
 }
 
-export function apiError(status: number, code: string, message: string): HttpResponse<ErrorBody> {
-  return HttpResponse.json({ error: { code, message } }, { status });
+/** An API error body; pass `requestId` to answer as the real API does (ADR 0020). */
+export function apiError(
+  status: number,
+  code: string,
+  message: string,
+  requestId?: string,
+): HttpResponse<ErrorBody> {
+  const error = requestId === undefined ? { code, message } : { code, message, requestId };
+  return HttpResponse.json({ error }, { status });
 }
 
 function withSummary(build: Build): BuildWithSummary {

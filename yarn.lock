@@ -2703,6 +2703,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@targus/react-native@workspace:packages/react-native"
   dependencies:
+    "@targus/core": "workspace:*"
     "@types/react": "npm:^19.3.0"
     "@types/react-test-renderer": "npm:^19.3.1"
     "@vitest/coverage-v8": "npm:5.1.0"

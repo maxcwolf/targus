@@ -1,25 +1,24 @@
-import { describe, expect, it } from 'vitest';
+import { maxStoryDelayMs, StoryParameters, storyParametersEvent } from '@targus/core';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
-import { defaultTargusParameters, resolveTargusParameters } from './parameters.ts';
+import type { TargusParameters } from './parameters.ts';
+import { storyParametersEvent as decoratorEvent } from './with-targus.ts';
 
-describe('resolveTargusParameters', () => {
-  it('applies the defaults when a story sets nothing', () => {
-    expect(resolveTargusParameters(undefined)).toEqual({ delay: 300, skip: false });
-    expect(resolveTargusParameters({ layout: 'centered' })).toEqual(defaultTargusParameters);
+// The app-side package does not depend on core at run time; these tests keep its copy of the
+// wire contract (ADR 0022) equal to core's.
+describe('TargusParameters', () => {
+  it('is exactly the shape of core’s StoryParameters schema, with the bounds it documents', () => {
+    expectTypeOf<TargusParameters>().toEqualTypeOf<Readonly<StoryParameters>>();
+
+    expect(maxStoryDelayMs).toBe(10_000);
+    const valid: TargusParameters = { delay: maxStoryDelayMs, skip: true };
+    expect(StoryParameters.safeParse(valid).success).toBe(true);
+    expect(StoryParameters.safeParse({ delay: maxStoryDelayMs + 1 }).success).toBe(false);
   });
+});
 
-  it('keeps valid values a story sets', () => {
-    expect(resolveTargusParameters({ targus: { delay: 1200, skip: true } })).toEqual({
-      delay: 1200,
-      skip: true,
-    });
-  });
-
-  it('fills in fields that are missing or malformed', () => {
-    expect(resolveTargusParameters({ targus: { delay: -5, skip: 'yes' } })).toEqual({
-      delay: 300,
-      skip: false,
-    });
-    expect(resolveTargusParameters({ targus: null })).toEqual(defaultTargusParameters);
+describe('storyParametersEvent', () => {
+  it('is the event name the CLI listens for', () => {
+    expect(decoratorEvent).toBe(storyParametersEvent);
   });
 });

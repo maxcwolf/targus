@@ -243,7 +243,16 @@ describe('targus run when submitting results fails', () => {
   it('retries, then exits 1 naming the request', async () => {
     const down: Override = (method, pathname) =>
       method === 'POST' && pathname.endsWith('/results')
-        ? Response.json({ error: { message: 'database unavailable' } }, { status: 500 })
+        ? Response.json(
+            {
+              error: {
+                code: 'internal',
+                message: 'database unavailable',
+                requestId: 'req-of-the-last-try',
+              },
+            },
+            { status: 500 },
+          )
         : null;
 
     const { exitCode, stderr } = await fromCapture(down);
@@ -251,7 +260,7 @@ describe('targus run when submitting results fails', () => {
     expect(exitCode).toBe(failureExitCode);
     expect(stderr).toBe(
       'error: POST /api/builds/build-1/results failed with 500: database unavailable ' +
-        '(gave up after 4 attempts)\n',
+        '(gave up after 4 attempts) (request id: req-of-the-last-try)\n',
     );
     expect(api.callsOf('uploadImage')).toHaveLength(3);
   });

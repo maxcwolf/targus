@@ -1,5 +1,6 @@
 {
-  // Type-checks the tests and config files against the library project (types only).
+  // Type-checks the tests and config files against the library project (types only). Core is a
+  // dev dependency only: a test checks the parameters type against its schema.
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "module": "nodenext",
@@ -9,5 +10,5 @@
     "tsBuildInfoFile": "${configDir}/.tsbuild/test.tsbuildinfo"
   },
   "include": ["src/**/*.test.ts", "vitest.config.ts"],
-  "references": [{ "path": "./tsconfig.lib.json" }]
+  "references": [{ "path": "./tsconfig.lib.json" }, { "path": "../core/tsconfig.lib.json" }]
 }

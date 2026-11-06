@@ -5,18 +5,47 @@ import { ApiRequestError, isSignedOut } from '../../api-client/index.ts';
 import { CrashPanel } from '../../components/CrashPanel.tsx';
 import { SignIn, useSessionExpired } from '../auth/index.ts';
 
+interface RequestIdProps {
+  /** The id the API gave the failed request (ADR 0020), or null when it never answered. */
+  readonly requestId?: string | null | undefined;
+}
+
+/**
+ * The failed request's id as plain, selectable text after its label, so a reviewer reporting
+ * the error can quote the one value that finds its log line. Nothing when there is no id.
+ */
+function RequestId({ requestId }: RequestIdProps): ReactElement | null {
+  if (requestId == null) return null;
+  return (
+    <p className="request-id">
+      Request id: <code>{requestId}</code>
+    </p>
+  );
+}
+
+function requestIdOf(error: Error): string | null {
+  return error instanceof ApiRequestError ? error.requestId : null;
+}
+
 /** A page-level "this does not exist" message. */
-export function NotFound({ message }: { readonly message?: string }): ReactElement {
+export function NotFound({
+  message,
+  requestId,
+}: { readonly message?: string } & RequestIdProps): ReactElement {
   return (
     <section className="panel" role="alert">
       <h1>Not found</h1>
       <p>{message ?? 'There is nothing at this address.'}</p>
+      <RequestId requestId={requestId} />
       <Link to="/">Back to projects</Link>
     </section>
   );
 }
 
-function Forbidden({ message }: { readonly message: string }): ReactElement {
+function Forbidden({
+  message,
+  requestId,
+}: { readonly message: string } & RequestIdProps): ReactElement {
   return (
     <section className="panel" role="alert">
       <h1>No access</h1>
@@ -25,6 +54,7 @@ function Forbidden({ message }: { readonly message: string }): ReactElement {
           ? message
           : `You're not a member of this project's org. ${message}`}
       </p>
+      <RequestId requestId={requestId} />
       <Link to="/">Back to projects</Link>
     </section>
   );
@@ -45,17 +75,22 @@ function SignedOut(): ReactElement {
   );
 }
 
-/** Turns a failed query into the right page: sign in, no access, not found, or a generic error. */
+/**
+ * Turns a failed query into the right page: sign in, no access, not found, or a generic error.
+ * Each but the sign-in page shows the request id when the API answered with one.
+ */
 export function ErrorView({ error }: { readonly error: Error }): ReactElement {
   if (isSignedOut(error)) return <SignedOut />;
+  const requestId = requestIdOf(error);
   if (error instanceof ApiRequestError) {
-    if (error.status === 403) return <Forbidden message={error.message} />;
-    if (error.status === 404) return <NotFound message={error.message} />;
+    if (error.status === 403) return <Forbidden message={error.message} requestId={requestId} />;
+    if (error.status === 404) return <NotFound message={error.message} requestId={requestId} />;
   }
   return (
     <section className="panel" role="alert">
       <h1>Something went wrong</h1>
       <p>{error.message}</p>
+      <RequestId requestId={requestId} />
     </section>
   );
 }

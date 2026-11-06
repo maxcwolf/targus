@@ -1,9 +1,4 @@
-export {
-  defaultTargusParameters,
-  resolveTargusParameters,
-  type ResolvedTargusParameters,
-  type TargusParameters,
-} from './parameters.ts';
+export type { TargusParameters } from './parameters.ts';
 export {
   TargusErrorBoundary,
   type StoryErrorReport,

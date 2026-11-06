@@ -1,9 +1,15 @@
 import { z } from 'zod';
 
-/** The API's error body: `{ error: { code, message } }` (apps/api/src/errors.ts). */
+/** The API's error body: `{ error: { code, message, requestId } }` (apps/api/src/errors.ts). */
 const ApiErrorBody = z.object({
   error: z.object({ code: z.string().min(1), message: z.string().min(1) }),
 });
+
+/** Parsed apart from the rest, so a body from an older API without the id still parses. */
+const RequestIdBody = z.object({ error: z.object({ requestId: z.string().min(1) }) });
+
+/** The response header that carries the request id (ADR 0020). */
+const requestIdHeader = 'x-request-id';
 
 /** A non-2xx response from the targus API, with the error code when the body carried one. */
 export class ApiRequestError extends Error {
@@ -11,12 +17,20 @@ export class ApiRequestError extends Error {
   readonly status: number;
   /** The API error code (`forbidden`, `not_found`, ...), or null when the body had none. */
   readonly code: string | null;
+  /**
+   * The id of the request's log line (ADR 0020): from the body, else from the `x-request-id`
+   * header (`headerRequestId`), else null.
+   */
+  readonly requestId: string | null;
 
-  constructor(status: number, path: string, body: unknown) {
+  constructor(status: number, path: string, body: unknown, headerRequestId: string | null = null) {
     const parsed = ApiErrorBody.safeParse(body);
     super(parsed.success ? parsed.data.error.message : `targus API answered ${status} for ${path}`);
     this.status = status;
     this.code = parsed.success ? parsed.data.error.code : null;
+    const withId = RequestIdBody.safeParse(body);
+    const fromHeader = headerRequestId === '' ? null : headerRequestId;
+    this.requestId = withId.success ? withId.data.error.requestId : fromHeader;
   }
 }
 
@@ -28,8 +42,8 @@ export class ApiRequestError extends Error {
 export class SignedOutError extends ApiRequestError {
   override readonly name: string = 'SignedOutError';
 
-  constructor(path: string, body: unknown, method: string) {
-    super(401, path, body);
+  constructor(path: string, body: unknown, method: string, headerRequestId: string | null = null) {
+    super(401, path, body, headerRequestId);
     this.message =
       method === 'GET'
         ? 'Your session has expired. Sign in again to continue.'
@@ -62,8 +76,11 @@ async function request(path: string, init: RequestInit): Promise<unknown> {
     credentials: 'same-origin',
   });
   const body = await readBody(response);
-  if (response.status === 401) throw new SignedOutError(path, body, init.method ?? 'GET');
-  if (!response.ok) throw new ApiRequestError(response.status, path, body);
+  const requestId = response.headers.get(requestIdHeader);
+  if (response.status === 401) {
+    throw new SignedOutError(path, body, init.method ?? 'GET', requestId);
+  }
+  if (!response.ok) throw new ApiRequestError(response.status, path, body, requestId);
   return body;
 }
 
