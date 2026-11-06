@@ -7,29 +7,26 @@ import {
 } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { bearer, call, createTestProject, postJson } from '../../test/support/api.js';
-import {
-  captured,
-  createBuildRequest,
-  imageHash,
-  sha,
-  storyResult,
-} from '../../test/support/fixtures.js';
+import { bearer, call, createTestProject, postJson, putImage } from '../../test/support/api.js';
+import { captured, createBuildRequest, sha, storyResult } from '../../test/support/fixtures.js';
+import { pngFixture } from '../../test/support/png.js';
 import { getAsReviewer, postAsReviewer, projectWithBuild } from '../../test/support/review.js';
 import { signIn } from '../../test/support/session.js';
 
 describe('/api/builds', () => {
   it('creates a build, accepts results and reads both back, each matching its contract', async () => {
     const { token } = await createTestProject();
+    const png = await pngFixture(2, 2, 31);
 
     const created = await postJson(
       '/api/builds',
       token,
-      createBuildRequest(sha('a'), { snapshots: [captured('button', imageHash('1'))] }),
+      createBuildRequest(sha('a'), { snapshots: [captured('button', png.hash)] }),
     );
     expect(created.status).toBe(201);
     const { build, missingImageHashes } = CreateBuildResponse.parse(await created.json());
-    expect(missingImageHashes).toEqual([imageHash('1')]);
+    expect(missingImageHashes).toEqual([png.hash]);
+    expect((await putImage(token, png.hash, png.bytes)).status).toBe(200);
     const open = await call(`/api/builds/${build.id}`, { headers: bearer(token) });
     expect(GetBuildResponse.parse(await open.json())).toMatchObject({
       build: { status: 'in_progress', checkRunId: null },
@@ -38,7 +35,7 @@ describe('/api/builds', () => {
 
     const submitted = await postJson(`/api/builds/${build.id}/results`, token, {
       durationMs: 5,
-      results: [storyResult('button', { imageHash: imageHash('1') })],
+      results: [storyResult('button', { imageHash: png.hash })],
     });
     expect(submitted.status).toBe(200);
     expect(SubmitResultsResponse.parse(await submitted.json()).reviewUrl).toBe(

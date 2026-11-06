@@ -54,6 +54,14 @@ installation and cached for an hour in `org_memberships`; an org without an inst
 visible to nobody. A build outside the reviewer's orgs answers 403; an image they may not read
 answers 404, like one that does not exist.
 
+Images are stored once per hash and shared by every project, so `project_images` records which
+project uploaded which hash, and that record, not the hash, is what grants access. A project
+token reads only images that project uploaded (404 otherwise, like one that does not exist);
+`POST /api/builds` lists as missing every hash the project has not uploaded itself, even when
+another project already stored it (the upload then answers `stored: false`); and
+`POST /api/builds/:id/results` answers 400 when a result names an `imageHash` or `diffHash` the
+project did not upload.
+
 Reviews: only `changed` and `new` snapshots of a build that has its results can be reviewed (409
 otherwise); repeating a decision is a no-op. Approving records the snapshot's hash pair in
 `approvals`, so later builds carry it forward (plan.md section 6, rule 3); denying removes that

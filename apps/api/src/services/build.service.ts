@@ -46,10 +46,11 @@ export async function requireBuild(
 /**
  * `POST /api/builds`: open a build. Resolves the baseline (plan.md section 6, rule 1), returns
  * its accepted images and the hashes the CLI still has to upload, and stores the build as
- * `in_progress` until results arrive.
+ * `in_progress` until results arrive. "Still has to upload" is per project: an image only
+ * another tenant sent is asked for again, so the answer never says what other tenants hold.
  */
 export async function createBuild(
-  deps: Pick<ServiceDeps, 'builds' | 'clock' | 'ids' | 'images' | 'imageStore'>,
+  deps: Pick<ServiceDeps, 'builds' | 'clock' | 'ids' | 'images'>,
   project: Project,
   request: CreateBuildRequest,
 ): Promise<CreateBuildResponse> {
@@ -59,7 +60,7 @@ export async function createBuild(
     baseline === null ? [] : baselineEntries(await deps.builds.listSnapshots(baseline.id));
 
   const hashes = [...new Set(request.snapshots.map((snapshot) => snapshot.imageHash))];
-  const missing = await deps.imageStore.missing(hashes);
+  const missing = await deps.images.notUploadedBy(project.id, hashes);
   const now = deps.clock.now();
   const present = hashes.filter((hash) => !missing.includes(hash));
   await deps.images.touch([...present, ...baselines.map((entry) => entry.imageHash)], now);

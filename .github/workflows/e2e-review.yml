@@ -17,7 +17,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      # Full history: on a pull request HEAD is GitHub's merge commit, and `targus run` needs its
+      # parents and origin/main to find the merge base. A shallow checkout has neither, so the
+      # PR build in review.spec.ts would find no baseline.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
@@ -32,7 +37,7 @@ jobs:
         run: yarn workspace @targus/web build
       # `yarn e2e` builds the CLI (run.spec.ts drives `targus run`); Playwright's webServer then
       # migrates a fresh local D1, rebuilds the web app and starts `wrangler dev` serving it.
-      # The checkout's HEAD (shallow is enough) is the sha the e2e builds are opened on.
+      # The checkout's HEAD is the sha the e2e builds are opened on.
       - run: yarn e2e
       - if: failure()
         uses: actions/upload-artifact@v7

@@ -2,6 +2,7 @@ import { ImageHash, TargusError, type UploadImageResponse } from '@targus/core';
 
 import { sha256Hex } from '../lib/sha256.js';
 import { canAccessProject } from './access.service.js';
+import type { Project } from '../repositories/project.repository.js';
 import type { ServiceDeps } from './deps.js';
 import type { Principal, Reviewer } from './principal.js';
 import { readPngDimensions } from './png.js';
@@ -17,10 +18,13 @@ function parseHash(hash: string): string {
 
 /**
  * `PUT /api/images/:hash`: store a PNG under its SHA-256. The body must be a PNG whose digest is
- * the path hash. Idempotent: an image that is already stored is only touched.
+ * the path hash. Idempotent: an image that is already stored is only touched. Either way the
+ * project has now sent the bytes itself, which is what lets it read the image back and name it
+ * in its results.
  */
 export async function uploadImage(
   deps: ImageDeps,
+  project: Project,
   hash: string,
   bytes: Uint8Array,
 ): Promise<UploadImageResponse> {
@@ -33,11 +37,12 @@ export async function uploadImage(
   const [missing] = await deps.imageStore.missing([expected]);
   if (missing === undefined) {
     await deps.images.touch([expected], now);
-    return { hash: expected, stored: false };
+  } else {
+    await deps.imageStore.put(expected, bytes);
+    await deps.images.record({ hash: expected, sizeBytes: bytes.length, width, height }, now);
   }
-  await deps.imageStore.put(expected, bytes);
-  await deps.images.record({ hash: expected, sizeBytes: bytes.length, width, height }, now);
-  return { hash: expected, stored: true };
+  await deps.images.recordUpload(project.id, expected, now);
+  return { hash: expected, stored: missing !== undefined };
 }
 
 type ReadImageDeps = Pick<
@@ -58,10 +63,20 @@ async function reviewerMayRead(
   return false;
 }
 
+/** Whether the project sent the bytes of the image itself. */
+async function projectMayRead(
+  deps: ReadImageDeps,
+  project: Project,
+  hash: string,
+): Promise<boolean> {
+  return (await deps.images.notUploadedBy(project.id, [hash])).length === 0;
+}
+
 /**
  * `GET /api/images/:hash`: the PNG bytes, or `not_found`. The CLI reads with its project token
- * (baselines); a reviewer only images of builds in their orgs, and an image they may not read
- * answers `not_found` exactly like a missing one, so its existence never leaks.
+ * (baselines) and gets only images that project uploaded; a reviewer only images of builds in
+ * their orgs. An image the caller may not read answers `not_found` exactly like a missing one,
+ * so neither a token nor a session learns that a hash exists in another tenant.
  */
 export async function getImage(
   deps: ReadImageDeps,
@@ -70,7 +85,9 @@ export async function getImage(
 ): Promise<Uint8Array> {
   const expected = parseHash(hash);
   const allowed =
-    principal.kind === 'project' || (await reviewerMayRead(deps, principal.reviewer, expected));
+    principal.kind === 'project'
+      ? await projectMayRead(deps, principal.project, expected)
+      : await reviewerMayRead(deps, principal.reviewer, expected);
   const bytes = allowed ? await deps.imageStore.get(expected) : null;
   if (bytes === null) throw new TargusError('not_found', `no image ${hash}`);
   return bytes;

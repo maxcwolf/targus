@@ -1,7 +1,7 @@
-import { eq, or, sql } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
-import { builds, images, snapshots } from '../db/schema.js';
+import { builds, images, projectImages, snapshots } from '../db/schema.js';
 
 /** At most this many projects are returned by `projectIdsReferencing`. */
 const referencingLimit = 20;
@@ -30,11 +30,42 @@ export interface ImageRepository {
    * authorizing a reviewer's read of an image.
    */
   projectIdsReferencing(hash: string): Promise<string[]>;
+  /** Remember that `projectId` sent the bytes of `hash` itself. Idempotent. */
+  recordUpload(projectId: string, hash: string, at: Date): Promise<void>;
+  /**
+   * The subset of `hashes` whose bytes `projectId` has never sent, in input order. Images are
+   * shared between tenants, so this, not `missing`, decides what a project may read or name.
+   */
+  notUploadedBy(projectId: string, hashes: readonly string[]): Promise<string[]>;
 }
 
 /** Membership test against a JSON array bound as one parameter (D1 binds at most 100). */
-function hashIn(hashes: readonly string[]) {
-  return sql`${images.hash} IN (SELECT value FROM json_each(${JSON.stringify(hashes)}))`;
+function inJson(column: typeof images.hash | typeof projectImages.hash, hashes: readonly string[]) {
+  return sql`${column} IN (SELECT value FROM json_each(${JSON.stringify(hashes)}))`;
+}
+
+/** The `project_images` half: which project sent which image. */
+function uploadQueries(
+  database: D1Database,
+): Pick<ImageRepository, 'recordUpload' | 'notUploadedBy'> {
+  const db = drizzle(database);
+  return {
+    async recordUpload(projectId, hash, at) {
+      await db
+        .insert(projectImages)
+        .values({ projectId, hash, createdAt: at })
+        .onConflictDoNothing({ target: [projectImages.projectId, projectImages.hash] });
+    },
+    async notUploadedBy(projectId, hashes) {
+      if (hashes.length === 0) return [];
+      const rows = await db
+        .select({ hash: projectImages.hash })
+        .from(projectImages)
+        .where(and(eq(projectImages.projectId, projectId), inJson(projectImages.hash, hashes)));
+      const uploaded = new Set(rows.map((row) => row.hash));
+      return hashes.filter((hash) => !uploaded.has(hash));
+    },
+  };
 }
 
 export function createImageRepository(database: D1Database): ImageRepository {
@@ -43,7 +74,10 @@ export function createImageRepository(database: D1Database): ImageRepository {
   return {
     async missing(hashes) {
       if (hashes.length === 0) return [];
-      const rows = await db.select({ hash: images.hash }).from(images).where(hashIn(hashes));
+      const rows = await db
+        .select({ hash: images.hash })
+        .from(images)
+        .where(inJson(images.hash, hashes));
       const present = new Set(rows.map((row) => row.hash));
       return hashes.filter((hash) => !present.has(hash));
     },
@@ -55,7 +89,7 @@ export function createImageRepository(database: D1Database): ImageRepository {
     },
     async touch(hashes, at) {
       if (hashes.length === 0) return;
-      await db.update(images).set({ lastReferencedAt: at }).where(hashIn(hashes));
+      await db.update(images).set({ lastReferencedAt: at }).where(inJson(images.hash, hashes));
     },
     async projectIdsReferencing(hash) {
       const rows = await db
@@ -72,5 +106,6 @@ export function createImageRepository(database: D1Database): ImageRepository {
         .limit(referencingLimit);
       return rows.map((row) => row.projectId);
     },
+    ...uploadQueries(database),
   };
 }

@@ -19,7 +19,7 @@ import type { ServiceDeps } from './deps.js';
 
 type ResultsDeps = Pick<
   ServiceDeps,
-  'approvals' | 'builds' | 'clock' | 'config' | 'github' | 'ids'
+  'approvals' | 'builds' | 'clock' | 'config' | 'github' | 'ids' | 'images'
 >;
 
 /** What every story of the build is compared against. */
@@ -162,6 +162,24 @@ function classify(
 }
 
 /**
+ * Every capture and diff a result names must be an image this project uploaded. Images are
+ * shared between tenants, so without this a project could adopt another tenant's image by
+ * naming its hash, and then read it back as its own.
+ */
+async function requireUploaded(
+  deps: ResultsDeps,
+  project: Project,
+  results: readonly StoryResult[],
+): Promise<void> {
+  const named = results.flatMap((result) => [result.imageHash, result.diffHash]);
+  const hashes = [...new Set(named.filter((hash) => hash !== null))];
+  const [foreign] = await deps.images.notUploadedBy(project.id, hashes);
+  if (foreign !== undefined) {
+    throw new TargusError('bad_request', `image ${foreign} was not uploaded by this project`);
+  }
+}
+
+/**
  * `POST /api/builds/:id/results`: classify every story against the baseline and the project's
  * approvals, store the snapshots, fold the build status, and create the check run.
  */
@@ -175,6 +193,7 @@ export async function submitResults(
   if (build.status !== 'in_progress') {
     throw new TargusError('conflict', `build ${buildId} already has results`);
   }
+  await requireUploaded(deps, project, request.results);
   const records = classify(
     deps,
     build.id,

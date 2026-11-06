@@ -1,18 +1,26 @@
 import { CreateBuildResponse, ListSnapshotsResponse, type StoryResult } from '@targus/core';
+import { env } from 'cloudflare:workers';
 import { expect } from 'vitest';
+
+import { createImageRepository } from '../../src/repositories/image.repository.js';
 
 import { createRecordingGitHub } from './github-recorder.js';
 import { appWith, bearer, call, createTestProject, postJson } from './api.js';
 import { createBuildRequest, sha } from './fixtures.js';
+import { markUploaded } from './in-memory-images.js';
 
 /** The app with a GitHub client for which only `octocat` is an org member. */
 export const reviewApp = appWith({ github: createRecordingGitHub(['octocat']) });
 
-/** A project with an installation (so membership can be checked) and one completed build. */
+/**
+ * A project with an installation (so membership can be checked) and one completed build. The
+ * results' made-up hashes are marked as uploaded by the project, since nothing uploads them.
+ */
 export async function projectWithBuild(results: StoryResult[]) {
   const { token, project } = await createTestProject(42);
   const created = await postJson('/api/builds', token, createBuildRequest(sha('a')));
   const { build } = CreateBuildResponse.parse(await created.json());
+  await markUploaded(createImageRepository(env.DB), project.id, results);
   const submitted = await postJson(`/api/builds/${build.id}/results`, token, {
     durationMs: 1,
     results,

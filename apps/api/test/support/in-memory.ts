@@ -7,7 +7,6 @@ import {
   resolveBaseline,
   type Approval,
   type FakeClock,
-  type ImageStore,
 } from '@targus/core';
 
 import { NoopGitHubClient } from '../../src/adapters/github-client.adapter.js';
@@ -20,7 +19,6 @@ import type {
   BuildRecord,
   SnapshotRecord,
 } from '../../src/repositories/build.repository.js';
-import type { ImageRecord, ImageRepository } from '../../src/repositories/image.repository.js';
 import type { Project, ProjectRepository } from '../../src/repositories/project.repository.js';
 import type { ServiceDeps } from '../../src/services/deps.js';
 import type { Principal } from '../../src/services/principal.js';
@@ -31,6 +29,7 @@ import {
   createInMemoryUsers,
   type FakeOAuth,
 } from './in-memory-auth.js';
+import { createInMemoryImages, type InMemoryImages } from './in-memory-images.js';
 
 // In-memory doubles of the API's repositories, for service unit tests. The D1 adapters are
 // tested against the same behaviour in src/repositories/*.test.ts.
@@ -181,44 +180,6 @@ export function createInMemoryApprovals(): ApprovalRepository & { readonly all: 
       all.splice(0, all.length, ...keep);
       return Promise.resolve();
     },
-  };
-}
-
-export interface InMemoryImages extends ImageRepository, ImageStore {
-  readonly records: Map<string, ImageRecord & { lastReferencedAt: Date }>;
-  readonly bytes: Map<string, Uint8Array>;
-  /** What `projectIdsReferencing` answers, by hash. */
-  readonly references: Map<string, string[]>;
-}
-
-/** The image metadata table and the R2 store in one, kept in step like the real pair. */
-export function createInMemoryImages(): InMemoryImages {
-  const records = new Map<string, ImageRecord & { lastReferencedAt: Date }>();
-  const bytes = new Map<string, Uint8Array>();
-  const references = new Map<string, string[]>();
-  return {
-    records,
-    bytes,
-    missing: (hashes) => Promise.resolve(hashes.filter((hash) => !records.has(hash))),
-    record(image, at) {
-      if (!records.has(image.hash)) records.set(image.hash, { ...image, lastReferencedAt: at });
-      return Promise.resolve();
-    },
-    touch(hashes, at) {
-      for (const hash of hashes) {
-        const record = records.get(hash);
-        if (record !== undefined) records.set(hash, { ...record, lastReferencedAt: at });
-      }
-      return Promise.resolve();
-    },
-    put(hash, value) {
-      if (!bytes.has(hash)) bytes.set(hash, value);
-      return Promise.resolve();
-    },
-    get: (hash) => Promise.resolve(bytes.get(hash) ?? null),
-    // The real one joins snapshots; service tests set the answer per hash.
-    projectIdsReferencing: (hash) => Promise.resolve(references.get(hash) ?? []),
-    references,
   };
 }
 

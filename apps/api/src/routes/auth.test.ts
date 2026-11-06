@@ -66,16 +66,19 @@ describe('GitHub login round trip', () => {
 });
 
 describe('GitHub login callback checks', () => {
-  it('sends an unsafe returnTo home', async () => {
-    const start = await startLogin('//evil.test/phish');
-    const back = await call(
-      `/api/auth/github/callback?code=octocat-code&state=${start.state}`,
-      { headers: withCookie(pairOf(start.stateCookie)) },
-      app,
-    );
+  it.each(['//evil.test/phish', '/\t/evil.test/phish', '/.//evil.test/phish'])(
+    'sends the unsafe returnTo %j home',
+    async (returnTo) => {
+      const start = await startLogin(returnTo);
+      const back = await call(
+        `/api/auth/github/callback?code=octocat-code&state=${start.state}`,
+        { headers: withCookie(pairOf(start.stateCookie)) },
+        app,
+      );
 
-    expect(back.headers.get('location')).toBe('/');
-  });
+      expect(back.headers.get('location')).toBe('/');
+    },
+  );
 
   it('rejects a callback whose state does not match the cookie, or has no cookie', async () => {
     const start = await startLogin('/');

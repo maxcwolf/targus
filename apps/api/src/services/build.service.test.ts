@@ -34,12 +34,13 @@ async function setup(): Promise<{ deps: TestDeps; project: Project }> {
 }
 
 describe('createBuild', () => {
-  it('opens an in_progress build without a baseline and lists missing images', async () => {
+  it('opens an in_progress build without a baseline and lists the images this project has not uploaded', async () => {
     const { deps, project } = await setup();
-    await deps.images.record(
-      { hash: imageHash('1'), sizeBytes: 1, width: 1, height: 1 },
-      deps.clock.now(),
-    );
+    for (const hash of [imageHash('1'), imageHash('2')]) {
+      await deps.images.record({ hash, sizeBytes: 1, width: 1, height: 1 }, deps.clock.now());
+    }
+    await deps.images.recordUpload(project.id, imageHash('1'), deps.clock.now());
+    await deps.images.recordUpload('project-other', imageHash('2'), deps.clock.now());
     deps.clock.advance(5000);
 
     const response = await createBuild(

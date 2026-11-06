@@ -81,3 +81,35 @@ describe('createImageRepository.projectIdsReferencing (local D1)', () => {
     expect(await repository.projectIdsReferencing(imageHash('5'))).toEqual([]);
   });
 });
+
+describe('createImageRepository uploads (local D1)', () => {
+  const repository = createImageRepository(env.DB);
+
+  it('remembers uploads per project, once, and answers in input order', async () => {
+    const projects = createProjectRepository(env.DB);
+    await projects.create(newProject('up-a'));
+    await projects.create(newProject('up-b'));
+    const [one, two, three] = [imageHash('1'), imageHash('2'), imageHash('3')];
+    await repository.recordUpload('project-up-a', one, at);
+    await repository.recordUpload('project-up-a', one, new Date(at.getTime() + 5));
+    await repository.recordUpload('project-up-b', two, at);
+
+    expect(await repository.notUploadedBy('project-up-a', [three, one, two])).toEqual([three, two]);
+    expect(await repository.notUploadedBy('project-up-b', [three, one, two])).toEqual([three, one]);
+    expect(await repository.notUploadedBy('project-up-a', [])).toEqual([]);
+    const rows = await env.DB.prepare(
+      'SELECT created_at FROM project_images WHERE project_id = ? AND hash = ?',
+    )
+      .bind('project-up-a', one)
+      .all<{ created_at: number }>();
+    expect(rows.results).toEqual([{ created_at: at.getTime() }]);
+  });
+
+  it('answers for more hashes than D1 binds parameters', async () => {
+    await createProjectRepository(env.DB).create(newProject('up-many'));
+    const hashes = Array.from({ length: 150 }, (_, index) => index.toString(16).padStart(64, '0'));
+    await repository.recordUpload('project-up-many', hashes[0] ?? '', at);
+
+    expect(await repository.notUploadedBy('project-up-many', hashes)).toEqual(hashes.slice(1));
+  });
+});

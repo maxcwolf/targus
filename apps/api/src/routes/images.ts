@@ -26,7 +26,7 @@ export const imagesRoute = new Hono<AppEnv>()
       throw new TargusError('bad_request', 'Content-Type must be image/png');
     }
     const bytes = new Uint8Array(await c.req.arrayBuffer());
-    return c.json(await c.var.services.uploadImage(c.req.param('hash'), bytes));
+    return c.json(await c.var.services.uploadImage(c.var.project, c.req.param('hash'), bytes));
   })
   .get('/:hash', readerAuth, async (c) => {
     const bytes = await c.var.services.getImage(c.var.principal, c.req.param('hash'));

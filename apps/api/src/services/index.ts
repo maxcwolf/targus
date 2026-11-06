@@ -69,7 +69,7 @@ export interface Services {
     decision: ReviewDecision,
   ): Promise<ReviewSnapshotResponse>;
   approveAll(reviewer: Reviewer, buildId: string): Promise<ApproveAllResponse>;
-  uploadImage(hash: string, bytes: Uint8Array): Promise<UploadImageResponse>;
+  uploadImage(project: Project, hash: string, bytes: Uint8Array): Promise<UploadImageResponse>;
   getImage(principal: Principal, hash: string): Promise<Uint8Array>;
 }
 
@@ -93,7 +93,7 @@ export function bindServices(deps: ServiceDeps): Services {
     reviewSnapshot: (reviewer, snapshotId, decision) =>
       reviewSnapshot(deps, reviewer, snapshotId, decision),
     approveAll: (reviewer, buildId) => approveAll(deps, reviewer, buildId),
-    uploadImage: (hash, bytes) => uploadImage(deps, hash, bytes),
+    uploadImage: (project, hash, bytes) => uploadImage(deps, project, hash, bytes),
     getImage: (principal, hash) => getImage(deps, principal, hash),
   };
 }

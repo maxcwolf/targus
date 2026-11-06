@@ -1,4 +1,4 @@
-import { SubmitResultsResponse, type GitHubClient } from '@targus/core';
+import { SubmitResultsResponse, type GitHubClient, type SubmitResultsRequest } from '@targus/core';
 import { describe, expect, it, vi } from 'vitest';
 
 import { OctokitGitHubClient } from '../adapters/github-client.adapter.js';
@@ -11,6 +11,7 @@ import {
   storyResult,
 } from '../../test/support/fixtures.js';
 import { createGitHubStub, generatePrivateKeyPem } from '../../test/support/github-stub.js';
+import { markUploaded } from '../../test/support/in-memory-images.js';
 import {
   asProject,
   completion,
@@ -38,12 +39,23 @@ async function openBuild(
   return (await createBuild(deps, project, request)).build.id;
 }
 
+/** `submitResults` once the project has uploaded every image the results name. */
+async function submit(
+  deps: TestDeps,
+  project: Project,
+  buildId: string,
+  request: SubmitResultsRequest,
+) {
+  await markUploaded(deps.images, project.id, request.results);
+  return submitResults(deps, project, buildId, request);
+}
+
 describe('submitResults', () => {
   it('fails a first build with an errored story and stores the server-side states', async () => {
     const { deps, project } = await setup();
     const buildId = await openBuild(deps, project, sha('a'));
 
-    const response = await submitResults(deps, project, buildId, {
+    const response = await submit(deps, project, buildId, {
       durationMs: 10,
       results: [
         storyResult('fresh', { blank: true }),
@@ -84,7 +96,7 @@ describe('submitResults against a baseline', () => {
   it('compares with the baseline, overrides the CLI state and adds removed stories', async () => {
     const { deps, project } = await setup();
     const first = await openBuild(deps, project, sha('a'));
-    await submitResults(deps, project, first, {
+    await submit(deps, project, first, {
       durationMs: 1,
       results: [
         storyResult('same', { imageHash: imageHash('1') }),
@@ -100,7 +112,7 @@ describe('submitResults against a baseline', () => {
     );
 
     const second = await openBuild(deps, project, sha('b'), sha('a'));
-    const response = await submitResults(deps, project, second, {
+    const response = await submit(deps, project, second, {
       durationMs: 1,
       results: [
         storyResult('same', { state: 'changed', imageHash: imageHash('1') }),
@@ -142,7 +154,7 @@ describe('submitResults with approvals', () => {
       approvedAt: deps.clock.now().toISOString(),
     });
 
-    const response = await submitResults(deps, project, buildId, {
+    const response = await submit(deps, project, buildId, {
       durationMs: 1,
       results: [storyResult('fresh')],
     });
@@ -158,19 +170,19 @@ describe('submitResults validation', () => {
     const other = await deps.projects.create(newProject('other'));
 
     await expect(
-      submitResults(deps, project, buildId, {
+      submit(deps, project, buildId, {
         durationMs: 1,
         results: [storyResult('x'), storyResult('x')],
       }),
     ).rejects.toMatchObject({ code: 'bad_request' });
-    await submitResults(deps, project, buildId, { durationMs: 1, results: [] });
+    await submit(deps, project, buildId, { durationMs: 1, results: [] });
     await expect(
-      submitResults(deps, project, buildId, { durationMs: 1, results: [] }),
+      submit(deps, project, buildId, { durationMs: 1, results: [] }),
     ).rejects.toMatchObject({
       code: 'conflict',
     });
     await expect(
-      submitResults(deps, other, buildId, { durationMs: 1, results: [] }),
+      submit(deps, other, buildId, { durationMs: 1, results: [] }),
     ).rejects.toMatchObject({
       code: 'not_found',
     });
@@ -181,11 +193,36 @@ describe('submitResults validation', () => {
     const buildId = await openBuild(deps, project, sha('a'));
 
     await expect(
-      submitResults(deps, project, buildId, {
+      submit(deps, project, buildId, {
         durationMs: 1,
         results: [storyResult('ghost', { state: 'removed', imageHash: null })],
       }),
     ).rejects.toMatchObject({ code: 'bad_request' });
+  });
+});
+
+describe('submitResults image ownership', () => {
+  it('rejects a capture or a diff that this project did not upload', async () => {
+    const { deps, project } = await setup();
+    const buildId = await openBuild(deps, project, sha('a'));
+    // Stored, but only another tenant sent the bytes: knowing the hash is not enough.
+    await deps.images.record(
+      { hash: imageHash('9'), sizeBytes: 1, width: 1, height: 1 },
+      deps.clock.now(),
+    );
+    await deps.images.recordUpload('project-other', imageHash('9'), deps.clock.now());
+    await deps.images.recordUpload(project.id, imageHash('1'), deps.clock.now());
+
+    for (const result of [
+      storyResult('capture', { imageHash: imageHash('9') }),
+      storyResult('diff', { imageHash: imageHash('1'), diffHash: imageHash('9'), diffRatio: 0.5 }),
+    ]) {
+      await expect(
+        submitResults(deps, project, buildId, { durationMs: 1, results: [result] }),
+      ).rejects.toThrow(`image ${imageHash('9')} was not uploaded by this project`);
+    }
+    expect(deps.builds.snapshots.get(buildId)).toBeUndefined();
+    expect(deps.builds.builds[0]?.status).toBe('in_progress');
   });
 });
 
@@ -199,7 +236,7 @@ describe('submitResults check runs', () => {
     const { deps, project } = await setup(github, 42);
     const buildId = await openBuild(deps, project, sha('c'));
 
-    const response = await submitResults(deps, project, buildId, {
+    const response = await submit(deps, project, buildId, {
       durationMs: 1,
       results: [storyResult('fresh')],
     });
@@ -232,12 +269,8 @@ describe('submitResults without a check run', () => {
     const second = await openBuild(withNoop.deps, withNoop.project, sha('a'));
     const results = { durationMs: 1, results: [] };
 
-    expect(
-      (await submitResults(without.deps, without.project, first, results)).checkRun,
-    ).toBeNull();
-    expect(
-      (await submitResults(withNoop.deps, withNoop.project, second, results)).checkRun,
-    ).toBeNull();
+    expect((await submit(without.deps, without.project, first, results)).checkRun).toBeNull();
+    expect((await submit(withNoop.deps, withNoop.project, second, results)).checkRun).toBeNull();
     expect(createCheckRun).toHaveBeenCalledOnce();
   });
 
@@ -251,7 +284,7 @@ describe('submitResults without a check run', () => {
     const { deps, project } = await setup(github, 7);
     const buildId = await openBuild(deps, project, sha('a'));
 
-    const response = await submitResults(deps, project, buildId, { durationMs: 1, results: [] });
+    const response = await submit(deps, project, buildId, { durationMs: 1, results: [] });
 
     expect(response).toMatchObject({ checkRun: null, summary: { status: 'passed' } });
     expect(deps.builds.builds[0]?.status).toBe('passed');

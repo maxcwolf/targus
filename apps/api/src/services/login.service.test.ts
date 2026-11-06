@@ -19,8 +19,27 @@ describe('safeReturnTo', () => {
     ['/\\evil.test', '/'],
     ['https://evil.test', '/'],
     ['builds', '/'],
-  ])('%s -> %s', (input, expected) => {
+    // Browsers drop tabs and newlines before resolving, so these are `//evil.test` to them.
+    ['/\t/evil.test', '/'],
+    ['/\n/evil.test', '/'],
+    ['/\r\\evil.test', '/'],
+    // Dot segments that collapse into a protocol-relative path.
+    ['/.//evil.test', '/'],
+    ['/x/..//evil.test', '/'],
+    // An authority that does not parse.
+    ['//[', '/'],
+    // What is returned is the parsed path, not the input.
+    ['/a\tb', '/ab'],
+    ['/builds/../library?q=a b#top', '/library?q=a%20b#top'],
+  ])('%j -> %s', (input, expected) => {
     expect(safeReturnTo(input)).toBe(expected);
+  });
+
+  it('returns a path that a browser resolves to the same origin', () => {
+    for (const input of ['/\t/evil.test', '/.//evil.test', '/\\evil.test', '/a//b', '/%09/x']) {
+      const resolved = new URL(safeReturnTo(input), 'https://targus.test');
+      expect(resolved.origin).toBe('https://targus.test');
+    }
   });
 });
 

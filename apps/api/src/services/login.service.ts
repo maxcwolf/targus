@@ -18,13 +18,26 @@ export function cookieSettings(deps: Pick<ServiceDeps, 'config'>): CookieSetting
   return { secret, secure: deps.config.publicUrl.startsWith('https:') };
 }
 
+/** A stand-in origin to resolve `returnTo` against; `.invalid` never resolves (RFC 2606). */
+const returnToBase = 'https://targus.invalid';
+
 /**
- * Where to go after login: only a same-origin path. `//host` and `/\\host` are protocol-relative
- * to browsers, so they fall back to `/` like anything else that is not a plain path.
+ * Where to go after login: only a same-origin path, anything else falls back to `/`. The value
+ * is resolved the way a browser resolves a `Location` header, and what comes back is the parsed
+ * path, not the input. A pattern over the raw string is not enough: `//host` and `/\\host` leave
+ * the origin, and so does `/<tab>/host`, because URL parsers drop tabs and newlines first.
+ * `/.//host` stays on the origin but parses to the path `//host`, which must not be sent back.
  */
 export function safeReturnTo(returnTo: string | undefined): string {
   if (!returnTo?.startsWith('/')) return '/';
-  return /^\/[/\\]/.test(returnTo) ? '/' : returnTo;
+  let url: URL;
+  try {
+    url = new URL(returnTo, returnToBase);
+  } catch {
+    return '/';
+  }
+  if (url.origin !== returnToBase || url.pathname.startsWith('//')) return '/';
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 function redirectUri(deps: Pick<ServiceDeps, 'config'>): string {

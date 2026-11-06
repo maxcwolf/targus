@@ -170,6 +170,24 @@ export const images = sqliteTable(
   (table) => [index('images_last_referenced_at_idx').on(table.lastReferencedAt)],
 );
 
+/**
+ * Which project uploaded which image. `images` is shared by every tenant (the bytes are
+ * content-addressed), so this table is what scopes it (ADR 0007): a project may read a hash, or
+ * name it in its results, only after sending the bytes itself. Knowing a hash proves nothing.
+ * The primary key covers the project_id foreign key and both lookups.
+ */
+export const projectImages = sqliteTable(
+  'project_images',
+  {
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id),
+    hash: text('hash').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.projectId, table.hash] })],
+);
+
 /** GitHub users who signed in to the review UI. */
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
