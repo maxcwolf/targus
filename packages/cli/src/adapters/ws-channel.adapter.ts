@@ -57,14 +57,23 @@ export class WsStorybookChannel implements StorybookChannel {
   private readonly clients = new Set<WebSocket>();
   private readonly listeners = new Set<Listener>();
   private readonly pending = new Set<(error: Error) => void>();
+  private readonly disconnected: Promise<void>;
+  private markDisconnected = (): void => undefined;
+  private closing = false;
 
   private constructor(
     private readonly server: WebSocketServer,
     private readonly connectTimeoutMs: number,
   ) {
+    this.disconnected = new Promise((resolve) => {
+      this.markDisconnected = resolve;
+    });
     server.on('connection', (socket) => {
       this.clients.add(socket);
-      socket.on('close', () => this.clients.delete(socket));
+      socket.on('close', () => {
+        this.clients.delete(socket);
+        if (this.clients.size === 0 && !this.closing) this.markDisconnected();
+      });
       socket.on('message', (data) => {
         this.dispatch(data);
       });
@@ -127,7 +136,12 @@ export class WsStorybookChannel implements StorybookChannel {
     return selection;
   }
 
+  whenDisconnected(): Promise<void> {
+    return this.disconnected;
+  }
+
   close(): Promise<void> {
+    this.closing = true;
     for (const reject of this.pending) reject(new Error('channel closed'));
     for (const client of this.clients) client.terminate();
     return new Promise((resolve, reject) => {
@@ -160,15 +174,23 @@ export class WsStorybookChannel implements StorybookChannel {
   private waitForClient(): Promise<void> {
     if (this.clients.size > 0) return Promise.resolve();
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
+      // close() ends the wait too, so a run stopped early is not held open by this timer.
+      const fail = (error: Error): void => {
+        clearTimeout(timer);
         this.server.off('connection', onConnection);
-        reject(notConnected(this.port, this.connectTimeoutMs));
+        this.pending.delete(fail);
+        reject(error);
+      };
+      const timer = setTimeout(() => {
+        fail(notConnected(this.port, this.connectTimeoutMs));
       }, this.connectTimeoutMs);
       const onConnection = (): void => {
         clearTimeout(timer);
+        this.pending.delete(fail);
         resolve();
       };
       this.server.once('connection', onConnection);
+      this.pending.add(fail);
     });
   }
 

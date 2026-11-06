@@ -2,7 +2,7 @@ import { TargusError } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import { ExecError, type Exec, type ExecOptions } from './exec.adapter.ts';
-import { SimctlDriver, simctlTimeoutsMs } from './simctl.adapter.ts';
+import { isProcessAlive, SimctlDriver, simctlTimeoutsMs } from './simctl.adapter.ts';
 
 const udid = 'SIM-UDID';
 
@@ -140,6 +140,57 @@ describe('SimctlDriver launch and status bar', () => {
         '3',
       ],
     ]);
+  });
+});
+
+describe('SimctlDriver isAppRunning', () => {
+  it('checks the pid simctl launch printed', async () => {
+    const fake = fakeExec({}, Buffer.from('co.example: 4242\n'));
+    const checked: number[] = [];
+    let alive = true;
+    const driver = new SimctlDriver({
+      udid,
+      exec: fake.exec,
+      isAlive: (pid) => {
+        checked.push(pid);
+        return alive;
+      },
+    });
+
+    await driver.launch('co.example', {});
+    expect(await driver.isAppRunning('co.example')).toBe(true);
+    alive = false;
+    expect(await driver.isAppRunning('co.example')).toBe(false);
+    expect(checked).toEqual([4242, 4242]);
+  });
+
+  it('answers true when no pid is known', async () => {
+    const fake = fakeExec({}, Buffer.from('launched\n'));
+    const driver = new SimctlDriver({ udid, exec: fake.exec, isAlive: () => false });
+
+    expect(await driver.isAppRunning('co.example')).toBe(true);
+    await driver.launch('co.example', {});
+    expect(await driver.isAppRunning('co.example')).toBe(true);
+  });
+});
+
+describe('isProcessAlive', () => {
+  const failWith = (code: string) => () => {
+    throw Object.assign(new Error(code), { code });
+  };
+
+  it('is true for this process and for one it may not signal', () => {
+    expect(isProcessAlive(process.pid)).toBe(true);
+    expect(isProcessAlive(1, failWith('EPERM'))).toBe(true);
+  });
+
+  it('is false only when the process does not exist', () => {
+    expect(isProcessAlive(4242, failWith('ESRCH'))).toBe(false);
+    expect(
+      isProcessAlive(4242, () => {
+        throw new Error('odd');
+      }),
+    ).toBe(true);
   });
 });
 

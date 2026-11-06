@@ -38,6 +38,17 @@ describe('createFakeDeviceDriver', () => {
   it('returns empty bytes when nothing was ever queued', async () => {
     expect(await createFakeDeviceDriver().screenshot()).toEqual(new Uint8Array());
   });
+
+  it('reports the app running until it exits, and running again after a relaunch', async () => {
+    const driver = createFakeDeviceDriver();
+
+    expect(await driver.isAppRunning('co.example')).toBe(true);
+    driver.exitApp();
+    expect(await driver.isAppRunning('co.example')).toBe(false);
+    await driver.launch('co.example', {});
+    expect(await driver.isAppRunning('co.example')).toBe(true);
+    expect(driver.calls).toEqual([{ method: 'launch', bundleId: 'co.example', env: {} }]);
+  });
 });
 
 describe('createFakeStorybookChannel', () => {
@@ -67,6 +78,29 @@ describe('createFakeStorybookChannel', () => {
       message: 'No QueryClient set',
     });
     await expect(channel.selectStory('b', 250)).rejects.toThrow('timeout after 250ms');
+  });
+
+  it('disconnects when told to', async () => {
+    const channel = createFakeStorybookChannel(index);
+    let disconnected = false;
+    void channel.whenDisconnected().then(() => (disconnected = true));
+
+    await Promise.resolve();
+    expect(disconnected).toBe(false);
+    channel.disconnect();
+    await channel.whenDisconnected();
+    expect(disconnected).toBe(true);
+  });
+
+  it('disconnects on a scripted disconnect and leaves that selection to close()', async () => {
+    const channel = createFakeStorybookChannel(index);
+    channel.setOutcome('button--primary', { kind: 'disconnect' });
+
+    const selection = channel.selectStory('button--primary', 100);
+    await channel.whenDisconnected();
+    await channel.close();
+
+    await expect(selection).rejects.toThrow('channel closed');
   });
 
   it('reports whether it was closed', async () => {

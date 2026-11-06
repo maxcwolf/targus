@@ -68,6 +68,8 @@ export interface CaptureStoriesInput {
   readonly compareImages: CompareImages;
   readonly isBlank?: (png: Uint8Array) => boolean;
   readonly onProgress?: (progress: CaptureProgress) => void;
+  /** Stop after the story in flight, without reporting it, once this is aborted (ADR 0021). */
+  readonly signal?: AbortSignal;
 }
 
 /** Keep the stories matching `filter`, then the first `limit` of them. */
@@ -86,7 +88,8 @@ export function selectStories(
  * The capture loop proven by the capture spike (docs/spike-m0.md): select each story, wait for
  * the app to commit it, settle, take two screenshots `stabilityGapMs` apart and keep the first
  * if they match. On a mismatch retry with a doubled settle up to `maxAttempts`, then mark the story
- * unstable. Channel errors and timeouts are recorded per story and never thrown.
+ * unstable. Channel errors and timeouts are recorded per story and never thrown; only an aborted
+ * `signal` ends the loop early.
  */
 export async function captureStories(input: CaptureStoriesInput): Promise<CaptureReport> {
   const { channel, clock, options } = input;
@@ -95,6 +98,7 @@ export async function captureStories(input: CaptureStoriesInput): Promise<Captur
   const results: CaptureResult[] = [];
   for (const [index, story] of stories.entries()) {
     const result = await captureStory(input, story);
+    input.signal?.throwIfAborted();
     results.push(result);
     input.onProgress?.({ index, total: stories.length, result });
   }

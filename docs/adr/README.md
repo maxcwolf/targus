@@ -35,3 +35,4 @@ the same change.
 | [0018](0018-squash-merges-only.md) | Squash merges only, so every commit on main is a Conventional Commit | accepted |
 | [0019](0019-web-features-meet-through-their-index.md) | Web features meet only through their index.ts | accepted |
 | [0020](0020-one-structured-log-line-per-request.md) | One structured log line per request, with a request id and no secrets | accepted |
+| [0021](0021-stop-the-capture-when-the-app-dies.md) | Stop the capture as soon as the app dies | accepted |

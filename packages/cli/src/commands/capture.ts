@@ -7,7 +7,12 @@ import { execFileBuffer, type Exec } from '../adapters/exec.adapter.ts';
 import { SimctlDriver } from '../adapters/simctl.adapter.ts';
 import { systemClock } from '../adapters/system-clock.adapter.ts';
 import { WsStorybookChannel } from '../adapters/ws-channel.adapter.ts';
-import { captureStories, type CaptureProgress } from '../capture/capture-stories.ts';
+import { defaultAppPollMs, whileAppRuns } from '../capture/app-watch.ts';
+import {
+  captureStories,
+  type CaptureProgress,
+  type CaptureReport,
+} from '../capture/capture-stories.ts';
 import { compareWithCore } from '../capture/compare-images.ts';
 import { writeCaptureOutput, type CaptureManifest } from '../capture/manifest.ts';
 import { sha256Hex } from '../capture/png.ts';
@@ -34,6 +39,8 @@ export interface CaptureCommandDeps {
   readonly log: (line: string) => void;
   readonly openChannel: (port: number, connectTimeoutMs: number) => Promise<StorybookChannel>;
   readonly createDriver: (udid: string, exec: Exec) => DeviceDriver;
+  /** How often the app process is checked during a capture; `defaultAppPollMs` if unset. */
+  readonly appPollMs?: number;
 }
 
 export const defaultCaptureDeps: CaptureCommandDeps = {
@@ -102,6 +109,47 @@ async function prepareDevice(
   await driver.launch(bundleId, {});
 }
 
+interface CaptureRun {
+  readonly options: CaptureCommandOptions;
+  readonly deps: CaptureCommandDeps;
+  readonly driver: DeviceDriver;
+  readonly channel: StorybookChannel;
+  readonly bundleId: string;
+}
+
+/**
+ * Drive every story while watching the app: a crash at launch or mid-run stops the capture at
+ * once with an `AppExitedError`, and nothing is written (ADR 0021).
+ */
+function captureWhileAppRuns(run: CaptureRun): Promise<CaptureReport> {
+  const { options, deps, driver, channel, bundleId } = run;
+  const pollMs = deps.appPollMs ?? defaultAppPollMs;
+  return whileAppRuns({ driver, channel, bundleId, pollMs }, ({ signal, onProgress }) =>
+    captureStories({
+      channel,
+      driver,
+      options: {
+        settleMs: options.settle,
+        stabilityGapMs: options.stabilityGap,
+        renderTimeoutMs: options.renderTimeout,
+        maxAttempts: options.attempts,
+        ...(options.filter === undefined ? {} : { filter: options.filter }),
+        ...(options.limit === undefined ? {} : { limit: options.limit }),
+      },
+      clock: deps.clock,
+      sleep: deps.sleep,
+      hash: sha256Hex,
+      compareImages: compareWithCore,
+      isBlank: isBlankPng,
+      signal,
+      onProgress: (progress) => {
+        onProgress(progress);
+        deps.log(progressLine(progress));
+      },
+    }),
+  );
+}
+
 /**
  * `targus capture`: boot the simulator, install and launch the app, drive every story over the
  * channel and write `<out>/<storyId>.png` plus `manifest.json`.
@@ -119,26 +167,7 @@ export async function runCapture(
   try {
     deps.log(`installing ${appPath} (${bundleId}) on ${options.udid}`);
     await prepareDevice(driver, appPath, bundleId);
-    const report = await captureStories({
-      channel,
-      driver,
-      options: {
-        settleMs: options.settle,
-        stabilityGapMs: options.stabilityGap,
-        renderTimeoutMs: options.renderTimeout,
-        maxAttempts: options.attempts,
-        ...(options.filter === undefined ? {} : { filter: options.filter }),
-        ...(options.limit === undefined ? {} : { limit: options.limit }),
-      },
-      clock: deps.clock,
-      sleep: deps.sleep,
-      hash: sha256Hex,
-      compareImages: compareWithCore,
-      isBlank: isBlankPng,
-      onProgress: (progress) => {
-        deps.log(progressLine(progress));
-      },
-    });
+    const report = await captureWhileAppRuns({ options, deps, driver, channel, bundleId });
     const manifest = await writeCaptureOutput(outDir, report, {
       udid: options.udid,
       bundleId,

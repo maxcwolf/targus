@@ -20,12 +20,18 @@ export interface FakeDeviceDriver extends DeviceDriver {
    * last screenshot returned is repeated (an empty array if there never was one).
    */
   queueScreenshots(...pngs: readonly Uint8Array[]): void;
+  /**
+   * Make the launched app exit, as a crash would: `isAppRunning` answers `false` from now on.
+   * `isAppRunning` is polled, so its calls are not recorded in `calls`.
+   */
+  exitApp(): void;
 }
 
 export function createFakeDeviceDriver(): FakeDeviceDriver {
   const calls: DeviceDriverCall[] = [];
   const queue: Uint8Array[] = [];
   let last: Uint8Array = new Uint8Array();
+  let running = true;
 
   return {
     calls,
@@ -34,7 +40,14 @@ export function createFakeDeviceDriver(): FakeDeviceDriver {
     },
     boot: () => record({ method: 'boot' }),
     install: (appPath) => record({ method: 'install', appPath }),
-    launch: (bundleId, env) => record({ method: 'launch', bundleId, env: { ...env } }),
+    exitApp: () => {
+      running = false;
+    },
+    launch: (bundleId, env) => {
+      running = true;
+      return record({ method: 'launch', bundleId, env: { ...env } });
+    },
+    isAppRunning: () => Promise.resolve(running),
     setStatusBar: (overrides) => record({ method: 'setStatusBar', overrides: { ...overrides } }),
     shutdown: () => record({ method: 'shutdown' }),
     screenshot: () => {

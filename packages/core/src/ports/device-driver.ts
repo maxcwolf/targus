@@ -16,6 +16,11 @@ export interface DeviceDriver {
   install(appPath: string): Promise<void>;
   /** Launch the installed app with launch-time environment variables. */
   launch(bundleId: string, env: Readonly<Record<string, string>>): Promise<void>;
+  /**
+   * Whether the process `launch` started for `bundleId` is still alive (ADR 0021). Cheap enough
+   * to poll every second. `true` when the driver cannot tell, so an unknown never fails a run.
+   */
+  isAppRunning(bundleId: string): Promise<boolean>;
   /** Override the status bar so captures are deterministic. */
   setStatusBar(overrides: StatusBarOverrides): Promise<void>;
   /** Capture the full screen as PNG bytes at device resolution. */

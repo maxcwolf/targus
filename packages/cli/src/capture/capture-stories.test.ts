@@ -197,6 +197,23 @@ describe('captureStories options', () => {
   });
 });
 
+describe('captureStories abort', () => {
+  it('stops after the story in flight once the signal is aborted, without reporting it', async () => {
+    const { channel, progress, input } = setup();
+    const controller = new AbortController();
+    const sleep = (ms: number): Promise<void> => {
+      if (channel.selected.length === 2) controller.abort(new Error('app exited'));
+      return input.sleep(ms);
+    };
+
+    const report = captureStories({ ...input, sleep, signal: controller.signal });
+
+    await expect(report).rejects.toThrow('app exited');
+    expect(channel.selected).toEqual(['button--primary', 'button--loading']);
+    expect(progress.map((event) => event.result.id)).toEqual(['button--primary']);
+  });
+});
+
 describe('selectStories', () => {
   it('matches the filter against id or title and then applies the limit', () => {
     expect(selectStories(index, { filter: 'chat' }).map((story) => story.id)).toEqual([

@@ -118,6 +118,14 @@ instead of running into the CI runner's own limit:
 - Every API request is aborted after 60 seconds, body included, as
   `error: <METHOD> <route>: no response from <api url> within 60s`.
 - `--connect-timeout` bounds the wait for the app to connect to the channel.
+- The app is watched for the whole capture: its process is checked every second and a dropped
+  channel connection is noticed at once. A crash at launch stops the run within about a second
+  with `error: the app <bundle id> exited before any story was captured, probably a crash at
+launch: look for its crash report in ~/Library/Logs/DiagnosticReports`, rather than waiting out
+  `--connect-timeout`. A crash mid-run stops it straight away with `exited after <n> of <total>
+stories`, or `closed its Storybook channel connection after ...` when the process is still up.
+  The stories captured before the crash are discarded: `targus capture` writes no output and
+  `targus run` opens no build, since a partial build would show the rest as removed.
 - Image uploads, image downloads and the results submission are retried up to four times, 0.5s,
   1s and 2s apart, on network errors, timeouts, 429 and 5xx; never on any other 4xx. Each retry
   prints a `warning:` line; when the last one fails the error ends with

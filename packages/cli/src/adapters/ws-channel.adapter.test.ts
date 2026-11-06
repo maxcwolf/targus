@@ -160,6 +160,47 @@ describe('WsStorybookChannel lifecycle', () => {
     await closed;
   });
 
+  it('ends a wait for the app to connect on close', async () => {
+    const server = await listen(60_000);
+    const index = server.getIndex();
+
+    await server.close();
+    channel = undefined;
+
+    await expect(index).rejects.toThrow('channel closed');
+  });
+
+  it('resolves whenDisconnected once the app drops its last connection', async () => {
+    const server = await listen();
+    const first = await connectApp(server.port);
+    const second = await connectApp(server.port);
+    let disconnected = false;
+    void server.whenDisconnected().then(() => (disconnected = true));
+
+    first.socket.close();
+    await new Promise((resolve) => first.socket.once('close', resolve));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(disconnected).toBe(false);
+    second.socket.terminate();
+
+    await server.whenDisconnected();
+    expect(disconnected).toBe(true);
+  });
+
+  it('does not count its own close as the app disconnecting', async () => {
+    const server = await listen();
+    const app = await connectApp(server.port);
+    let disconnected = false;
+    void server.whenDisconnected().then(() => (disconnected = true));
+
+    await server.close();
+    channel = undefined;
+    await new Promise((resolve) => app.socket.once('close', resolve));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(disconnected).toBe(false);
+  });
+
   it('fails to listen on a port that is taken', async () => {
     const server = await listen();
 

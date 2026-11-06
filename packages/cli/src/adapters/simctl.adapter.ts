@@ -41,6 +41,32 @@ export interface SimctlDriverOptions {
   readonly exec?: Exec;
   /** Where per-screenshot temp directories are made; defaults to the OS temp directory. */
   readonly tempRoot?: string;
+  /** Whether a host process is alive; defaults to `isProcessAlive`. */
+  readonly isAlive?: (pid: number) => boolean;
+}
+
+/** `simctl launch` prints `<bundle id>: <pid>`. */
+const launchedPid = /:\s*(\d+)\s*$/;
+
+type Kill = (pid: number, signal: 0) => void;
+
+/**
+ * Whether host process `pid` exists, by sending it signal 0 (nothing is delivered). A simulator
+ * app is an ordinary macOS process, so this needs no simctl call (ADR 0021). Only `ESRCH` means
+ * gone; `EPERM` means it exists, and any other answer is treated as alive.
+ */
+export function isProcessAlive(
+  pid: number,
+  kill: Kill = (target, signal) => {
+    process.kill(target, signal);
+  },
+): boolean {
+  try {
+    kill(pid, 0);
+    return true;
+  } catch (error) {
+    return !(error instanceof Error && 'code' in error && error.code === 'ESRCH');
+  }
 }
 
 /** simctl exited 0 but left no usable image behind. */
@@ -56,11 +82,20 @@ export class SimctlDriver implements DeviceDriver {
   readonly udid: string;
   private readonly exec: Exec;
   private readonly tempRoot: string;
+  private readonly isAlive: (pid: number) => boolean;
+  /** The pid each bundle id was last launched with. */
+  private readonly pids = new Map<string, number>();
 
-  constructor({ udid, exec = execFileBuffer, tempRoot = tmpdir() }: SimctlDriverOptions) {
+  constructor({
+    udid,
+    exec = execFileBuffer,
+    tempRoot = tmpdir(),
+    isAlive = isProcessAlive,
+  }: SimctlDriverOptions) {
     this.udid = udid;
     this.exec = exec;
     this.tempRoot = tempRoot;
+    this.isAlive = isAlive;
   }
 
   async boot(): Promise<void> {
@@ -79,7 +114,16 @@ export class SimctlDriver implements DeviceDriver {
     const childEnv = Object.fromEntries(
       Object.entries(env).map(([key, value]) => [`SIMCTL_CHILD_${key}`, value]),
     );
-    await this.simctl(['launch', this.udid, bundleId], childEnv);
+    const { stdout } = await this.simctl(['launch', this.udid, bundleId], childEnv);
+    const pid = launchedPid.exec(stdout.toString('utf8'))?.[1];
+    if (pid === undefined) this.pids.delete(bundleId);
+    else this.pids.set(bundleId, Number(pid));
+  }
+
+  /** Checks the pid `simctl launch` printed; `true` when no pid is known. */
+  isAppRunning(bundleId: string): Promise<boolean> {
+    const pid = this.pids.get(bundleId);
+    return Promise.resolve(pid === undefined || this.isAlive(pid));
   }
 
   async setStatusBar({ time, batteryLevel, cellularBars }: StatusBarOverrides): Promise<void> {

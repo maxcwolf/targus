@@ -22,6 +22,11 @@ export interface StorybookChannel {
    * not that the frame was painted, so callers still apply the settle delay.
    */
   selectStory(storyId: string, timeoutMs: number): Promise<StorySelection>;
+  /**
+   * Resolve when the app, having connected, drops its last connection (ADR 0021). Never resolves
+   * if the app never connects or when the CLI itself calls `close`.
+   */
+  whenDisconnected(): Promise<void>;
   /** Close the server and every client connection. */
   close(): Promise<void>;
 }

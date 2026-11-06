@@ -59,6 +59,7 @@ function deps(plutilOutput = 'co.example.app\n'): CaptureCommandDeps {
     log: (line) => lines.push(line),
     openChannel: () => Promise.resolve(channel),
     createDriver: () => driver,
+    appPollMs: 5,
   };
 }
 
@@ -148,6 +149,50 @@ describe('runCapture failures', () => {
 
     await expect(runCapture(options(), deps())).rejects.toThrow('boot failed');
     expect(channel.closed).toBe(true);
+  });
+});
+
+describe('runCapture when the app crashes', () => {
+  it('stops at once when the app exits at launch, and writes nothing', async () => {
+    // Like the real channel when nothing connects: the index never arrives.
+    channel.getIndex = () => new Promise(() => undefined);
+    const launch = driver.launch.bind(driver);
+    driver.launch = async (bundleId, env) => {
+      await launch(bundleId, env);
+      driver.exitApp();
+    };
+
+    await expect(runCapture(options(), deps())).rejects.toThrow(
+      'the app co.example.app exited before any story was captured, probably a crash at launch',
+    );
+    await expect(readdir(path.join(dir, 'out'))).rejects.toThrow('ENOENT');
+    expect(channel.closed).toBe(true);
+  });
+
+  it('stops at the story where the app drops the channel, and writes nothing', async () => {
+    channel.setOutcome('b--two', { kind: 'disconnect' });
+    driver.queueScreenshots(white);
+
+    await expect(runCapture(options(), deps())).rejects.toThrow(
+      'the app co.example.app closed its Storybook channel connection after 1 of 3 stories; ' +
+        'the partial capture was discarded',
+    );
+    expect(channel.selected).toEqual(['a--one', 'b--two']);
+    expect(lines.filter((line) => /^\d\/3 /.test(line))).toEqual([
+      '1/3 a--one render=0ms total=450ms',
+    ]);
+    await expect(readdir(path.join(dir, 'out'))).rejects.toThrow('ENOENT');
+    expect(channel.closed).toBe(true);
+  });
+
+  it('polls once a second unless told otherwise', async () => {
+    const { exec, clock, sleep, log, openChannel, createDriver } = deps();
+    const unset: CaptureCommandDeps = { exec, clock, sleep, log, openChannel, createDriver };
+    driver.queueScreenshots(white);
+
+    const manifest = await runCapture(options({ limit: 1 }), unset);
+
+    expect(manifest.summary.captured).toBe(1);
   });
 });
 
