@@ -2,7 +2,25 @@
 
 ## Status
 
-accepted
+accepted, amended by [0014](0014-upload-record-grants-image-access.md) and
+[0016](0016-cli-measures-server-classifies.md)
+
+## Amended by
+
+The decision to diff on the CI runner still holds. Two parts of the text below were overtaken:
+
+- **Who classifies.** The CLI does not submit statuses that the server stores. It submits diff
+  ratios, diff hashes and capture flags, and the server classifies every story with
+  `compareSnapshot`, using its own baseline, its `DIFF_THRESHOLD` and the project's approvals.
+  The server also adds `removed` stories. The CLI's `--threshold` affects only its own summary
+  and which diff images it uploads. See [ADR 0016](0016-cli-measures-server-classifies.md).
+- **Which hashes are "missing".** `POST /api/builds` answers the hashes this project has not
+  uploaded, not the hashes the server lacks. A project may name a hash in its results only
+  after uploading it, and the baseline hash is never taken from the request. See
+  [ADR 0014](0014-upload-record-grants-image-access.md).
+
+The default threshold is still 0.1% changed pixels. Tuning it per project and per story is not
+built.
 
 ## Date
 

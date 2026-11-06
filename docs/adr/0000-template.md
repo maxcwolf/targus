@@ -2,7 +2,10 @@
 
 ## Status
 
-proposed | accepted | superseded by NNNN
+proposed | accepted | accepted, amended by NNNN | superseded by NNNN
+
+<!-- Amended: the decision still holds, but a later ADR replaces named parts of it. List those
+parts in an "Amended by" section below Status and leave the original text as it was. -->
 
 ## Date
 

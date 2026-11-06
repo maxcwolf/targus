@@ -2,7 +2,31 @@
 
 ## Status
 
-accepted
+accepted, amended by [0011](0011-github-login-sessions-and-org-authorization.md),
+[0012](0012-personal-accounts-as-single-member-orgs.md) and
+[0014](0014-upload-record-grants-image-access.md)
+
+## Amended by
+
+The org-scoped data model still holds. These parts of the text below were overtaken:
+
+- **Login and the membership cache**
+  ([ADR 0011](0011-github-login-sessions-and-org-authorization.md)). Membership is not checked
+  at login and not cached in the session. The session is a `sessions` row named by a signed
+  cookie. Org membership is asked through the App installation when a reviewer reaches a
+  project, and cached per user and org for one hour in `org_memberships`. An org row without
+  an installation can be reviewed by nobody.
+- **What an org is** ([ADR 0012](0012-personal-accounts-as-single-member-orgs.md)).
+  `github_org` may name a personal account, whose owner is its one member.
+- **"Every other table hangs off `org_id`"**
+  ([ADR 0014](0014-upload-record-grants-image-access.md)). `images` is shared by every project
+  and has no org column. A project's access to an image is the upload record in
+  `project_images`. `users`, `sessions` and `org_memberships` belong to a user, not an org.
+
+Two details were changed without an ADR and are recorded here. The org row is created with the
+org's first project by `POST /api/admin/projects`, not seeded separately. And project tokens
+are created through that admin API call, not by a `targus admin create-project` command
+(plan.md section 12).
 
 ## Date
 

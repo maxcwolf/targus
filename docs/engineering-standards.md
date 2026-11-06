@@ -1,201 +1,408 @@
 # targus engineering standards
 
-The rule for this document: every standard has a guard. A standard that only lives in prose
-will be violated by the next engineer or agent under time pressure, so each rule below names
-the tool or CI check that enforces it. Prose explains *why*; tooling enforces *what*. If a rule
-cannot be enforced automatically, it is written into `AGENTS.md` and the PR template so a
-reviewer checks it, and that is listed as a known gap.
+The rule for this document (ADR 0009): every standard has a guard. A standard that lives only
+in prose gets violated by the next engineer or agent who is short of time. So each rule names the
+file or command that enforces it. The prose explains _why_; the tooling enforces _what_.
 
-`yarn check` runs every guard locally, and CI runs exactly `yarn check` plus the e2e suites.
-Local and CI never disagree.
+The document has two parts:
+
+- **Enforced today** (sections 1 to 5). Each rule here names its enforcing config or command,
+  and each was checked against the repository on 2026-11-06. A rule marked **Review only** has
+  no automated guard: a reviewer checks it, prompted by `AGENTS.md` or the PR template, and it
+  is listed as a known gap.
+- **Planned** (section 6). Intent that is written down but not built. Nothing in section 6
+  stops a change today. When a planned guard lands, move its rule up into sections 1 to 5 and
+  name the file that enforces it.
+
+Code comments cite sections 1.2, 2, 3.1, 3.2, 3.3, 3.4, 4.3 and 4.4 by number, so keep those
+numbers stable.
+
+# Enforced today
 
 ## 1. Architecture
 
 ### 1.1 Shape of the system
 
 ```
-packages/core          pure domain: types, zod schemas, diff, baseline rules   (no I/O)
-packages/cli           adapters + orchestration: simctl, channel server, API client, git
-packages/react-native  tiny app-side helper (decorator + parameter types)
-apps/api               Cloudflare Worker: routes → services → repositories/storage
-apps/web               React review UI: features → api-client → components
-examples/basic         minimal Expo app used by e2e
+packages/core          pure domain: types, zod contracts, ports, diff, baseline rules   (no I/O)
+packages/cli           adapters + orchestration: simctl, channel server, git, API client
+packages/react-native  app-side helper: withTargus decorator, parameters.targus types
+apps/api               Cloudflare Worker: routes -> services -> repositories/ + storage/
+apps/web               React review UI: features/ -> api-client/ (components/ are presentational)
+e2e/                   Playwright suites against a local Worker
+scripts/               the yarn new:* generators and their tests
+spike/                 the M0 spike, kept as written (docs/spike-m0.md)
 ```
 
+The workspaces are listed in the root `package.json` (`packages/*`, `apps/*`, `e2e`).
+
 Dependencies point inward: `apps/*` and `packages/cli` depend on `packages/core`; `core`
-depends on nothing in the repo and on no I/O library (pure computation libraries such as zod,
-pixelmatch and pngjs are allowed). Nothing depends on an `app`.
+depends on no other workspace and on no I/O library; nothing depends on an app.
+
+**Guard:** `.dependency-cruiser.cjs`, run by `yarn depcruise` in `yarn check`:
+
+- `core-no-other-workspaces`: core imports nothing outside `packages/core/`.
+- `core-no-node-builtins`: core imports no Node builtin.
+- `core-dependency-allowlist`: core's non-test source may import only zod, pixelmatch and pngjs.
+- `no-importing-apps` and `apps-do-not-import-each-other`.
 
 ### 1.2 Ports and adapters inside each package
 
-- `core` defines the **ports** as TypeScript interfaces (`DeviceDriver`, `StorybookChannel`,
-  `ImageStore`, `BuildRepository`, `GitHubClient`, `Clock`). Every piece of logic that matters
-  is written against a port, which is what makes it unit-testable with fakes.
-- `cli` and `api` provide the **adapters** (`SimctlDriver`, `WsStorybookChannel`, `R2ImageStore`,
-  `D1BuildRepository`, `OctokitGitHubClient`). Adapters are thin, contain no business rules,
-  and are tested by integration tests against the real thing (a simulator, Miniflare, MSW).
-- `api` layering: `routes/` (HTTP concerns only: parse, call one service, map result) →
-  `services/` (use-cases, the only place business rules live outside `core`) →
-  `repositories/` and `storage/` (D1 and R2 adapters). A route never imports a repository.
+- `core` defines the **ports** as TypeScript interfaces in `packages/core/src/ports/`:
+  `DeviceDriver`, `StorybookChannel`, `ImageStore`, `BuildRepository`, `GitHubClient`, `Clock`
+  and `IdGenerator`. Logic is written against a port so that fakes can test it.
+- `cli` and `api` provide the **adapters**: `SimctlDriver` and `WsStorybookChannel`
+  (`packages/cli/src/adapters/`), `R2ImageStore` (`apps/api/src/storage/`), `D1BuildRepository`
+  (`apps/api/src/repositories/`), `OctokitGitHubClient`, `systemClock` and `cryptoIdGenerator`
+  (`apps/api/src/adapters/`). **Review only:** that an adapter is thin and holds no business rule.
+- `api` layering: `routes/` (HTTP only: parse, call a service, map the result) →
+  `services/` (use-cases, the only place rules live outside `core`) → `repositories/` and
+  `storage/` (D1 and R2 adapters).
 - `web` layering: `features/<name>/` own their components, hooks and tests; data enters only
-  through `api-client/`, which validates every response with the shared zod schemas. No `fetch`
-  outside `api-client/`.
+  through `api-client/`, and `components/` are presentational.
 
-**Guard:** `dependency-cruiser` with a committed `.dependency-cruiser.cjs` that encodes this
-graph as `forbidden` rules (core → anything with I/O, routes → repositories, components →
-fetch, any cycle). `yarn check` runs `depcruise --validate` and fails on a violation. The
-rules file is itself reviewed like code; CODEOWNERS routes changes to it to maintainers.
+**Guard:** `.dependency-cruiser.cjs`:
+
+- `api-routes-not-repositories`: a route never imports `repositories/`, `storage/` or `db/`.
+- `api-layers-point-down`: nothing below `routes/` imports a route.
+- `api-adapters-not-services`: repositories and storage never import a service.
+- `web-features-use-api-client-index`: the web app reaches `api-client/` only through its
+  `index.ts`.
+- `web-components-are-presentational`: `components/` imports neither `api-client/` nor
+  `features/`.
+- `no-test-code-in-production`, `not-to-unresolvable`, `not-to-dev-dep`.
+
+`eslint.config.js` (`targus/web`) bans the `fetch` and `XMLHttpRequest` globals in
+`apps/web/src/` outside `api-client/`, which dependency-cruiser cannot see.
+
+**Review only:** that a route calls exactly one service.
 
 ### 1.3 One source of truth for contracts
 
-All request and response shapes are zod schemas in `packages/core/src/contracts/`. The API
-parses input with them, the CLI and web parse output with them, and the OpenAPI document is
-generated from them (`@hono/zod-openapi`). A contract change is therefore one diff, and a
-mismatch between producer and consumer is a type error, not a runtime surprise.
+All request and response shapes are zod schemas in `packages/core/src/contracts/`, exported
+from `@targus/core`. The API parses input with them. The CLI (`TargusApiClient`) and the web
+`api-client/` parse responses with them (the web's request helper in
+`apps/web/src/api-client/http.ts` parses each body with the schema it is given). A contract change is one diff in core. When a consumer
+uses a field that no longer exists, the build fails on a type error.
 
-**Guard:** a contract test in `apps/api` asserts every route's response against its schema;
-`tsc` across the workspace fails if a consumer uses a field that no longer exists.
+**Guard:** `yarn typecheck` (`tsc -b` over every workspace) fails when a consumer uses a field
+that no longer exists. `packages/core/src/contracts/contracts.test.ts` tests the schemas
+themselves. Several API route tests (for example `apps/api/src/routes/builds.test.ts`) parse
+responses with the core schema. Nothing checks that every route has such a test (6.6).
 
 ### 1.4 Decisions are recorded
 
-Non-obvious choices (diff on the runner, baseline rules, Cloudflare, no server-side diffing)
-live in `docs/adr/NNNN-title.md` using a short template: context, decision, consequences. A PR
-that changes an architectural rule adds or supersedes an ADR.
+Non-obvious choices live in `docs/adr/NNNN-title.md`, following
+[`docs/adr/0000-template.md`](adr/0000-template.md); the index and statuses are in
+[`docs/adr/README.md`](adr/README.md). A PR that changes an architectural rule adds an ADR, or
+supersedes or amends one.
 
-**Guard:** PR template checkbox and reviewer; no automation (known gap).
+**Review only:** the first item of `.github/PULL_REQUEST_TEMPLATE.md` asks about ports and
+contracts, and `AGENTS.md` says "a new or changed architectural rule means a new ADR". Nothing
+checks either.
 
 ## 2. Code standards
 
 | Rule | Guard |
 | --- | --- |
-| TypeScript strict, plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride` | shared `tsconfig.base.json`; `tsc --noEmit -b` in `yarn check` |
-| No `any`, no non-null assertions, no unused code | ESLint `no-explicit-any`, `no-non-null-assertion` as errors; `knip` for unused exports, files and dependencies |
-| Small units: files ≤ 300 lines, functions ≤ 50 lines, cyclomatic complexity ≤ 10, nesting ≤ 3 | ESLint `max-lines`, `max-lines-per-function`, `complexity`, `max-depth` as errors |
-| No import cycles, no reaching into another package's internals | `import/no-cycle`; packages expose only `src/index.ts`, enforced by `exports` in each `package.json` and dependency-cruiser |
-| Errors are typed: services throw subclasses of `TargusError` with a `code`; one middleware maps them to HTTP | ESLint `no-throw-literal`; a unit test asserts every `code` has an HTTP mapping |
-| Dates and randomness come from injected `Clock` and `IdGenerator` ports | ESLint `no-restricted-syntax` on `new Date()`, `Date.now()`, `Math.random()`, `crypto.randomUUID()` outside the adapters that implement those ports |
-| Formatting is not discussed | Prettier, run by lint-staged on commit and checked in CI |
-| Commits and PR titles are Conventional Commits | commitlint on commit and on PR title in CI |
-| Every user-facing package change has a changeset | Changesets bot check on PRs |
-| No secrets in the tree | gitleaks in CI |
-| Dependencies are deliberate | Renovate PRs; `core` may depend only on pure computation libraries (zod, pixelmatch, pngjs), never on anything that touches the OS or network, enforced by a dependency-cruiser allowlist |
+| TypeScript `strict`, plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch` | `tsconfig.base.json`, which every workspace's compiled tsconfig extends; `yarn typecheck` (`tsc -b`) |
+| No `any`, no non-null assertions | ESLint `@typescript-eslint/no-explicit-any` and `no-non-null-assertion` as errors (`eslint.config.js`, `targus/standards`); `typescript-eslint` `strictTypeChecked` |
+| No unused files, exports or dependencies | `yarn knip` with `knip.json` |
+| Small units: files ≤ 300 lines, functions ≤ 50 lines (blank lines and comments not counted), cyclomatic complexity ≤ 10, nesting ≤ 3 | ESLint `max-lines`, `max-lines-per-function`, `complexity`, `max-depth` as errors |
+| No import cycles | ESLint `import-x/no-cycle`, and dependency-cruiser `no-circular` |
+| A package is reached only through its entry point | each package's `exports` (`development` → `src/index.ts`, else `dist/`, ADR 0010); dependency-cruiser `only-public-package-entry` |
+| Only `Error` objects are thrown | ESLint `@typescript-eslint/only-throw-error` |
+| Every `TargusError` code has an HTTP status | `statusByCode` in `apps/api/src/errors.ts` `satisfies Record<TargusErrorCode, …>`, so `yarn typecheck` fails on a missing code; `apps/api/src/errors.test.ts` checks every code maps to an error status |
+| Time and randomness come from the `Clock` and `IdGenerator` ports | ESLint `no-restricted-syntax` on `new Date()`, `Date.now()`, `Math.random()` and `*.randomUUID()`, switched off only in `**/adapters/**` and `**/*.adapter.ts` |
+| `process.env` is read only in a `config.ts` | ESLint `no-restricted-properties`, switched off only in `**/config.ts` |
+| Type-only imports are marked | ESLint `@typescript-eslint/consistent-type-imports` |
+| No focused or skipped tests | ESLint `vitest/no-focused-tests` and `vitest/no-disabled-tests` on `**/*.test.{ts,tsx}`. In Playwright, `forbidOnly` is on in CI (`e2e/playwright.config.ts`) |
+| React hooks rules in the web app | `eslint-plugin-react-hooks` `recommended-latest` on `apps/web/src/` |
+| Formatting is not discussed | Prettier (`.prettierrc.json`): the lefthook `pre-commit` job writes staged files, and `yarn format:check` in `yarn check` fails on unformatted code. `docs/` and `spike/` are in `.prettierignore` |
+| Commit messages are Conventional Commits | commitlint (`commitlint.config.js`), run by the lefthook `commit-msg` hook |
+| PR titles are Conventional Commits | the `pr-title` job in `.github/workflows/check.yml` |
+| No secrets in the tree | the `gitleaks` job in `.github/workflows/check.yml`, with `.gitleaks.toml` |
+| `core` depends only on pure computation libraries (zod, pixelmatch, pngjs) | dependency-cruiser `core-dependency-allowlist` and `core-no-node-builtins` |
+
+These rows apply to the repository as configured today. Two limits apply to all of them. Hooks
+can be skipped with `--no-verify`. And a red CI job does not block a merge until branch
+protection exists (section 4.2).
+
+**Review only:** services throw `TargusError` with a `code`, not some other `Error` (the lint
+above only requires an `Error`). Each user-facing change to a published package has a
+changeset (`AGENTS.md` and the PR template's last checkbox; no CI check, 6.4). A new dependency
+must be justified (the PR template's second question).
 
 ### 2.1 Simplicity rules that need judgment
+
+All **Review only**:
 
 - Prefer a plain function over a class unless there is state to encapsulate. Prefer a
   discriminated union over a class hierarchy.
 - Three similar lines beat a premature abstraction; extract on the third real use.
 - A module's public surface is what `index.ts` exports. If a test needs an internal, the
   internal is probably a unit that deserves its own module.
-- Configuration is validated at startup with zod and typed from the schema. No `process.env`
-  reads outside `config.ts` (ESLint `no-restricted-properties`).
+- Configuration is validated with zod in `config.ts` and typed from the schema (the
+  `process.env` half of this rule is enforced, see section 2).
 
 ## 3. Testing
 
-### 3.1 The pyramid, with ownership
+### 3.1 The layers, as built
 
 | Layer | What it proves | Where | Runs |
 | --- | --- | --- | --- |
-| Unit | A pure function or a service against fakes behaves per spec | every package, `*.test.ts` beside the source | every PR, < 30 s |
-| Integration | An adapter works against the real dependency it wraps | `cli` (websocket, git, pixelmatch), `api` (Miniflare D1 + R2), `web` (MSW) | every PR, < 3 min |
-| Contract | Producers and consumers agree on the wire format | `api` response-schema tests; CLI client tests against recorded API fixtures | every PR |
-| End to end | A user-visible flow works across processes | `e2e/` at the repo root | every PR for the no-simulator flows; simulator flow on PRs touching `cli` and nightly |
+| Unit | A pure function or a service against fakes behaves per spec | every workspace, `*.test.ts(x)` beside the source | `yarn test`, in `yarn check` |
+| Integration | An adapter works against the real dependency it wraps | `api`: inside workerd against local D1 and R2 (`@cloudflare/vitest-plugin`); `cli`: a real websocket (`ws-channel.adapter.test.ts`) and real `git` in a sandbox (`git.sandbox.ts`); `web`: jsdom with MSW | `yarn test`, in `yarn check` |
+| Contract | Producers and consumers agree on the wire format | `packages/core/src/contracts/contracts.test.ts`; API route tests that parse responses with the core schema | `yarn test`, in `yarn check` |
+| End to end | A user-visible flow works across processes | `e2e/` (Playwright) | `yarn e2e`, in `.github/workflows/e2e-review.yml` |
+| Generators | `yarn new:*` output compiles and passes lint | `scripts/*.test.mjs` (`node --test`) | `yarn test:scripts`, in `yarn test` |
 
-Coverage thresholds are enforced per package in `vitest.config.ts` and fail the build:
-`core` 95% lines and branches, `api` 85%, `cli` 80%, `web` 70%. Thresholds only go up; a PR
-that lowers one must say why in the description.
+`yarn test` runs `vitest run --coverage` in every workspace that has a `test` script. CI's
+`check` job runs `yarn check` on every pull request and every push to `main`, with a 15-minute
+job timeout. The `e2e-review` job has a 20-minute timeout.
 
-### 3.2 What each package must test
+**Coverage thresholds** are set per workspace in `thresholds` of `packages/core`,
+`packages/cli`, `packages/react-native`, `apps/api` and `apps/web` `vitest.config.ts`, for lines,
+branches, functions and statements. Falling under them fails `yarn test`. The numbers live only
+in those files. `e2e/` and `scripts/` have no coverage threshold.
 
-**core.** Unit tests with fixtures for `diffImages`, `compareSnapshot`, `resolveBaseline`,
-`buildStatus`, approval carry-forward, and story-id normalisation. Property-based tests with
-`fast-check` for the baseline and approval rules (for any build graph, the chosen baseline is an
-ancestor; approving then re-running never produces a pending state). Mutation testing with
-Stryker runs nightly on `core` only, and a surviving-mutant score below 80% opens an issue.
+**Review only:** thresholds only go up. `**/vitest.config.ts` is in `.github/CODEOWNERS`
+(see 4.3 for what that does and does not do), the PR template asks for a justification, and
+`AGENTS.md` says so.
 
-**cli.** Unit tests for the capture loop against `FakeDriver` and `FakeChannel`, including the
-retry and `unstable` paths. Integration tests that start a real channel server and a fake app
-client over a real websocket. A real-simulator smoke test against `examples/basic` that captures
-three stories and checks image dimensions; this is the only test that needs macOS.
+### 3.2 What each package tests today
 
-**api.** Integration tests with `@cloudflare/vitest-pool-workers` against local D1 and R2:
-build creation, baseline resolution over HTTP, image dedup, review state transitions, check-run
-payloads (GitHub mocked with MSW), authorization (org member vs non-member vs no session).
-Migration drift test: `drizzle-kit generate` against the schema must produce no new migration.
+**core.** Fixture-based unit tests for `diffImages`, `isBlankPng`, `compareSnapshot`,
+`resolveBaseline`, `buildStatus`, `acceptedImageHash`, `libraryStories` and the contracts.
+`fast-check` property tests cover `resolveBaseline` (the result is null or a successful
+candidate on the earliest sha that has one) and `compareSnapshot` (an approved hash pair is
+never left pending; a build whose non-error captures are all approved is never pending).
 
-**web.** Component tests with Testing Library for the snapshot viewer modes and review actions.
-Feature tests with MSW for the build page (filters, approve-all, keyboard navigation).
+**cli.** The capture loop runs against `createFakeDeviceDriver` and `createFakeStorybookChannel`
+from `packages/core/src/ports/`, covering the doubled-settle retry and the `unstable` path. The
+channel server is tested over a real websocket. The git adapter is tested against real `git` with
+inherited `GIT_*` variables removed. The API client is tested against a stubbed `fetch`. A
+real-simulator test (`src/commands/capture.simulator.test.ts`) runs only when
+`TARGUS_SIMULATOR_UDID` and `TARGUS_APP` are set. CI sets neither, so it never runs there (6.2).
 
-**react-native.** Unit tests for the decorator with `@testing-library/react-native`.
+**api.** Tests run inside workerd with the real local D1 and R2 bindings from `wrangler.jsonc`,
+with the committed migrations applied by `test/apply-migrations.ts`. They cover routes,
+services and repositories: build creation, baseline resolution, image upload records,
+results, review state, retries and races. GitHub is a recording stub
+(`test/support/github-recorder.ts`), not MSW. Authorization covers org member, non-member,
+no session and cross-org (`src/routes/cross-org.test.ts`, `src/services/cross-org.test.ts`).
+Full-flow tests live in `src/flows/`. The migration drift test
+(`test/node/migration-drift.test.ts`, run by the workspace's `test:drift` as part of its `test`)
+fails when `drizzle-kit generate` against `src/db/schema.ts` would produce a new migration.
+
+**web.** Testing Library component and feature tests under `src/features/`, with
+network calls answered by MSW handlers (`src/test/msw.ts`).
+
+**react-native.** Unit tests for `parameters.targus` and for the `withTargus` decorator,
+rendered with `react-test-renderer` in Node.
 
 ### 3.3 End-to-end suites
 
-- `e2e/review.spec.ts` (Playwright): seed a local Worker with a build that has two changed
-  stories, sign in through a stubbed GitHub OAuth, approve one and deny one, assert the check-run
-  calls the GitHub mock received and the build status shown. Runs on every PR.
-- `e2e/capture.spec.ts` (macOS only): build `examples/basic` once per fingerprint, run
-  `targus run` against the local Worker, assert the build appears with the expected story ids.
-  Runs on PRs that touch `packages/cli` or `examples/`, and nightly.
-- `e2e/pilot-canary` (manual workflow): run the CLI against the pilot app's cached app on a maintainer's
-  machine or CircleCI and post the summary. Not a gate; a feedback loop.
+`yarn e2e` builds the CLI and the web app. Playwright's `webServer` then migrates a fresh local
+D1 and starts `wrangler dev`, with a stubbed GitHub (`e2e/support/github-stub.ts`) behind the
+Worker's GitHub origins. `.github/workflows/e2e-review.yml` runs it on every pull request and
+push to `main`, on Linux, with full git history.
+
+- `e2e/review.spec.ts`: builds published by the CLI, sign-in through the stubbed GitHub OAuth,
+  approve-all on the first build so it becomes the baseline, then a changed story on a PR
+  build denied and approved, with the check-run calls the stub received asserted after each
+  decision.
+- `e2e/run.spec.ts`: the built `targus run` against the local Worker from a fixture capture,
+  checking the build, its snapshots and the stored PNGs.
+
+No e2e suite drives a simulator (6.2).
 
 ### 3.4 Test hygiene rules
 
-- No retries in unit, integration or contract tests. E2E may retry once; a test that needed the
-  retry is flagged in the report and quarantined within a week or fixed.
-- No network in unit tests (`vitest` runs with `--no-network` shim; MSW `onUnhandledRequest: 'error'`).
-- Fakes live beside the port they fake (`core/src/ports/device-driver.fake.ts`) and are the
-  only test doubles; no ad-hoc mocking of modules with `vi.mock` except at adapter boundaries.
-- Fixtures are small and named for what they show (`two-changed-one-new.json`), never dumps.
+- E2E retries once in CI and never locally (`retries` in `e2e/playwright.config.ts`).
+  **Review only:** a test that needed the retry is fixed or quarantined within a week.
+- **Review only:** no retries in unit, integration or contract tests. No Vitest config sets
+  `retry`, but nothing stops a test from setting it.
+- In `apps/web`, a request without an MSW handler fails the test (`onUnhandledFrame: 'error'`
+  in `apps/web/src/test/setup.ts`). The other workspaces have no network guard (6.10).
+- **Review only:** fakes of a port live beside it (`packages/core/src/ports/*.fake.ts`) and are
+  preferred to any other double. Other hand-written doubles exist outside the ports:
+  `apps/api/test/support/` (in-memory repositories, the GitHub recorder and stub, a fake OAuth),
+  `packages/cli/src/run/targus-api.fake.ts` and `packages/cli/src/capture/solid-png.fake.ts`.
+  No test uses `vi.mock` today; nothing enforces that.
+- **Review only:** fixtures are small and named for what they show, never dumps.
 
 ## 4. Guards against drift by engineers and agents
 
-The honest answer to "how do we stop someone going around the standards" is: make the
-standard the path of least resistance, and make CI the thing that says no.
+Make the standard the path of least resistance, and make CI the thing that says no. Today CI
+says no only in the sense that its jobs go red. Section 4.2 explains why that does not yet stop
+a merge.
 
-1. **One command.** `yarn check` = typecheck + lint + prettier check + depcruise + knip + unit
-   and integration tests with coverage. It is what pre-commit runs on staged packages and what
-   CI runs. An agent that "finishes" without a green `yarn check` has not finished.
-2. **Branch protection.** `main` requires: `check`, `e2e-review`, PR title lint, changeset
-   check, one human approval, linear history. Admins are not exempt.
-3. **CODEOWNERS.** `.dependency-cruiser.cjs`, `tsconfig.base.json`, `eslint.config.js`,
-   `vitest.config.ts` thresholds, `docs/adr/`, and `AGENTS.md` require a maintainer review.
-   Loosening a guard is a visible, reviewed act.
-4. **Scaffolding over instructions.** `yarn new:adapter <port> <name>` and `yarn new:route <name>`
-   generate the files in the right layer with a test beside them. The easy way is the right way.
-5. **AGENTS.md** at the root (imported by `CLAUDE.md` via `@AGENTS.md`) states, in under 80 lines: the layer
-   map, where new code goes, the ports list, "run `yarn check` before you finish", "do not add
-   dependencies to core", "do not lower a coverage threshold", "new rule means new ADR". Agents
-   read it on every session; its content is tested by the same CI gates, so an agent that ignores
-   it still cannot merge.
-6. **Review checklist in the PR template.** Three questions a reviewer answers: does this
-   change a port or contract (then is there a test and an ADR), does it add a dependency (why),
-   does it touch a guard file (why). Short enough to be read.
-7. **Nightly drift jobs.** Mutation score on `core`, Renovate, and a `knip` run that opens an
-   issue for new dead code, so slow rot is surfaced rather than discovered.
+### 4.1 One command
 
-Known gaps that rely on humans: ADR discipline, naming quality, and whether a test actually
-asserts the behaviour rather than the implementation. Review covers these.
+`yarn check` (root `package.json`) runs `typecheck`, `lint`, `format:check`, `depcruise`,
+`knip` and `test`, which includes the generator tests. Then:
+
+- `.github/workflows/check.yml` job `check` runs `yarn install --immutable` and exactly
+  `yarn check`. The same workflow runs `gitleaks` and, on pull requests, `pr-title`.
+- `.github/workflows/e2e-review.yml` runs `yarn e2e`.
+- `lefthook.yml`, installed by the root `postinstall`: `pre-commit` runs Prettier and ESLint
+  with `--fix` on staged files; `commit-msg` runs commitlint; `pre-push` runs `yarn check`.
+
+`AGENTS.md` says work is not done until `yarn check` exits 0.
+
+### 4.2 Branch protection
+
+Not configured. On 2026-11-06 the GitHub API answered "Branch not protected" for `main`, and the
+repository had no rulesets. The repository also allows merge commits, squash and rebase. A pull
+request can therefore merge with any CI job red, without review and with any history shape. The
+intended settings are in 6.3.
+
+### 4.3 CODEOWNERS
+
+`.github/CODEOWNERS` assigns `@maxcwolf` to `.dependency-cruiser.cjs`, `tsconfig.base.json`,
+`eslint.config.js`, `**/vitest.config.ts`, `docs/adr/`, `AGENTS.md`, `lefthook.yml`,
+`knip.json` and `.github/`. GitHub requests that owner's review on a pull request that touches
+those paths. The request blocks a merge only when branch protection requires code-owner review,
+and it does not (4.2). While the owner is also the only author, nobody else is ever asked to
+review. So loosening a guard is visible in the diff, but no one else has to approve it.
+
+### 4.4 Scaffolding over instructions
+
+`yarn new:adapter <port> <name>` (`scripts/new-adapter.mjs`) and `yarn new:route <name>`
+(`scripts/new-route.mjs`) write the files in the right layer with a test beside them.
+`scripts/generators.test.mjs`, run by `yarn test:scripts`, generates each into a scratch copy and
+checks that the output type-checks and lints.
+
+### 4.5 AGENTS.md
+
+`AGENTS.md` at the root (`CLAUDE.md` contains only `@AGENTS.md`) lists the layer map, where new
+code goes, the ports, and the rules above in short form. Nothing checks `AGENTS.md` against the
+guard files; when they disagree, the guard files are what runs.
+
+### 4.6 Review checklist in the PR template
+
+`.github/PULL_REQUEST_TEMPLATE.md` asks three questions: does this change a port or contract
+(then is there a test and an ADR), does it add a dependency (why), and does it touch a guard
+file (why). A last checkbox covers `yarn check` and a changeset. **Review only:** nothing checks
+that the boxes are answered.
+
+### 4.7 Known gaps that rely on humans
+
+The **Review only** items above, plus: naming quality, and whether a test asserts the behaviour
+rather than the implementation.
 
 ## 5. Repository layout
 
 ```
 targus/
-  AGENTS.md  CLAUDE.md (@AGENTS.md)
-  package.json  .yarnrc.yml  tsconfig.base.json  eslint.config.js
-  .dependency-cruiser.cjs  knip.json  .changeset/  lefthook.yml  renovate.json
+  AGENTS.md  CLAUDE.md (@AGENTS.md)  README.md
+  package.json  .yarnrc.yml  .nvmrc  yarn.lock
+  tsconfig.base.json  tsconfig.json  eslint.config.js  .prettierrc.json  .prettierignore
+  .dependency-cruiser.cjs  knip.json  lefthook.yml  commitlint.config.js
+  .gitleaks.toml  renovate.json  .changeset/
   .github/
-    workflows/check.yml  e2e-review.yml  e2e-capture.yml  nightly.yml  release.yml
+    workflows/check.yml  e2e-review.yml
     PULL_REQUEST_TEMPLATE.md  CODEOWNERS
   docs/  plan.md  engineering-standards.md  spike-m0.md  adr/
   packages/core  packages/cli  packages/react-native
   apps/api  apps/web
-  examples/basic
-  e2e/
+  e2e/  scripts/  spike/
 ```
 
-Tooling choices: Yarn 4 workspaces (node-modules linker, matching the pilot app), TypeScript 5.x project references, Vitest, Playwright,
-ESLint flat config with `typescript-eslint`, `eslint-plugin-import-x`, `eslint-plugin-vitest`,
-Prettier, dependency-cruiser, knip, Changesets, lefthook, commitlint, Renovate, gitleaks.
-Every one of these is free and runs on GitHub Actions' Linux runners; only the simulator e2e
-needs macOS.
+Tooling in use: Yarn 4 workspaces (node-modules linker), TypeScript 6 with project references
+(`eslint.config.js` explains why not 7), Vitest, `@cloudflare/vitest-plugin` for the Worker,
+Testing Library and MSW for the web app, Playwright, ESLint flat config with `typescript-eslint`,
+`eslint-plugin-import-x`, `@vitest/eslint-plugin` and `eslint-plugin-react-hooks`, Prettier,
+dependency-cruiser, knip, Changesets (CLI only), lefthook, commitlint, gitleaks. All CI runs on
+GitHub Actions' Linux runners.
+
+# Planned
+
+## 6. Not built yet
+
+Each item says where the intent came from and what it would take. Nothing here is a
+guard yet.
+
+### 6.1 `examples/basic`
+
+A minimal Expo app with a few stories, used by targus's own e2e and simulator tests. It does
+not exist. The e2e suites use a fixture capture (`targus fixture-capture`) instead of a real
+app.
+
+### 6.2 Real-simulator tests in CI
+
+- `e2e/capture.spec.ts` (macOS only) and a `e2e-capture.yml` workflow: build `examples/basic`
+  once per fingerprint, run `targus run` against the local Worker, and assert that the build
+  appears with the expected story ids. Run on PRs that touch `packages/cli` or `examples/`,
+  and nightly.
+- A cli smoke test against `examples/basic` that captures three stories and checks image
+  dimensions. Today `capture.simulator.test.ts` exists but runs only by hand.
+- `e2e/pilot-canary`, a manual workflow that runs the CLI against the pilot app's cached app and
+  posts the summary. A feedback loop, not a gate.
+
+These were planned on the assumption that the repository is public, so that macOS runner
+minutes are free (plan.md section 10). The repository is private, so a macOS job costs minutes
+or needs a self-hosted runner.
+
+### 6.3 Branch protection on `main`
+
+Require the `check`, `gitleaks`, `pr-title` and `e2e-review` jobs, a changeset check (6.4), one
+human approval and code-owner review (which makes 4.3 a gate). Require linear history, with
+admins not exempt.
+
+### 6.4 Changeset check on pull requests
+
+The Changesets bot or a CI step (for example `changeset status --since=origin/main`) that fails
+a PR changing a published package (`@targus/core`, `@targus/cli`, `@targus/react-native`)
+without a changeset. Today `.changeset/config.json` and the `yarn changeset` script exist, and
+nothing checks.
+
+### 6.5 Release workflow
+
+`.github/workflows/release.yml`: Changesets version PRs and npm publishing of the three public
+packages. Nothing publishes them today.
+
+### 6.6 Contracts: OpenAPI and an every-route response test
+
+- Generate an OpenAPI document from the core contracts (`@hono/zod-openapi`). The dependency
+  is not installed and no document exists.
+- A contract test in `apps/api` that asserts every route's response against its schema, so a
+  route without such a test fails the suite.
+- CLI client tests against recorded API fixtures instead of hand-written stub responses.
+
+### 6.7 Mutation testing
+
+Stryker on `packages/core`, nightly. A mutation score below 80% opens an issue. Not installed.
+
+### 6.8 Nightly drift jobs
+
+`.github/workflows/nightly.yml`: mutation score on `core` (6.7), and a `knip` run that opens an
+issue for new dead code, so slow rot is surfaced rather than discovered. There is no nightly
+workflow.
+
+### 6.9 Renovate
+
+`renovate.json` is committed. Whether the Renovate app is installed on the repository was not
+verified, and no Renovate pull request has been opened yet. Until one has, treat dependency
+updates as manual.
+
+### 6.10 No network in Node tests
+
+A guard that fails any unit test in `core`, `cli`, `react-native` and `api` that opens a network
+connection, like MSW does for `apps/web`.
+
+### 6.11 Test-speed budgets
+
+Unit tests under 30 s and integration tests under 3 minutes per PR. Only the CI job timeouts
+(3.1) exist.
+
+### 6.12 Decorator tests with `@testing-library/react-native`
+
+The decorator is tested with `react-test-renderer` today (`packages/react-native/vitest.config.ts`
+explains why); the plan is to move to `@testing-library/react-native`.
+
+### 6.13 CODEOWNERS teams
+
+Move the owners in `.github/CODEOWNERS` to an org team when the repository moves to an org, so
+a guard change needs someone other than its author.
