@@ -13,8 +13,9 @@ import { compareWithCore } from '../capture/compare-images.js';
 import { sha256Hex } from '../capture/png.js';
 import type { CliConfig } from '../config.js';
 import { resolveCiContext, type CiContext } from '../run/ci-context.js';
+import { readGitInfo } from '../run/git-info.js';
 import { loadCapture } from '../run/load-capture.js';
-import { maxAncestors, runBuild, type RunBuildOutput, type RunGitInfo } from '../run/run-build.js';
+import { runBuild, type RunBuildOutput } from '../run/run-build.js';
 import { formatRunSummary } from '../run/run-summary.js';
 import type { TargusApi } from '../run/targus-api.js';
 import { runCapture, type CaptureCommandOptions } from './capture.js';
@@ -62,32 +63,6 @@ export const defaultRunDeps: RunCommandDeps = {
   createGit: (exec) => new GitCli({ exec }),
   simulatorName: (udid, exec) => new SimctlDriver({ udid, exec }).deviceName(),
 };
-
-async function readHeadSha(git: GitMetadata): Promise<string> {
-  return git.headSha().catch((error: unknown) => {
-    throw new TargusError('bad_request', 'cannot read git HEAD: run targus run in a git checkout', {
-      cause: error,
-    });
-  });
-}
-
-/**
- * sha, merge base with the base branch and its first-parent ancestors (ADR 0004). `sha`
- * (from `--sha`) replaces `HEAD` as the build's commit; the merge base is still that of `HEAD`.
- */
-export async function readGitInfo(
-  git: GitMetadata,
-  baseBranch: string,
-  sha?: string,
-): Promise<RunGitInfo> {
-  await git.fetchBase(baseBranch);
-  const buildSha = sha ?? (await readHeadSha(git));
-  const mergeBaseSha =
-    (await git.mergeBase(`origin/${baseBranch}`)) ?? (await git.mergeBase(baseBranch));
-  const ancestors =
-    mergeBaseSha === null ? [] : await git.firstParentAncestors(mergeBaseSha, maxAncestors);
-  return { sha: buildSha, mergeBaseSha, ancestors };
-}
 
 async function resolveDevice(options: RunCommandOptions, deps: RunCommandDeps): Promise<string> {
   if (options.deviceName !== undefined) return options.deviceName;
@@ -156,7 +131,7 @@ export async function runRun(
     throw new TargusError('unauthorized', 'TARGUS_TOKEN is not set: export the project token');
   }
   const git = deps.createGit(deps.exec);
-  const gitInfo = await readGitInfo(git, options.baseBranch, options.sha);
+  const gitInfo = await readGitInfo(git, options.baseBranch, options.sha, deps.log);
   const ci = await resolveContext(options, config, git);
   const device = await resolveDevice(options, deps);
   const dir = await captureDir(options, deps);

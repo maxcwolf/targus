@@ -80,12 +80,25 @@ Branch and PR number come from CircleCI (`CIRCLE_BRANCH`, `CIRCLE_PULL_REQUEST`,
 everything else is a `pr` build. `targus run` fetches `origin/<base-branch>`, sends the merge base
 with it and its first 100 first-parent ancestors so the server can pick the baseline (ADR 0004).
 
+This needs the full git history. A shallow clone stops before the merge base, which git cannot
+tell apart from unrelated histories, so every story would come out `new` with nothing compared;
+`targus run` refuses one up front instead. On GitHub Actions set `fetch-depth: 0` on
+`actions/checkout` (its default is `1`); elsewhere run `git fetch --unshallow` before
+`targus run`. CircleCI's `checkout` step clones the full history already. If the fetch of the base
+branch fails but `origin/<base-branch>` or a local `<base-branch>` exists (a laptop offline, or a
+checkout without `origin`), `targus run` prints a warning and uses it; if neither exists it stops.
+Any other git failure (not a repository, git missing, an unknown revision) stops the run with
+git's message.
+
 `--sha` replaces only the commit the build (and its check run) is for; the merge base is still
 computed from `HEAD`. GitHub Actions `pull_request` workflows must pass it: there `actions/checkout`
 checks out a synthetic merge commit, so `HEAD` is a sha that is not on the PR and the check run
 would not show on it:
 
 ```yaml
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0 # full history: targus run refuses a shallow clone
 - run: npx targus run --udid "$UDID" --app build/ExampleApp.app --sha ${{ github.event.pull_request.head.sha }}
   env:
     TARGUS_TOKEN: ${{ secrets.TARGUS_TOKEN }}

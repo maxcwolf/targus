@@ -11,22 +11,19 @@ import type { CaptureCommandOptions } from './capture.js';
 import { loadConfig, type CliConfig } from '../config.js';
 import { fixtureCaptureReport, writeFixtureCapture } from '../fixtures/fixture-capture.js';
 import { createFakeTargusApi, type FakeTargusApi } from '../run/targus-api.fake.js';
-import { readGitInfo, runRun, type RunCommandDeps, type RunCommandOptions } from './run.js';
+import { runRun, type RunCommandDeps, type RunCommandOptions } from './run.js';
 
 const head = 'a'.repeat(40);
 const mergeBase = 'b'.repeat(40);
 const ancestor = 'c'.repeat(40);
 
-function fakeGit(overrides: Partial<GitMetadata> = {}): GitMetadata & { fetched: string[] } {
-  const fetched: string[] = [];
+function fakeGit(overrides: Partial<GitMetadata> = {}): GitMetadata {
   return {
-    fetched,
-    fetchBase: (branch) => {
-      fetched.push(branch);
-      return Promise.resolve();
-    },
+    fetchBase: () => Promise.resolve(),
     headSha: () => Promise.resolve(head),
     currentBranch: () => Promise.resolve('feature/button'),
+    isShallow: () => Promise.resolve(false),
+    resolveCommit: (ref) => Promise.resolve(ref === 'origin/main' ? mergeBase : null),
     mergeBase: (ref) => Promise.resolve(ref === 'origin/main' ? mergeBase : null),
     firstParentAncestors: () => Promise.resolve([ancestor]),
     ...overrides,
@@ -231,46 +228,25 @@ describe('runRun failures', () => {
     );
     expect(captures).toEqual([]);
   });
-});
 
-describe('readGitInfo', () => {
-  it('fetches the base and falls back from origin/<base> to <base>', async () => {
-    const git = fakeGit({
-      mergeBase: (ref) => Promise.resolve(ref === 'develop' ? mergeBase : null),
-    });
+  it('stops on a shallow clone before capturing', async () => {
+    const shallow = deps({ createGit: () => fakeGit({ isShallow: () => Promise.resolve(true) }) });
 
-    expect(await readGitInfo(git, 'develop')).toEqual({
-      sha: head,
-      mergeBaseSha: mergeBase,
-      ancestors: [ancestor],
-    });
-    expect(git.fetched).toEqual(['develop']);
+    expect(await codeOf(runRun(options({ udid: 'SIM', app: 'A.app' }), config, shallow))).toMatch(
+      /^bad_request: this checkout is a shallow clone.*fetch-depth: 0/,
+    );
+    expect(captures).toEqual([]);
   });
 
-  it('uses --sha instead of HEAD, keeping the merge base of HEAD', async () => {
-    const override = 'd'.repeat(40);
-    const git = fakeGit({ headSha: () => Promise.reject(new Error('HEAD must not be read')) });
+  it('logs a failed fetch and goes on with the local base branch', async () => {
+    const offline = fakeGit({ fetchBase: () => Promise.reject(new Error('no network')) });
 
-    expect(await readGitInfo(git, 'main', override)).toEqual({
-      sha: override,
-      mergeBaseSha: mergeBase,
-      ancestors: [ancestor],
-    });
-  });
+    await runRun(
+      options({ udid: 'SIM', app: 'A.app', deviceName: 'X' }),
+      config,
+      deps({ createGit: () => offline }),
+    );
 
-  it('explains a missing git checkout', async () => {
-    const git = fakeGit({ headSha: () => Promise.reject(new Error('not a git repository')) });
-
-    expect(await codeOf(readGitInfo(git, 'main'))).toMatch(/^bad_request: cannot read git HEAD/);
-  });
-
-  it('sends no ancestors without a merge base', async () => {
-    const git = fakeGit({ mergeBase: () => Promise.resolve(null) });
-
-    expect(await readGitInfo(git, 'main')).toEqual({
-      sha: head,
-      mergeBaseSha: null,
-      ancestors: [],
-    });
+    expect(lines[0]).toMatch(/^warning: could not fetch main from origin; using origin\/main/);
   });
 });
