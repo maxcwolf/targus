@@ -16,10 +16,10 @@ export default defineConfig({
       // bin.ts only wires process.argv/exit to createProgram, which is tested directly.
       exclude: ['src/**/*.test.ts', 'src/bin.ts', 'src/index.ts'],
       thresholds: {
-        lines: 80,
-        branches: 80,
-        functions: 80,
-        statements: 80,
+        lines: 95,
+        branches: 90,
+        functions: 91,
+        statements: 94,
       },
     },
   },

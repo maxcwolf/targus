@@ -47,8 +47,9 @@ come from `Clock` and `IdGenerator`; `new Date()`, `Date.now()`, `Math.random()`
 - Run `yarn check` before you finish. Work is not done until it exits 0.
 - Do not add dependencies to `packages/core` (allowlist: zod, pixelmatch, pngjs; pure computation
   only, nothing that touches the OS or network).
-- Do not lower a coverage threshold in any `vitest.config.ts` (core 95, api 85, cli 80,
-  react-native 80, web 70). Thresholds only go up.
+- Do not lower a coverage threshold in any `vitest.config.ts` (lines/branches/functions/
+  statements: core 98/98/98/98, api 97/94/97/97, cli 95/90/91/94, react-native 98/89/98/94,
+  web 97/92/97/96). Thresholds only go up.
 - A new or changed architectural rule means a new ADR in `docs/adr/` (template: 0000).
 - Do not weaken a guard file to make a check pass: `.dependency-cruiser.cjs`,
   `tsconfig.base.json`, `eslint.config.js`, `vitest.config.ts`, `knip.json`, `lefthook.yml`.

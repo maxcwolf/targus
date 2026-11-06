@@ -19,10 +19,10 @@ export default defineConfig({
       // main.tsx only mounts <App /> into index.html; App itself is tested.
       exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/main.tsx'],
       thresholds: {
-        lines: 70,
-        branches: 70,
-        functions: 70,
-        statements: 70,
+        lines: 97,
+        branches: 92,
+        functions: 97,
+        statements: 96,
       },
     },
   },

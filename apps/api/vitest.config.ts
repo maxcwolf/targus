@@ -34,10 +34,10 @@ export default defineConfig({
       // The repository tests exercise the tables through the generated migration.
       exclude: ['src/**/*.test.ts', 'src/db/schema.ts'],
       thresholds: {
-        lines: 85,
-        branches: 85,
-        functions: 85,
-        statements: 85,
+        lines: 97,
+        branches: 94,
+        functions: 97,
+        statements: 97,
       },
     },
   },
