@@ -1,6 +1,19 @@
-import { SnapshotState } from '@targus/core';
+import { SnapshotState, type CheckRunMissing, type SubmitResultsResponse } from '@targus/core';
 
 import type { RunBuildOutput } from './run-build.ts';
+
+/** What `targus run` prints when the build has no check run, by reason. */
+const missingCheckRun: Record<CheckRunMissing, string> = {
+  no_installation: 'check run: none (the project has no GitHub App installation)',
+  no_github_app: 'check run: none (the server has no GitHub App configured)',
+  failed: 'check run not created: GitHub failed; the next review of this build creates it',
+};
+
+/** The check run line. A server older than `checkRunMissing` sends no reason. */
+function checkRunLine({ checkRun, checkRunMissing }: SubmitResultsResponse): string {
+  if (checkRun !== null) return `check run: ${checkRun.id}`;
+  return missingCheckRun[checkRunMissing ?? 'no_installation'];
+}
 
 /**
  * Human summary printed by `targus run`: the build id on its own `build: <id>` line (for scripts),
@@ -12,10 +25,6 @@ export function formatRunSummary({ build, response, counts, skipped }: RunBuildO
     (state) => `  ${state.padEnd(width)}  ${String(counts[state]).padStart(4)}`,
   );
   const { status, pendingCount, deniedCount, errorCount } = response.summary;
-  const checkRun =
-    response.checkRun === null
-      ? 'check run: none (the project has no GitHub App installation)'
-      : `check run: ${response.checkRun.id}`;
   return [
     `build: ${build.id}`,
     `build #${build.number} (${build.id}): ${status}`,
@@ -25,6 +34,6 @@ export function formatRunSummary({ build, response, counts, skipped }: RunBuildO
       : [`skipped (${skipped.length}, parameters.targus.skip): ${skipped.join(', ')}`]),
     `${pendingCount} to review, ${deniedCount} denied, ${errorCount} errored`,
     `review: ${response.reviewUrl}`,
-    checkRun,
+    checkRunLine(response),
   ];
 }

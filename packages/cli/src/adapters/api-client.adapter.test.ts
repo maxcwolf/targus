@@ -59,6 +59,7 @@ const submitResponse = {
   },
   reviewUrl: 'https://targus.test/builds/b1',
   checkRun: { id: 7 },
+  checkRunMissing: null,
 };
 
 async function rejection(promise: Promise<unknown>): Promise<{ code: string; message: string }> {

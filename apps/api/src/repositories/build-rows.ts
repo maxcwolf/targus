@@ -52,6 +52,15 @@ function toTally(row: BuildRow): SnapshotTally {
 }
 
 /** Every `Build` column with ISO timestamps, plus the tally. */
+/**
+ * A claim on creating a build's check run, as stored in `check_run_id`: minus the claim's time
+ * in ms. Real check run ids are positive, so a claim is told apart by its sign and its age by
+ * its value, without a column of its own; `toBuildRecord` reads it as no check run.
+ */
+export function checkRunClaim(claimedAt: Date): number {
+  return -claimedAt.getTime();
+}
+
 export function toBuildRecord(row: BuildRow): BuildRecord {
   return {
     id: row.id,
@@ -67,7 +76,7 @@ export function toBuildRecord(row: BuildRow): BuildRecord {
     status: row.status,
     createdAt: row.createdAt.toISOString(),
     completedAt: row.completedAt === null ? null : row.completedAt.toISOString(),
-    checkRunId: row.checkRunId,
+    checkRunId: row.checkRunId !== null && row.checkRunId > 0 ? row.checkRunId : null,
     tally: toTally(row),
   };
 }

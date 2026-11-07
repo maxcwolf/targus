@@ -282,6 +282,19 @@ describe('SubmitResultsResponse', () => {
     );
     expect(SubmitResultsResponse.safeParse({ ...response, reviewUrl: 'nope' }).success).toBe(false);
   });
+
+  it('says why there is no check run, defaulting to null for an older server', () => {
+    const summary = { status: 'passed', conclusion: 'success', pendingCount: 0 };
+    const response = { build: { id: 'b1', number: 3 }, reviewUrl: 'https://x.test/b1' };
+    const body = { ...response, summary: { ...summary, deniedCount: 0, errorCount: 0 } };
+    const parse = (extra: object) => SubmitResultsResponse.safeParse({ ...body, ...extra });
+
+    expect(parse({ checkRun: null }).data?.checkRunMissing).toBeNull();
+    expect(parse({ checkRun: null, checkRunMissing: 'failed' }).data?.checkRunMissing).toBe(
+      'failed',
+    );
+    expect(parse({ checkRun: null, checkRunMissing: 'gone' }).success).toBe(false);
+  });
 });
 
 describe('BuildStatusSummary', () => {

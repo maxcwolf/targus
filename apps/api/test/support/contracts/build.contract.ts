@@ -105,6 +105,29 @@ async function storesCompletionAndCheckRun(harness: BuildHarness): Promise<void>
   expect(await repository.findAnyById('bc-none')).toBeNull();
 }
 
+async function claimsCheckRunCreation(harness: BuildHarness): Promise<void> {
+  const { repository } = harness;
+  const { projectId, buildId } = await openBuild(harness, 'bc-claim');
+  const at = (ms: number) => new Date(Date.UTC(2026, 0, 1) + ms);
+  const staleBefore = at(-60_000);
+
+  expect(await repository.claimCheckRun(buildId, at(0), staleBefore)).toBe(true);
+  expect(await repository.claimCheckRun(buildId, at(1), staleBefore)).toBe(false);
+  expect(await repository.findById(projectId, buildId)).toMatchObject({ checkRunId: null });
+  // Another request's release leaves the claim alone; the claimer's own frees it.
+  await repository.releaseCheckRunClaim(buildId, at(1));
+  expect(await repository.claimCheckRun(buildId, at(2), staleBefore)).toBe(false);
+  await repository.releaseCheckRunClaim(buildId, at(0));
+  expect(await repository.claimCheckRun(buildId, at(3), staleBefore)).toBe(true);
+  // A claim older than `staleBefore` is taken over.
+  expect(await repository.claimCheckRun(buildId, at(120_000), at(60_000))).toBe(true);
+
+  await repository.setCheckRunId(buildId, 57);
+  expect(await repository.claimCheckRun(buildId, at(200_000), at(300_000))).toBe(false);
+  expect(await repository.findById(projectId, buildId)).toMatchObject({ checkRunId: 57 });
+  expect(await repository.claimCheckRun('bc-none', at(0), staleBefore)).toBe(false);
+}
+
 async function latestBaselineOnBranch({ repository, seedProject }: BuildHarness): Promise<void> {
   const projectId = await seedProject('bc-lib-a');
   const otherId = await seedProject('bc-lib-b');
@@ -180,6 +203,8 @@ export function describeBuildContract(name: string, harness: Harness): void {
       oneBuildPerKey(harness()));
     it('stores the completion, its tally and the check run id', () =>
       storesCompletionAndCheckRun(harness()));
+    it('lets one request at a time claim creating the check run', () =>
+      claimsCheckRunCreation(harness()));
     it('finds the newest signed-off build of a branch within the project', () =>
       latestBaselineOnBranch(harness()));
   });

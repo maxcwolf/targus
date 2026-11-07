@@ -16,6 +16,7 @@ const submitResponse = {
   },
   reviewUrl: 'https://targus.test/builds/b1',
   checkRun: null,
+  checkRunMissing: 'no_installation',
 };
 const buildRequest: CreateBuildRequest = {
   sha: 'a'.repeat(40),

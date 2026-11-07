@@ -11,6 +11,12 @@ export interface RecordingGitHub extends GitHubClient {
   readonly membershipChecks: { readonly org: string; readonly login: string }[];
   /** The installation ids whose account was asked for, in order. */
   readonly accountLookups: number[];
+  /** The check runs created, in order; each gets id 901, 902, ... */
+  readonly creates: {
+    readonly target: CheckRunTarget;
+    readonly state: CheckRunState;
+    readonly detailsUrl: string;
+  }[];
   readonly updates: {
     readonly target: CheckRunTarget;
     readonly checkRunId: number;
@@ -22,6 +28,8 @@ export function createRecordingGitHub(
   members: OrgMembers = ['octocat'],
   options: {
     readonly failUpdates?: boolean;
+    /** How many of the first check run creations fail, as when GitHub has a hiccup. */
+    readonly failCreates?: number;
     /**
      * Each org's App installation. When an org is listed here, a membership check through any
      * other installation answers false, as GitHub only lets an installation see its own org.
@@ -37,9 +45,12 @@ export function createRecordingGitHub(
   const membershipChecks: RecordingGitHub['membershipChecks'] = [];
   const accountLookups: number[] = [];
   const updates: RecordingGitHub['updates'] = [];
+  const creates: RecordingGitHub['creates'] = [];
+  let createCalls = 0;
   return {
     membershipChecks,
     accountLookups,
+    creates,
     updates,
     installationAccountId(installationId) {
       accountLookups.push(installationId);
@@ -47,7 +58,14 @@ export function createRecordingGitHub(
         options.accounts?.[installationId] ?? defaultAccountId(installationId),
       );
     },
-    createCheckRun: () => Promise.resolve({ id: 901 }),
+    createCheckRun(target, state, detailsUrl) {
+      createCalls += 1;
+      if (createCalls <= (options.failCreates ?? 0)) {
+        return Promise.reject(new Error('GitHub is down'));
+      }
+      creates.push({ target, state, detailsUrl });
+      return Promise.resolve({ id: 900 + creates.length });
+    },
     updateCheckRun(target, checkRunId, state) {
       if (options.failUpdates === true) return Promise.reject(new Error('GitHub is down'));
       updates.push({ target, checkRunId, state });

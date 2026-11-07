@@ -121,6 +121,36 @@ function snapshotReviews(
 }
 
 /**
+ * The check run id and the claims on creating one. A claim is kept apart from the record, which
+ * reads as no check run while it is held, as D1's does.
+ */
+function checkRunClaims(
+  builds: readonly BuildRecord[],
+  patch: Patch,
+): Pick<ApiBuildRepository, 'setCheckRunId' | 'claimCheckRun' | 'releaseCheckRunClaim'> {
+  const claims = new Map<string, number>();
+  return {
+    setCheckRunId(buildId, checkRunId) {
+      claims.delete(buildId);
+      patch(buildId, { checkRunId });
+      return Promise.resolve();
+    },
+    claimCheckRun(buildId, claimedAt, staleBefore) {
+      const build = builds.find((b) => b.id === buildId);
+      const claim = claims.get(buildId);
+      const held = claim !== undefined && claim >= staleBefore.getTime();
+      if (build?.checkRunId !== null || held) return Promise.resolve(false);
+      claims.set(buildId, claimedAt.getTime());
+      return Promise.resolve(true);
+    },
+    releaseCheckRunClaim(buildId, claimedAt) {
+      if (claims.get(buildId) === claimedAt.getTime()) claims.delete(buildId);
+      return Promise.resolve();
+    },
+  };
+}
+
+/**
  * `create` of the builds double. The foreign key on project_id first, as D1 enforces it; then,
  * as the D1 upsert, a key the project already used returns its build, unchanged, before the id
  * is checked (`builds_project_idempotency_key_unique`). No await between the checks and the write.
@@ -181,10 +211,7 @@ export function createInMemoryBuilds(
       patch(buildId, { status, tally, completedAt: completedAt.toISOString() });
       return Promise.resolve(true);
     },
-    setCheckRunId(buildId, checkRunId) {
-      patch(buildId, { checkRunId });
-      return Promise.resolve();
-    },
+    ...checkRunClaims(builds, patch),
     listSnapshots: (buildId) => Promise.resolve(storyOrder(snapshots.get(buildId) ?? [])),
     ...snapshotReviews(snapshots, versions, patch, (id) => builds.some((b) => b.id === id)),
   };

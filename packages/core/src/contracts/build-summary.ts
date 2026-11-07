@@ -75,14 +75,23 @@ export const ListSnapshotsResponse = z.object({
 export type ListSnapshotsResponse = z.infer<typeof ListSnapshotsResponse>;
 
 /**
+ * Why a build has no check run: its org has no GitHub App installation, the server has no
+ * GitHub App configured, or GitHub failed to create it (the next review of the build does).
+ */
+export const CheckRunMissing = z.enum(['no_installation', 'no_github_app', 'failed']);
+export type CheckRunMissing = z.infer<typeof CheckRunMissing>;
+
+/**
  * `POST /api/builds/:id/results` response: the build's new status and where to review it.
- * `checkRun` is null when the project has no GitHub App installation.
+ * `checkRun` is null when there is no check run, and `checkRunMissing` then says why; it is null
+ * when there is one, and defaults to null so a body from an older server still parses.
  */
 export const SubmitResultsResponse = z.object({
   build: z.object({ id: z.string().min(1), number: z.number().int().positive() }),
   summary: BuildStatusSummary,
   reviewUrl: z.url(),
   checkRun: z.object({ id: z.number().int().positive() }).nullable(),
+  checkRunMissing: CheckRunMissing.nullable().default(null),
 });
 export type SubmitResultsResponse = z.infer<typeof SubmitResultsResponse>;
 

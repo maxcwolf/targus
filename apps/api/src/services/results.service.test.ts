@@ -80,6 +80,7 @@ describe('submitResults', () => {
       },
       reviewUrl: `https://targus.test/builds/${buildId}`,
       checkRun: null,
+      checkRunMissing: 'no_installation',
     });
     expect(deps.builds.builds[0]).toMatchObject({
       status: 'failed',
@@ -245,7 +246,7 @@ describe('submitResults check runs', () => {
       results: [storyResult('fresh')],
     });
 
-    expect(response.checkRun).toEqual({ id: 901 });
+    expect(response).toMatchObject({ checkRun: { id: 901 }, checkRunMissing: null });
     expect(deps.builds.builds[0]?.checkRunId).toBe(901);
     expect((await getBuild(deps, asProject(project), buildId)).build.checkRunId).toBe(901);
     expect(stub.requests.map((request) => request.path)).toEqual([
@@ -278,8 +279,14 @@ describe('submitResults without a check run', () => {
     const second = await openBuild(withNoop.deps, withNoop.project, sha('a'));
     const results = { durationMs: 1, results: [] };
 
-    expect((await submit(without.deps, without.project, first, results)).checkRun).toBeNull();
-    expect((await submit(withNoop.deps, withNoop.project, second, results)).checkRun).toBeNull();
+    expect(await submit(without.deps, without.project, first, results)).toMatchObject({
+      checkRun: null,
+      checkRunMissing: 'no_installation',
+    });
+    expect(await submit(withNoop.deps, withNoop.project, second, results)).toMatchObject({
+      checkRun: null,
+      checkRunMissing: 'no_github_app',
+    });
     expect(createCheckRun).toHaveBeenCalledOnce();
   });
 
@@ -295,7 +302,11 @@ describe('submitResults without a check run', () => {
 
     const response = await submit(deps, project, buildId, { durationMs: 1, results: [] });
 
-    expect(response).toMatchObject({ checkRun: null, summary: { status: 'passed' } });
+    expect(response).toMatchObject({
+      checkRun: null,
+      checkRunMissing: 'failed',
+      summary: { status: 'passed' },
+    });
     expect(deps.builds.builds[0]?.status).toBe('passed');
     expect(deps.log.warnings).toEqual([
       { event: 'check_run_create_failed', reason: 'GitHub is down' },

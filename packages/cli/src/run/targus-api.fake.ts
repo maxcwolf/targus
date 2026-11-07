@@ -54,6 +54,7 @@ function submitResponse(
     },
     reviewUrl: `https://targus.test/builds/${buildId}`,
     checkRun: checkRunId === null ? null : { id: checkRunId },
+    checkRunMissing: checkRunId === null ? 'no_installation' : null,
   };
 }
 

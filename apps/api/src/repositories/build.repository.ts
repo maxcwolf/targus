@@ -7,7 +7,7 @@ import {
   type ReviewState,
   type SnapshotTally,
 } from '@targus/core';
-import { and, asc, desc, eq, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
 import { builds, snapshots } from '../db/schema.ts';
@@ -21,6 +21,7 @@ import {
 import { chunkForD1 } from './d1-limits.ts';
 import {
   buildInProgress,
+  checkRunClaim,
   guardedSnapshotInserts,
   runBatch,
   tallyColumns,
@@ -95,8 +96,17 @@ export interface ApiBuildRepository extends BuildRepository {
     records: readonly SnapshotRecord[],
     completion: BuildCompletion,
   ): Promise<boolean>;
-  /** Remember the check run created for a completed build. */
+  /** Remember the check run created for a completed build, replacing any claim on it. */
   setCheckRunId(buildId: string, checkRunId: number): Promise<void>;
+  /**
+   * Claim the creation of the build's check run, so two requests that both see none do not
+   * both create one. True when the build has no check run and no claim made at or after
+   * `staleBefore` (an older one belongs to a request that died before it stored or released).
+   * A claim reads as no check run (`checkRunId: null`).
+   */
+  claimCheckRun(buildId: string, claimedAt: Date, staleBefore: Date): Promise<boolean>;
+  /** Drop the claim made at `claimedAt`, when the check run could not be created. */
+  releaseCheckRunClaim(buildId: string, claimedAt: Date): Promise<void>;
   listSnapshots(buildId: string): Promise<SnapshotRecord[]>;
   findSnapshotById(snapshotId: string): Promise<SnapshotRecord | null>;
   /** The build's snapshots and its review version, read together. */
@@ -251,6 +261,27 @@ export class D1BuildRepository implements ApiBuildRepository {
 
   async setCheckRunId(buildId: string, checkRunId: number): Promise<void> {
     await this.db.update(builds).set({ checkRunId }).where(eq(builds.id, buildId));
+  }
+
+  /** The claim lives in `check_run_id` as minus its time in ms; see `checkRunClaim`. */
+  async claimCheckRun(buildId: string, claimedAt: Date, staleBefore: Date): Promise<boolean> {
+    const free = or(
+      isNull(builds.checkRunId),
+      and(lt(builds.checkRunId, 0), gt(builds.checkRunId, checkRunClaim(staleBefore))),
+    );
+    const claimed = await this.db
+      .update(builds)
+      .set({ checkRunId: checkRunClaim(claimedAt) })
+      .where(and(eq(builds.id, buildId), free))
+      .returning({ id: builds.id });
+    return claimed.length === 1;
+  }
+
+  async releaseCheckRunClaim(buildId: string, claimedAt: Date): Promise<void> {
+    await this.db
+      .update(builds)
+      .set({ checkRunId: null })
+      .where(and(eq(builds.id, buildId), eq(builds.checkRunId, checkRunClaim(claimedAt))));
   }
 
   async listSnapshots(buildId: string): Promise<SnapshotRecord[]> {

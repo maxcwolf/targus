@@ -20,6 +20,7 @@ const output: RunBuildOutput = {
     },
     reviewUrl: 'https://targus.test/builds/b1',
     checkRun: { id: 42 },
+    checkRunMissing: null,
   },
 };
 
@@ -38,6 +39,17 @@ describe('formatRunSummary', () => {
       'review: https://targus.test/builds/b1',
       'check run: 42',
     ]);
+  });
+
+  it.each([
+    ['no_installation', 'check run: none (the project has no GitHub App installation)'],
+    ['no_github_app', 'check run: none (the server has no GitHub App configured)'],
+    ['failed', 'check run not created: GitHub failed; the next review of this build creates it'],
+    [null, 'check run: none (the project has no GitHub App installation)'],
+  ] as const)('says why there is no check run (%s)', (checkRunMissing, line) => {
+    const response = { ...output.response, checkRun: null, checkRunMissing };
+
+    expect(formatRunSummary({ ...output, response }).at(-1)).toBe(line);
   });
 
   it('lists skipped stories after the counts', () => {

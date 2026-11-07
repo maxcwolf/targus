@@ -11,11 +11,10 @@ import {
   type SubmitResultsResponse,
 } from '@targus/core';
 
-import { failureReason } from '../logging/request-log.ts';
 import type { SnapshotRecord } from '../repositories/build.repository.ts';
 import type { Project } from '../repositories/project.repository.ts';
 import { baselineEntries, requireBuild } from './build.service.ts';
-import { reportCheckRun } from './check-run.ts';
+import { createCheckRun, reviewUrlOf } from './check-run.ts';
 import type { ServiceDeps } from './deps.ts';
 
 type ResultsDeps = Pick<
@@ -181,22 +180,9 @@ async function requireUploaded(
 }
 
 /**
- * Remember the check run's id so reviews can move it along. Best effort, like creating it: the
- * results are stored and the build is complete, so failing here would only make the CLI retry
- * into a conflict.
- */
-async function rememberCheckRun(deps: ResultsDeps, buildId: string, checkRunId: number) {
-  try {
-    await deps.builds.setCheckRunId(buildId, checkRunId);
-  } catch (error) {
-    deps.log.warn('check_run_id_not_stored', { reason: failureReason(error) });
-  }
-}
-
-/**
  * `POST /api/builds/:id/results`: classify every story against the baseline and the project's
  * approvals, store the snapshots and the folded build status in one write, then create the
- * check run. The write applies only while the build is `in_progress`, so a retry or a racing
+ * check run (once; when that fails the response says so and the next review creates it). The write applies only while the build is `in_progress`, so a retry or a racing
  * second submission is a `conflict`, never a half-stored build.
  */
 export async function submitResults(
@@ -220,8 +206,13 @@ export async function submitResults(
   const completion = { status: summary.status, tally, completedAt: deps.clock.now() };
   if (!(await deps.builds.completeWithResults(build.id, records, completion))) throw alreadyDone();
 
-  const reviewUrl = `${deps.config.publicUrl}/builds/${build.id}`;
-  const checkRun = await reportCheckRun(deps, project, build, summary, reviewUrl);
-  if (checkRun !== null) await rememberCheckRun(deps, build.id, checkRun.id);
-  return { build: { id: build.id, number: build.number }, summary, reviewUrl, checkRun };
+  const outcome = await createCheckRun(deps, project, build, summary);
+  return {
+    build: { id: build.id, number: build.number },
+    summary,
+    reviewUrl: reviewUrlOf(deps, build.id),
+    ...('id' in outcome
+      ? { checkRun: { id: outcome.id }, checkRunMissing: null }
+      : { checkRun: null, checkRunMissing: outcome.missing }),
+  };
 }

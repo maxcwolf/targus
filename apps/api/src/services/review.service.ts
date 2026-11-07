@@ -20,7 +20,15 @@ import type { Reviewer } from './principal.ts';
 
 type ReviewDeps = Pick<
   ServiceDeps,
-  'approvals' | 'builds' | 'clock' | 'github' | 'ids' | 'log' | 'memberships' | 'projects'
+  | 'approvals'
+  | 'builds'
+  | 'clock'
+  | 'config'
+  | 'github'
+  | 'ids'
+  | 'log'
+  | 'memberships'
+  | 'projects'
 >;
 
 /** A build the reviewer may review: readable, and no longer waiting on its results. */
