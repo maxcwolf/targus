@@ -90,6 +90,7 @@ export function storyResult(storyId: string, overrides: Partial<StoryResult> = {
     imageHash: imageHash('1'),
     width: 1179,
     height: 2556,
+    baselineHash: null,
     diffHash: null,
     diffRatio: null,
     error: null,

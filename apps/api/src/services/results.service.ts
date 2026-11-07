@@ -1,6 +1,7 @@
 import {
   buildStatusFromTally,
   compareSnapshot,
+  pinnedDiff,
   tallySnapshots,
   TargusError,
   type ApprovalPair,
@@ -64,7 +65,9 @@ function currentOf(result: StoryResult): CompareSnapshotInput['current'] {
 
 /**
  * One stored snapshot per result. The state and review are the server's (ADR 0016 trusts the
- * CLI's diff ratio, not its classification), so a disagreeing CLI `state` is overwritten.
+ * CLI's diff ratio, not its classification), so a disagreeing CLI `state` is overwritten. The
+ * ratio and diff image are kept only when the CLI measured them against the baseline compared
+ * with here, so that all three refer to the stored `baselineHash` (ADR 0032).
  */
 function recordFor(
   deps: ResultsDeps,
@@ -74,10 +77,11 @@ function recordFor(
 ): SnapshotRecord {
   const key = storyKey(result.storyId, result.variant);
   const baselineHash = comparison.baselines.get(key) ?? null;
+  const { diffRatio, diffHash } = pinnedDiff(result, baselineHash);
   const outcome = compareSnapshot({
     current: currentOf(result),
     baseline: baselineHash === null ? null : { imageHash: baselineHash },
-    diffRatio: result.diffRatio,
+    diffRatio,
     threshold: comparison.threshold,
     approvals: comparison.approvals.get(key) ?? [],
   });
@@ -92,8 +96,8 @@ function recordFor(
     width: result.width,
     height: result.height,
     baselineHash,
-    diffHash: result.diffHash,
-    diffRatio: result.diffRatio,
+    diffHash,
+    diffRatio,
     state: outcome.state,
     review: outcome.review,
     reviewedBy: null,
@@ -138,6 +142,23 @@ function removedRecord(
   };
 }
 
+/**
+ * A reviewer changed the baseline build while this one was open, so some stories were diffed
+ * against a baseline that is no longer theirs and are stored without the CLI's diff (ADR 0032).
+ */
+function warnIfBaselineMoved(
+  deps: ResultsDeps,
+  buildId: string,
+  results: readonly StoryResult[],
+  comparison: Comparison,
+): void {
+  const moved = results.filter((result) => {
+    const baselineHash = comparison.baselines.get(storyKey(result.storyId, result.variant));
+    return pinnedDiff(result, baselineHash ?? null).baselineMoved;
+  });
+  if (moved.length > 0) deps.log.warn('baseline_moved', { buildId, stories: moved.length });
+}
+
 function classify(
   deps: ResultsDeps,
   buildId: string,
@@ -159,6 +180,7 @@ function classify(
   const removed = [...comparison.baselines]
     .filter(([key]) => !seen.has(key))
     .map(([key, hash]) => removedRecord(deps, buildId, key, hash));
+  warnIfBaselineMoved(deps, buildId, results, comparison);
   return [...records, ...removed];
 }
 

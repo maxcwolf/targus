@@ -2,6 +2,7 @@ import {
   emptyTally,
   SubmitResultsResponse,
   type GitHubClient,
+  type SnapshotState,
   type SubmitResultsRequest,
 } from '@targus/core';
 import { describe, expect, it, vi } from 'vitest';
@@ -97,6 +98,15 @@ describe('submitResults', () => {
   });
 });
 
+/** A result diffed against the baseline `POST /api/builds` offered (ADR 0032). */
+const pinned = (story: string, state: SnapshotState, hash: string, base: string, ratio: number) =>
+  storyResult(story, {
+    state,
+    imageHash: imageHash(hash),
+    baselineHash: imageHash(base),
+    diffRatio: ratio,
+  });
+
 describe('submitResults against a baseline', () => {
   it('compares with the baseline, overrides the CLI state and adds removed stories', async () => {
     const { deps, project } = await setup();
@@ -124,9 +134,9 @@ describe('submitResults against a baseline', () => {
     const response = await submit(deps, project, second, {
       durationMs: 1,
       results: [
-        storyResult('same', { state: 'changed', imageHash: imageHash('1') }),
-        storyResult('moved', { state: 'unchanged', imageHash: imageHash('5'), diffRatio: 0.5 }),
-        storyResult('wobbly', { state: 'unstable', imageHash: imageHash('6'), diffRatio: 0.2 }),
+        pinned('same', 'changed', '1', '1', 0),
+        pinned('moved', 'unchanged', '5', '2', 0.5),
+        pinned('wobbly', 'unstable', '6', '4', 0.2),
         storyResult('tiny', { variant: 'dark', imageHash: imageHash('7') }),
       ],
     });
@@ -222,7 +232,7 @@ describe('submitResults image ownership', () => {
 
     for (const result of [
       storyResult('capture', { imageHash: imageHash('9') }),
-      storyResult('diff', { imageHash: imageHash('1'), diffHash: imageHash('9'), diffRatio: 0.5 }),
+      { ...pinned('diff', 'changed', '1', '2', 0.5), diffHash: imageHash('9') },
     ]) {
       await expect(
         submitResults(deps, project, buildId, {

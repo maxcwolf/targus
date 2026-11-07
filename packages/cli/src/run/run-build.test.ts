@@ -203,6 +203,7 @@ describe('runBuild with an errored story', () => {
       imageHash: null,
       width: null,
       height: null,
+      baselineHash: sha256Hex(whitePng),
       diffHash: null,
       diffRatio: null,
       error: 'render threw',

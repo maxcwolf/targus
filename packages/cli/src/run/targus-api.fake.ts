@@ -1,10 +1,10 @@
 import {
   defaultThreshold,
+  SubmitResultsRequest,
   TargusError,
   type CreateBuildRequest,
   type CreateBuildResponse,
   type CurrentProjectResponse,
-  type SubmitResultsRequest,
   type SubmitResultsResponse,
 } from '@targus/core';
 
@@ -82,7 +82,8 @@ function currentProject(error: Error | undefined): Promise<CurrentProjectRespons
 
 /**
  * An in-memory targus API: it serves the given baselines, reports every snapshot hash it does
- * not hold as missing, stores uploads, and records every call.
+ * not hold as missing, stores uploads, checks submitted results against the contract, and
+ * records every call.
  */
 export function createFakeTargusApi(options: FakeTargusApiOptions = {}): FakeTargusApi {
   const calls: FakeApiCall[] = [];
@@ -130,6 +131,8 @@ export function createFakeTargusApi(options: FakeTargusApiOptions = {}): FakeTar
     },
     submitResults: (buildId, request) => {
       calls.push({ method: 'submitResults', buildId, request });
+      // The real server validates the body against the contract, so the fake does too.
+      SubmitResultsRequest.parse(request);
       return Promise.resolve(submitResponse(buildId, request, checkRunId));
     },
   };

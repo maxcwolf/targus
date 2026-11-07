@@ -156,6 +156,7 @@ const result = {
   imageHash: hash,
   width: 1179,
   height: 2556,
+  baselineHash: 'd'.repeat(64),
   diffHash: 'c'.repeat(64),
   diffRatio: 0.02,
   error: null,

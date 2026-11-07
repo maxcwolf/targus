@@ -46,9 +46,13 @@ export function isCaptured(story: CaptureResult): story is CapturedStory {
 
 /**
  * A story whose render errored: no image, so nothing to diff (ADR 0004, rule 6). The message is
- * never empty, even from a capture an older CLI wrote, as the server requires one.
+ * never empty, even from a capture an older CLI wrote, as the server requires one. It still names
+ * the baseline it was offered, as every result does (ADR 0032).
  */
-export function errorResult(story: CaptureResult): StoryResult {
+export function errorResult(
+  story: CaptureResult,
+  baseline: BaselineEntry | undefined,
+): StoryResult {
   return {
     storyId: story.id,
     variant: defaultVariant,
@@ -58,6 +62,7 @@ export function errorResult(story: CaptureResult): StoryResult {
     imageHash: null,
     width: null,
     height: null,
+    baselineHash: baseline?.imageHash ?? null,
     diffHash: null,
     diffRatio: null,
     error: story.error === null ? 'the story produced no capture' : storyErrorMessage(story.error),
@@ -86,7 +91,9 @@ async function diffAgainst(
  * Classify a captured story against its baseline with core's `compareSnapshot` (so the CLI and
  * the server agree on `new`, `unchanged`, `unstable` and `changed`). Approvals are the server's
  * business, so none are passed here. A diff image is kept for `changed` and `unstable` stories,
- * which the review UI shows; an under-threshold diff is not worth storing.
+ * which the review UI shows; an under-threshold diff is not worth storing. The result names the
+ * baseline it was diffed against, so the server can tell when that baseline moved before the
+ * submit and drop the diff instead of applying it to another image (ADR 0032).
  */
 export async function judgeStory(
   story: CapturedStory,
@@ -113,6 +120,7 @@ export async function judgeStory(
       imageHash: story.hash,
       width: story.width,
       height: story.height,
+      baselineHash: baseline?.imageHash ?? null,
       diffHash: diff?.hash ?? null,
       diffRatio: ratio,
       error: null,

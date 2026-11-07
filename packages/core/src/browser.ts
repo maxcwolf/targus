@@ -33,3 +33,4 @@ export {
   type CompareSnapshotInput,
 } from './snapshots/compare-snapshot.ts';
 export { libraryStories } from './snapshots/library-stories.ts';
+export { pinnedDiff, type PinnedDiff } from './snapshots/pinned-diff.ts';

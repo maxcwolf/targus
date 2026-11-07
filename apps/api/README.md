@@ -87,6 +87,13 @@ the request that completed it (`builds.results_digest`, migration 0009), and the
 again answers 200 with the build's summary as of now, creating the check run if the first attempt
 could not; any other results for a completed build answer 409 `conflict`.
 
+Each result of `POST /api/builds/:id/results` names the `baselineHash` the CLI diffed against:
+the baseline `POST /api/builds` returned for the story, or null when there was none (a result
+without one has `diffRatio` and `diffHash` null). The server classifies against the baseline it
+works out at submit, which a review of the baseline build can move while the run is open. When
+the two differ, it drops the CLI's ratio and diff image and classifies by hash alone, stores its
+own baseline, and logs a `baseline_moved` warning (ADR 0032).
+
 Reviews: only `changed` and `new` snapshots of a build that has its results can be reviewed (409
 otherwise); repeating a decision is a no-op. Approving records the snapshot's hash pair in
 `approvals`, so later builds carry it forward (plan.md section 6, rule 3); denying removes that
@@ -268,11 +275,12 @@ BUILD=...   # the "build.id" field of the response
 curl -s -X PUT $B/api/images/$HASH -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: image/png' --data-binary @button.png
 
-# 4. Submit the results. The server recomputes each state against the baseline and approvals.
+# 4. Submit the results, with the threshold the build was opened with. The server recomputes each
+#    state against the baseline and approvals; baselineHash is the baseline step 2 returned (none).
 curl -s $B/api/builds/$BUILD/results -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d "{\"durationMs\":1200,\"results\":[{\"storyId\":\"button--primary\",\"state\":\"new\",
-       \"imageHash\":\"$HASH\",\"width\":1179,\"height\":2556,\"diffHash\":null,\"diffRatio\":null,
-       \"error\":null,\"blank\":false}]}"
+  -d "{\"durationMs\":1200,\"threshold\":0.001,\"results\":[{\"storyId\":\"button--primary\",
+       \"state\":\"new\",\"imageHash\":\"$HASH\",\"width\":1179,\"height\":2556,\"baselineHash\":null,
+       \"diffHash\":null,\"diffRatio\":null,\"error\":null,\"blank\":false}]}"
 
 # 5. Read it back.
 curl -s $B/api/builds/$BUILD -H "Authorization: Bearer $TOKEN"

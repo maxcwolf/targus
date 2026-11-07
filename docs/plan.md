@@ -69,7 +69,8 @@ Consumer's CI macOS job (the pilot app: not built yet)      targus service (Clou
    │                                     ◄── baseline hashes + hashes this project has not uploaded
    ├─ download baselines that differ, diff locally (pixelmatch)
    ├─ PUT missing images + diff images to R2 (via API)
-   └─ POST results (diff ratios) ──────────────────► classify each story, store,
+   └─ POST results (diff ratios, each with the ──► classify each story against the
+      baseline it was diffed against)                 server's baseline, store,
                                                       create GitHub check run
                                                       (in_progress: "7 changes to review")
 
@@ -95,6 +96,15 @@ story with `compareSnapshot` using its own `DIFF_THRESHOLD` and the project's ap
 accepts only image hashes the project itself uploaded (ADRs 0014, 0016). What it still trusts
 is what only the runner can measure: the diff ratio, the `unstable` and `blank` flags, and the
 render error text.
+
+Each result names the baseline its diff was measured against (`baselineHash`, the one
+`POST /api/builds` offered). A reviewer can deny or approve a story on the baseline build while
+a run is open, which moves that story's baseline. When the named baseline is not the one the
+server compares with at submit, the server drops the CLI's ratio and diff image and classifies
+by hash alone: a capture equal to the server's baseline is `unchanged`, any other is `changed`
+and waits for review without a diff overlay, and a story whose baseline disappeared is `new`. So
+a stored snapshot's state, ratio and diff always refer to its stored baseline, and a denied
+change cannot pass as `unchanged` (ADR 0032).
 
 Trade-off: a build cannot be re-diffed without re-running the capture.
 

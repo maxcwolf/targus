@@ -70,7 +70,13 @@ describe('the diff threshold', () => {
     await submit(deps, project, buildId, {
       durationMs: 1,
       threshold: serverThreshold,
-      results: [storyResult('s', { imageHash: imageHash('2'), diffRatio: serverThreshold })],
+      results: [
+        storyResult('s', {
+          imageHash: imageHash('2'),
+          baselineHash: imageHash('1'),
+          diffRatio: serverThreshold,
+        }),
+      ],
     });
 
     expect(deps.builds.snapshots.get(buildId)).toMatchObject([
@@ -86,7 +92,13 @@ describe('the diff threshold', () => {
       submit(deps, project, buildId, {
         durationMs: 1,
         threshold: 0.001,
-        results: [storyResult('s', { imageHash: imageHash('2'), diffRatio: 0.005 })],
+        results: [
+          storyResult('s', {
+            imageHash: imageHash('2'),
+            baselineHash: imageHash('1'),
+            diffRatio: 0.005,
+          }),
+        ],
       }),
     ).rejects.toMatchObject({
       code: 'conflict',

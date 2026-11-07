@@ -111,8 +111,18 @@ const prBuild = (flow: Flow, onSha: string) =>
   });
 
 const prResults = (flow: Flow) => [
-  storyResult('button', { state: 'unchanged', imageHash: flow.button.hash }),
-  storyResult('card', { state: 'changed', imageHash: flow.cardChanged.hash, diffRatio: 0.25 }),
+  storyResult('button', {
+    state: 'unchanged',
+    imageHash: flow.button.hash,
+    baselineHash: flow.button.hash,
+    diffRatio: 0,
+  }),
+  storyResult('card', {
+    state: 'changed',
+    imageHash: flow.cardChanged.hash,
+    baselineHash: flow.card.hash,
+    diffRatio: 0.25,
+  }),
 ];
 
 /** Build 2, a PR on sha b whose merge base is sha a: one story unchanged, one changed. */

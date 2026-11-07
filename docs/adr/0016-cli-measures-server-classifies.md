@@ -2,11 +2,18 @@
 
 ## Status
 
-accepted, amended by [0028](0028-server-owns-the-diff-threshold.md)
+accepted, amended by [0028](0028-server-owns-the-diff-threshold.md) and
+[0032](0032-results-name-the-baseline-they-were-diffed-against.md)
 
 ## Amended by
 
-The split still holds. The two thresholds are gone: the server owns the one threshold, sends it
+The split still holds. The server uses the CLI's diff ratio and diff image only when they were
+measured against the baseline it compares with: each result names the baseline the CLI diffed
+against (`baselineHash`), and when the baseline moved during the run the server drops the diff
+and classifies by hash alone. See
+[ADR 0032](0032-results-name-the-baseline-they-were-diffed-against.md).
+
+The two thresholds are gone: the server owns the one threshold, sends it
 in the `POST /api/builds` response, and the CLI diffs with it and sends it back with the
 results, which the server refuses if it differs. `targus run` has no `--threshold` flag. The
 CLI-threshold sentence in the Decision, the "two thresholds" consequence and the last

@@ -123,11 +123,11 @@ async function judgeAll(input: RunBuildInput, created: CreateBuildResponse): Pro
   );
   const judged: Judged = { results: [], diffs: [] };
   for (const story of input.report.stories) {
+    const baseline = byKey.get(baselineKey(story.id, defaultVariant));
     if (!isCaptured(story)) {
-      judged.results.push(errorResult(story));
+      judged.results.push(errorResult(story, baseline));
       continue;
     }
-    const baseline = byKey.get(baselineKey(story.id, defaultVariant));
     const { result, diff } = await judgeStory(story, baseline, judge);
     judged.results.push(result);
     if (diff !== null) judged.diffs.push(diff);
@@ -209,7 +209,8 @@ function requireStories(report: CaptureReport, filter: string | undefined): void
  * The server half of `targus run` (plan.md section 4): refuse an empty capture, open a build,
  * judge every story against its baseline locally (ADR 0003) with the threshold the server
  * returned (ADR 0028), upload missing captures and diff images, then submit the results with
- * that threshold. Every effect goes through `api`, so this is tested against an in-memory fake.
+ * that threshold, each naming the baseline it was diffed against (ADR 0032). Every effect goes
+ * through `api`, so this is tested against an in-memory fake.
  */
 export async function runBuild(input: RunBuildInput): Promise<RunBuildOutput> {
   requireStories(input.report, input.filter);

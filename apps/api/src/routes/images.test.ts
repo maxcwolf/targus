@@ -163,6 +163,7 @@ describe('GET /api/images/:hash for reviewers of a changed story', () => {
     const changed = storyResult('button', {
       state: 'changed',
       imageHash: capture.hash,
+      baselineHash: baseline.hash,
       diffHash: diff.hash,
       diffRatio: 0.5,
     });

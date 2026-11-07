@@ -41,7 +41,7 @@ function capture(channel: StorybookChannel) {
 /** The results body for `stories`, as `targus run` would submit it, checked by the contract. */
 function submitted(stories: readonly CaptureResult[]) {
   return SubmitResultsRequest.safeParse({
-    results: stories.map(errorResult),
+    results: stories.map((story) => errorResult(story, undefined)),
     durationMs: 1,
     threshold: 0.001,
   });
@@ -94,6 +94,6 @@ describe('a story error with an empty message', () => {
       error: ' ',
     };
 
-    expect(StoryResult.parse(errorResult(captured)).error).toBe(noErrorMessage);
+    expect(StoryResult.parse(errorResult(captured, undefined)).error).toBe(noErrorMessage);
   });
 });

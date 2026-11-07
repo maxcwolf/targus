@@ -58,7 +58,12 @@ async function unstableAfterBaseline(): Promise<{ deps: TestDeps; project: Proje
     approvals: { record: [], withdraw: [] },
   });
   const second = await runBuild(deps, project, 'b', 'a', [
-    storyResult('spinner', { state: 'unstable', imageHash: wobbly, diffRatio: 0.2 }),
+    storyResult('spinner', {
+      state: 'unstable',
+      imageHash: wobbly,
+      baselineHash: accepted,
+      diffRatio: 0.2,
+    }),
   ]);
   expect(second.submitted.summary.status).toBe('passed');
   expect(second.snapshots).toMatchObject([
@@ -72,7 +77,12 @@ describe('an unstable capture', () => {
     const { deps, project } = await unstableAfterBaseline();
 
     const third = await runBuild(deps, project, 'c', 'b', [
-      storyResult('spinner', { state: 'changed', imageHash: wobbly, diffRatio: 0.2 }),
+      storyResult('spinner', {
+        state: 'changed',
+        imageHash: wobbly,
+        baselineHash: accepted,
+        diffRatio: 0.2,
+      }),
     ]);
 
     expect(third.created.baselines).toEqual([
@@ -88,7 +98,7 @@ describe('an unstable capture', () => {
     const { deps, project } = await unstableAfterBaseline();
 
     const third = await runBuild(deps, project, 'c', 'b', [
-      storyResult('spinner', { imageHash: accepted }),
+      storyResult('spinner', { imageHash: accepted, baselineHash: accepted, diffRatio: 0 }),
     ]);
 
     expect(third.submitted.summary.status).toBe('passed');
