@@ -50,6 +50,7 @@ function deps(overrides: Partial<RunCommandDeps> = {}): RunCommandDeps {
     createApi: () => api,
     createGit: () => fakeGit(),
     simulatorName: () => Promise.resolve('iPhone 16'),
+    checkApp: (_app, bundleId) => Promise.resolve(bundleId ?? 'co.example'),
     ...overrides,
   };
 }
@@ -137,7 +138,8 @@ describe('runRun --sha', () => {
     );
 
     expect(api.callsOf('createBuild')[0]?.request.sha).toBe(override);
-    expect(lines[1]).toBe('build: build-1');
+    expect(lines[0]).toBe('project: the pilot app (example-org/example-app)');
+    expect(lines[2]).toBe('build: build-1');
   });
 });
 
@@ -216,9 +218,8 @@ describe('runRun failures', () => {
     const detached = deps({
       createGit: () => fakeGit({ currentBranch: () => Promise.resolve(null) }),
     });
-    expect(await codeOf(runRun(options({ fromCapture: dir }), config, detached))).toMatch(
-      /--branch/,
-    );
+    const fromDir = options({ fromCapture: dir, deviceName: 'X' });
+    expect(await codeOf(runRun(fromDir, config, detached))).toMatch(/--branch/);
   });
 
   it('fails when the simulator name is unknown', async () => {
@@ -248,6 +249,6 @@ describe('runRun failures', () => {
       deps({ createGit: () => offline }),
     );
 
-    expect(lines[0]).toMatch(/^warning: could not fetch main from origin; using origin\/main/);
+    expect(lines[1]).toMatch(/^warning: could not fetch main from origin; using origin\/main/);
   });
 });

@@ -3,6 +3,7 @@ import {
   TargusError,
   type CreateBuildRequest,
   type CreateBuildResponse,
+  type CurrentProjectResponse,
   type SubmitResultsRequest,
   type SubmitResultsResponse,
 } from '@targus/core';
@@ -11,6 +12,7 @@ import { sha256Hex } from '../capture/png.ts';
 import type { TargusApi } from './targus-api.ts';
 
 export type FakeApiCall =
+  | { readonly method: 'currentProject' }
   | { readonly method: 'createBuild'; readonly request: CreateBuildRequest }
   | { readonly method: 'uploadImage'; readonly hash: string }
   | { readonly method: 'getImage'; readonly hash: string }
@@ -34,9 +36,21 @@ export interface FakeTargusApiOptions {
   /** Extra images the server already has. */
   readonly stored?: readonly Uint8Array[];
   readonly checkRunId?: number | null;
+  /** What `currentProject` rejects with, as the server would for a bad token; resolves if unset. */
+  readonly currentProjectError?: Error;
   /** The diff threshold the fake server returns with a new build. Default: core's default. */
   readonly threshold?: number;
 }
+
+/** The project the fake answers `currentProject` with. */
+export const fakeProject: CurrentProjectResponse['project'] = {
+  id: 'project-1',
+  orgId: 'org-1',
+  githubOrg: 'example-org',
+  repo: 'example-org/example-app',
+  name: 'the pilot app',
+  defaultBranch: 'main',
+};
 
 function submitResponse(
   buildId: string,
@@ -61,6 +75,11 @@ function submitResponse(
   };
 }
 
+/** `currentProject`: `fakeProject`, or a rejection with `error` as for a bad token. */
+function currentProject(error: Error | undefined): Promise<CurrentProjectResponse> {
+  return error === undefined ? Promise.resolve({ project: fakeProject }) : Promise.reject(error);
+}
+
 /**
  * An in-memory targus API: it serves the given baselines, reports every snapshot hash it does
  * not hold as missing, stores uploads, and records every call.
@@ -81,6 +100,10 @@ export function createFakeTargusApi(options: FakeTargusApiOptions = {}): FakeTar
     images,
     callsOf: <M extends FakeApiCall['method']>(method: M) =>
       calls.filter((call): call is Extract<FakeApiCall, { method: M }> => call.method === method),
+    currentProject: () => {
+      calls.push({ method: 'currentProject' });
+      return currentProject(options.currentProjectError);
+    },
     createBuild: (request): Promise<CreateBuildResponse> => {
       calls.push({ method: 'createBuild', request });
       const hashes = new Set(request.snapshots.map((snapshot) => snapshot.imageHash));

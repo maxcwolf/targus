@@ -2,8 +2,12 @@ import {
   TargusError,
   type CreateProjectRequest,
   type CreateProjectResponse,
+  type CurrentProjectResponse,
   type ListProjectsResponse,
+  type ProjectSummary,
 } from '@targus/core';
+
+import type { Project } from '../repositories/project.repository.ts';
 
 import {
   canAccessProject,
@@ -49,6 +53,26 @@ export async function createProject(
   };
 }
 
+/** A project as the API answers it: never the token hash. */
+function summaryOf(project: Project): ProjectSummary {
+  return {
+    id: project.id,
+    orgId: project.orgId,
+    githubOrg: project.org.githubOrg,
+    repo: project.repo,
+    name: project.name,
+    defaultBranch: project.defaultBranch,
+  };
+}
+
+/**
+ * `GET /api/projects/current`: the project its token authenticated. Nothing to check beyond the
+ * token, so `targus run` can ask before it spends minutes capturing.
+ */
+export function currentProject(project: Project): CurrentProjectResponse {
+  return { project: summaryOf(project) };
+}
+
 type ListDeps = Pick<ServiceDeps, 'clock' | 'github' | 'log' | 'memberships' | 'projects'>;
 
 /**
@@ -72,14 +96,7 @@ export async function listProjects(
       byOrg.set(project.orgId, access);
     }
     if (access !== true) continue;
-    visible.push({
-      id: project.id,
-      orgId: project.orgId,
-      githubOrg: project.org.githubOrg,
-      repo: project.repo,
-      name: project.name,
-      defaultBranch: project.defaultBranch,
-    });
+    visible.push(summaryOf(project));
   }
   logUnchecked(
     deps,

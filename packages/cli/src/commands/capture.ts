@@ -7,6 +7,7 @@ import { execFileBuffer, type Exec } from '../adapters/exec.adapter.ts';
 import { SimctlDriver } from '../adapters/simctl.adapter.ts';
 import { systemClock } from '../adapters/system-clock.adapter.ts';
 import { WsStorybookChannel } from '../adapters/ws-channel.adapter.ts';
+import { readBundleId } from '../capture/app-bundle.ts';
 import { defaultAppPollMs, whileAppRuns } from '../capture/app-watch.ts';
 import {
   captureStories,
@@ -53,22 +54,6 @@ export const defaultCaptureDeps: CaptureCommandDeps = {
   openChannel: (port, connectTimeoutMs) => WsStorybookChannel.listen({ port, connectTimeoutMs }),
   createDriver: (udid, exec) => new SimctlDriver({ udid, exec }),
 };
-
-/** The app's bundle id from its Info.plist, read with `plutil`. */
-export async function readBundleId(exec: Exec, appPath: string): Promise<string> {
-  const plist = path.join(appPath, 'Info.plist');
-  const { stdout } = await exec('plutil', [
-    '-extract',
-    'CFBundleIdentifier',
-    'raw',
-    '-o',
-    '-',
-    plist,
-  ]);
-  const bundleId = stdout.toString('utf8').trim();
-  if (bundleId === '') throw new Error(`no CFBundleIdentifier in ${plist}`);
-  return bundleId;
-}
 
 function progressLine({ index, total, result, skipped }: CaptureProgress): string {
   const position = `${index + 1}/${total} ${result.id}`;

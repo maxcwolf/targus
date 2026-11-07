@@ -23,7 +23,7 @@ function stubFetch(respond: (url: string, init: RequestInit) => Response) {
 
 function client(fetch: Fetch): TargusApiClient {
   return new TargusApiClient({
-    baseUrl: 'https://targus.test/',
+    baseUrl: 'https://targus.test',
     token: 'tok',
     fetch,
     sleep: () => Promise.resolve(),
@@ -124,6 +124,30 @@ describe('TargusApiClient.createBuild', () => {
     expect(error).toEqual({
       code: 'internal',
       message: 'POST /api/builds: cannot reach https://targus.test',
+    });
+  });
+});
+
+describe('TargusApiClient.currentProject', () => {
+  const current = {
+    project: {
+      id: 'p1',
+      orgId: 'o1',
+      githubOrg: 'example-org',
+      repo: 'example-org/example-app',
+      name: 'the pilot app',
+      defaultBranch: 'main',
+    },
+  };
+
+  it('GETs the project of the token and parses it', async () => {
+    const stub = stubFetch(() => Response.json(current));
+
+    expect(await client(stub.fetch).currentProject()).toEqual(current);
+    expect(stub.calls[0]?.url).toBe('https://targus.test/api/projects/current');
+    expect(stub.calls[0]?.init).toMatchObject({
+      method: 'GET',
+      headers: { authorization: 'Bearer tok' },
     });
   });
 });

@@ -10,9 +10,11 @@ import { execFileBuffer, type Exec } from '../adapters/exec.adapter.ts';
 import { GitCli, type GitMetadata } from '../adapters/git.adapter.ts';
 import { SimctlDriver } from '../adapters/simctl.adapter.ts';
 import { systemClock } from '../adapters/system-clock.adapter.ts';
+import { checkAppBundle } from '../capture/app-bundle.ts';
 import { compareWithCore } from '../capture/compare-images.ts';
 import { sha256Hex } from '../capture/png.ts';
 import type { CliConfig } from '../config.ts';
+import { checkProject } from '../run/check-project.ts';
 import { resolveCiContext, type CiContext } from '../run/ci-context.ts';
 import { readGitInfo } from '../run/git-info.ts';
 import { loadCapture } from '../run/load-capture.ts';
@@ -51,6 +53,8 @@ export interface RunCommandDeps {
   readonly createApi: (baseUrl: string, token: string, log: (line: string) => void) => TargusApi;
   readonly createGit: (exec: Exec) => GitMetadata;
   readonly simulatorName: (udid: string, exec: Exec) => Promise<string | null>;
+  /** Checks `--app` before the simulator boots and answers its bundle id (`checkAppBundle`). */
+  readonly checkApp: (app: string, bundleId: string | undefined, exec: Exec) => Promise<string>;
 }
 
 export const defaultRunDeps: RunCommandDeps = {
@@ -65,6 +69,7 @@ export const defaultRunDeps: RunCommandDeps = {
   createApi: (baseUrl, token, log) => new TargusApiClient({ baseUrl, token, onRetry: log }),
   createGit: (exec) => new GitCli({ exec }),
   simulatorName: (udid, exec) => new SimctlDriver({ udid, exec }).deviceName(),
+  checkApp: (app, bundleId, exec) => checkAppBundle(app, { exec, bundleId }),
 };
 
 async function resolveDevice(options: RunCommandOptions, deps: RunCommandDeps): Promise<string> {
@@ -84,15 +89,31 @@ async function resolveDevice(options: RunCommandOptions, deps: RunCommandDeps): 
   return name;
 }
 
-/** The capture directory: `--from-capture` as given, or a fresh capture from the simulator. */
-async function captureDir(options: RunCommandOptions, deps: RunCommandDeps): Promise<string> {
-  if (options.fromCapture !== undefined) return path.resolve(options.fromCapture);
+/** Where the stories come from: a `--from-capture` directory, or the simulator and app. */
+type CaptureSource =
+  | { readonly kind: 'dir'; readonly dir: string }
+  | { readonly kind: 'simulator'; readonly udid: string; readonly app: string };
+
+function captureSource(options: RunCommandOptions): CaptureSource {
+  if (options.fromCapture !== undefined) return { kind: 'dir', dir: options.fromCapture };
   const { udid, app } = options;
   if (udid === undefined || app === undefined) {
     throw new TargusError('bad_request', 'pass --udid and --app, or --from-capture <dir>');
   }
+  return { kind: 'simulator', udid, app };
+}
+
+/** The capture directory: `--from-capture` as given, or a fresh capture from the simulator. */
+async function captureDir(
+  source: CaptureSource,
+  bundleId: string | undefined,
+  options: RunCommandOptions,
+  deps: RunCommandDeps,
+): Promise<string> {
+  if (source.kind === 'dir') return path.resolve(source.dir);
   const dir = options.out ?? (await deps.makeTempDir());
-  await deps.capture({ ...captureFlags(options), udid, app, out: dir });
+  const flags = { ...captureFlags(options), ...(bundleId === undefined ? {} : { bundleId }) };
+  await deps.capture({ ...flags, udid: source.udid, app: source.app, out: dir });
   return path.resolve(dir);
 }
 
@@ -130,7 +151,8 @@ async function resolveContext(
 /**
  * `targus run`: capture (or load `--from-capture`), open a build, diff against the baselines
  * locally, upload images and submit the results (plan.md section 4). Everything that can fail
- * cheaply (token, git, branch, device) is checked before the minutes-long capture.
+ * cheaply (device, app, token and project, git, branch) is checked before the minutes-long
+ * capture.
  */
 export async function runRun(
   options: RunCommandOptions,
@@ -140,18 +162,25 @@ export async function runRun(
   if (config.token === undefined) {
     throw new TargusError('unauthorized', 'TARGUS_TOKEN is not set: export the project token');
   }
+  const source = captureSource(options);
+  const device = await resolveDevice(options, deps);
+  const bundleId =
+    source.kind === 'simulator'
+      ? await deps.checkApp(source.app, options.bundleId, deps.exec)
+      : undefined;
+  const api = deps.createApi(options.apiUrl, config.token, deps.log);
+  await checkProject(api, options.apiUrl, deps.log);
   const git = deps.createGit(deps.exec);
   const gitInfo = await readGitInfo(git, options.baseBranch, options.sha, deps.log);
   const ci = await resolveContext(options, config, git);
-  const device = await resolveDevice(options, deps);
-  const dir = await captureDir(options, deps);
+  const dir = await captureDir(source, bundleId, options, deps);
   deps.log(`loading capture from ${dir}`);
   const output = await runBuild({
     report: await loadCapture(dir),
     git: gitInfo,
     ci,
     device,
-    api: deps.createApi(options.apiUrl, config.token, deps.log),
+    api,
     clock: deps.clock,
     ids: deps.ids,
     compareImages: compareWithCore,

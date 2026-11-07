@@ -84,6 +84,7 @@ function deps(app: AppScript): RunCommandDeps {
     createApi: () => api,
     createGit: () => git,
     simulatorName: () => Promise.resolve('iPhone 16'),
+    checkApp: (_app, bundleId) => Promise.resolve(bundleId ?? 'co.example'),
   };
 }
 
@@ -167,7 +168,7 @@ describe('targus run when the app crashes', () => {
       'error: the app co.example exited before any story was captured, probably a crash at ' +
         `launch: look for its crash report in ${crashReportDir}\n`,
     );
-    expect(api.calls).toEqual([]);
+    expect(api.calls).toEqual([{ method: 'currentProject' }]);
   });
 
   it('exits 1 as soon as the app dies mid-run, saying how far it got', async () => {
@@ -181,7 +182,7 @@ describe('targus run when the app crashes', () => {
     expect(lines.filter((line) => /^\d\/3 /.test(line))).toEqual([
       '1/3 a--one render=0ms total=0ms',
     ]);
-    expect(api.calls).toEqual([]);
+    expect(api.calls).toEqual([{ method: 'currentProject' }]);
   });
 
   it('runs to the end when the app stays up', async () => {

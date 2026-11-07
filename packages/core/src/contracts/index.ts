@@ -14,7 +14,13 @@ export {
   SubmitResultsResponse,
   UploadImageResponse,
 } from './build-summary.ts';
-export { CreateProjectRequest, CreateProjectResponse, RepoFullName } from './project.ts';
+export {
+  CreateProjectRequest,
+  CreateProjectResponse,
+  CurrentProjectResponse,
+  ProjectSummary,
+  RepoFullName,
+} from './project.ts';
 export {
   BaselineEntry,
   CapturedSnapshot,
@@ -27,7 +33,6 @@ export {
   ApproveAllResponse,
   ListProjectsResponse,
   MeResponse,
-  ProjectSummary,
   ReviewDecision,
   ReviewerUser,
   ReviewRequest,

@@ -69,6 +69,7 @@ function deps(listing = '{"devices":{}}'): RunCommandDeps {
     createApi: () => api,
     createGit: () => git,
     simulatorName: (udid, run) => new SimctlDriver({ udid, exec: run }).deviceName(),
+    checkApp: () => Promise.resolve('co.example'),
   };
 }
 

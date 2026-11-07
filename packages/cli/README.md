@@ -78,6 +78,20 @@ when the build opens, and refuses results diffed with any other one (ADR 0028).
 The project token is read only from `TARGUS_TOKEN`; there is deliberately no flag, so it never
 lands in shell history or CI logs.
 
+Before the git work and before the simulator boots, `targus run` checks what it can in seconds:
+the simulator's name, that `--app` is a directory with an `Info.plist` holding a
+`CFBundleIdentifier` (unless `--bundle-id` is given), and the token, by asking the API which
+project it belongs to (`GET /api/projects/current`). It then prints
+`project: <name> (<owner/repo>)`. A token the API rejects (wrong, revoked, or its project deleted)
+exits `3`:
+
+```text
+error: the targus API at https://targus.example.com rejected TARGUS_TOKEN: export the token printed when the project was created (a revoked token, or one whose project was deleted, is rejected)
+```
+
+An API that does not answer that route (a URL that is not the targus API, or an API older than the
+CLI) exits `1`. `targus capture` makes no API call.
+
 Branch and PR number come from CircleCI (`CIRCLE_BRANCH`, `CIRCLE_PULL_REQUEST`,
 `CIRCLE_PR_NUMBER`) or GitHub Actions (`GITHUB_HEAD_REF`, `GITHUB_REF_NAME`, `GITHUB_REF`);
 `--branch` and `--pr` override them. A build on `--base-branch` without a PR is a `main` build;

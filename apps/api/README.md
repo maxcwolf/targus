@@ -33,6 +33,7 @@ src/cloudflare/    the Worker edge: bindings, env -> deps (D1, R2), and the Work
 | `GET /api/projects`                   | session                  | Projects of the orgs the user belongs to                              |
 | `GET /api/projects/:id/builds?limit=` | session                  | Builds, newest first, with summary and counts (limit 1..100)          |
 | `GET /api/projects/:id/library`       | session                  | Every story of the newest signed-off default-branch build             |
+| `GET /api/projects/current`           | project token            | The token's project; the CLI checks its token with it                 |
 | `POST /api/builds`                    | project token            | Open a build: baseline, baseline hashes, missing image hashes         |
 | `PUT /api/images/:hash`               | project token            | Upload a PNG (`Content-Type: image/png`, at most 10 MB)               |
 | `GET /api/images/:hash`               | session or project token | Read a PNG                                                            |

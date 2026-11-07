@@ -2,6 +2,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import {
   CreateBuildResponse,
+  CurrentProjectResponse,
   isTargusError,
   SubmitResultsResponse,
   UploadImageResponse,
@@ -28,6 +29,7 @@ export type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 export const defaultRequestTimeoutMs = 60_000;
 
 export interface TargusApiClientOptions {
+  /** The API's address without a trailing slash, as `targus run` normalizes `--api-url`. */
   readonly baseUrl: string;
   readonly token: string;
   readonly fetch?: Fetch;
@@ -70,7 +72,7 @@ export class TargusApiClient implements TargusApi {
   private readonly onRetry: (message: string) => void;
 
   constructor(options: TargusApiClientOptions) {
-    this.baseUrl = options.baseUrl.replace(/\/+$/, '');
+    this.baseUrl = options.baseUrl;
     this.token = options.token;
     this.fetch = options.fetch ?? globalThis.fetch;
     this.timeoutMs = options.timeoutMs ?? defaultRequestTimeoutMs;
@@ -78,6 +80,11 @@ export class TargusApiClient implements TargusApi {
     this.sleep = options.sleep ?? ((ms) => delay(ms));
     this.timeoutSignal = options.timeoutSignal ?? ((ms) => AbortSignal.timeout(ms));
     this.onRetry = options.onRetry ?? (() => undefined);
+  }
+
+  async currentProject(): Promise<CurrentProjectResponse> {
+    const request = { method: 'GET', route: '/api/projects/current', idempotent: true };
+    return this.send(request, (response) => parse(request, response, CurrentProjectResponse));
   }
 
   /**

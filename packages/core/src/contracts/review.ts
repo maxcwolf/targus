@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { Build } from './build.ts';
 import { BuildStatusSummary, SnapshotCounts } from './build-summary.ts';
-import { RepoFullName } from './project.ts';
+import { ProjectSummary } from './project.ts';
 import { Snapshot } from './snapshot.ts';
 
 /** A reviewer, as GitHub login identified them. */
@@ -17,17 +17,6 @@ export type ReviewerUser = z.infer<typeof ReviewerUser>;
 /** `GET /api/me` response; 401 when there is no session. */
 export const MeResponse = z.object({ user: ReviewerUser });
 export type MeResponse = z.infer<typeof MeResponse>;
-
-/** A project as the review UI lists it: never the token hash. */
-export const ProjectSummary = z.object({
-  id: z.string().min(1),
-  orgId: z.string().min(1),
-  githubOrg: z.string().min(1),
-  repo: RepoFullName,
-  name: z.string().min(1),
-  defaultBranch: z.string().min(1),
-});
-export type ProjectSummary = z.infer<typeof ProjectSummary>;
 
 /** `GET /api/projects` response: the projects whose org the reviewer belongs to. */
 export const ListProjectsResponse = z.object({ projects: z.array(ProjectSummary) });

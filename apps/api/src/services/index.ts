@@ -4,6 +4,7 @@ import type {
   CreateBuildResponse,
   CreateProjectRequest,
   CreateProjectResponse,
+  CurrentProjectResponse,
   GetBuildResponse,
   GetLibraryResponse,
   HealthResponse,
@@ -41,7 +42,7 @@ import {
 } from './login.service.ts';
 import { assertSameOrigin, type RequestOrigin } from './origin.service.ts';
 import type { Principal, Reviewer } from './principal.ts';
-import { createProject, listProjects } from './project.service.ts';
+import { createProject, currentProject, listProjects } from './project.service.ts';
 import { submitResults } from './results.service.ts';
 import { approveAll, reviewSnapshot } from './review.service.ts';
 
@@ -60,6 +61,8 @@ export interface Services {
   logout(sessionId: string): Promise<void>;
   createProject(request: CreateProjectRequest): Promise<CreateProjectResponse>;
   listProjects(reviewer: Reviewer): Promise<ListProjectsResponse>;
+  /** The project a token authenticated, as the CLI checks it before capturing. */
+  currentProject(project: Project): CurrentProjectResponse;
   listBuilds(
     reviewer: Reviewer,
     projectId: string,
@@ -99,6 +102,7 @@ export function bindServices(deps: ServiceDeps): Services {
     logout: (sessionId) => logout(deps, sessionId),
     createProject: (request) => createProject(deps, request),
     listProjects: (reviewer) => listProjects(deps, reviewer),
+    currentProject: (project) => currentProject(project),
     listBuilds: (reviewer, projectId, query) => listBuilds(deps, reviewer, projectId, query),
     getLibrary: (reviewer, projectId) => getLibrary(deps, reviewer, projectId),
     createBuild: (project, request) => createBuild(deps, project, request),

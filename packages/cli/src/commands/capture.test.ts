@@ -12,11 +12,11 @@ import {
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Exec } from '../adapters/exec.adapter.ts';
+import { readBundleId } from '../capture/app-bundle.ts';
 import { encodeSolidPng } from '../capture/solid-png.fake.ts';
 import {
   defaultCaptureDeps,
   formatCaptureSummary,
-  readBundleId,
   runCapture,
   type CaptureCommandDeps,
   type CaptureCommandOptions,

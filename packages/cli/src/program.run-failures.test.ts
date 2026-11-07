@@ -54,6 +54,7 @@ function json(body: RequestInit['body']): unknown {
 
 /** The fake server's routes, by method and path pattern; a capture group is the id. */
 const routes: readonly (readonly [string, RegExp, Route])[] = [
+  ['GET', /^\/api\/projects\/current$/, (api) => api.currentProject()],
   [
     'POST',
     /^\/api\/builds$/,
@@ -128,6 +129,7 @@ function deps(override: Override = () => null): RunCommandDeps {
       }),
     createGit: () => git,
     simulatorName: () => Promise.resolve('iPhone 16'),
+    checkApp: (_app, bundleId) => Promise.resolve(bundleId ?? 'co.example'),
   };
 }
 
@@ -189,7 +191,7 @@ describe('targus run when the app never connects', () => {
     expect(stderr).toContain('EXPO_PUBLIC_TARGUS=true');
     expect(stderr).toContain('raise --connect-timeout');
     expect(driver.calls).toContainEqual({ method: 'launch', bundleId: 'co.example', env: {} });
-    expect(api.calls).toEqual([]);
+    expect(api.calls).toEqual([{ method: 'currentProject' }]);
   });
 });
 

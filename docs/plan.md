@@ -177,6 +177,7 @@ below is the built one; `apps/api/README.md` has the full table.
 | --- | --- | --- |
 | `GET /api/health` | none | Liveness and version |
 | `POST /api/admin/projects` | admin token | Create a project (and its org when new); returns the project token once |
+| `GET /api/projects/current` | project token | The token's project; `targus run` asks before capturing, so a bad token fails in seconds |
 | `POST /api/builds` | project token | Create build, return baseline build + per-story baseline hashes + hashes this project has not uploaded |
 | `PUT /api/images/:hash` | project token | Upload a PNG to R2 (idempotent) and record that this project uploaded it |
 | `POST /api/builds/:id/results` | project token | Submit per-story results and diff stats; the server classifies, stores and creates the check run |
