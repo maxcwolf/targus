@@ -27,7 +27,7 @@ the same change.
 | [0010](0010-package-builds-and-development-condition.md) | Package builds and the development condition | accepted, amended by [0025](0025-browser-entry-for-core.md) |
 | [0011](0011-github-login-sessions-and-org-authorization.md) | GitHub login with cookie sessions and org-membership authorization | accepted, amended by [0015](0015-same-origin-session-writes-and-hashed-session-ids.md), PR #10 and PR #24 |
 | [0012](0012-personal-accounts-as-single-member-orgs.md) | Personal accounts as single-member orgs | accepted, amended by [0024](0024-personal-account-owner-by-github-account-id.md) |
-| [0013](0013-guarded-single-batch-build-writes.md) | Guarded single-batch writes for build results and reviews | accepted, amended by [0026](0026-review-approvals-and-check-runs-follow-the-review-version.md) |
+| [0013](0013-guarded-single-batch-build-writes.md) | Guarded single-batch writes for build results and reviews | accepted, amended by [0026](0026-review-approvals-and-check-runs-follow-the-review-version.md) and [0031](0031-replayable-results-submission.md) |
 | [0014](0014-upload-record-grants-image-access.md) | An upload record, not a hash, grants a project access to an image | accepted, amended by PR #10 and PR #24 |
 | [0015](0015-same-origin-session-writes-and-hashed-session-ids.md) | Same-origin checks on session writes, and hashed session ids | accepted |
 | [0016](0016-cli-measures-server-classifies.md) | The CLI measures the diff, the server classifies the story | accepted, amended by [0028](0028-server-owns-the-diff-threshold.md) |
@@ -44,3 +44,4 @@ the same change.
 | [0027](0027-idempotency-key-for-opening-a-build.md) | An idempotency key makes opening a build safe to retry | accepted |
 | [0028](0028-server-owns-the-diff-threshold.md) | The server owns the diff threshold | accepted |
 | [0030](0030-an-unstable-capture-never-becomes-the-baseline.md) | An unstable capture never becomes the baseline | accepted |
+| [0031](0031-replayable-results-submission.md) | A digest of the request makes submitting results safe to replay | accepted, amended 2026-11-07 |

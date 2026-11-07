@@ -53,6 +53,37 @@ describe('/api/builds', () => {
   });
 });
 
+describe('/api/builds/:id/results sent again', () => {
+  it('answers the same body as the first time and refuses other results with 409', async () => {
+    const { token } = await createTestProject();
+    const png = await pngFixture(2, 2, 32);
+    const created = await postJson(
+      '/api/builds',
+      token,
+      createBuildRequest(sha('d'), { snapshots: [captured('button', png.hash)] }),
+    );
+    const { build } = CreateBuildResponse.parse(await created.json());
+    await putImage(token, png.hash, png.bytes);
+    const body = {
+      durationMs: 5,
+      threshold: 0.001,
+      results: [storyResult('button', { imageHash: png.hash })],
+    };
+    const path = `/api/builds/${build.id}/results`;
+
+    const first = await postJson(path, token, body);
+    const replayed = await postJson(path, token, body);
+    const other = await postJson(path, token, { ...body, durationMs: 6 });
+
+    expect([first.status, replayed.status, other.status]).toEqual([200, 200, 409]);
+    expect(SubmitResultsResponse.parse(await replayed.json())).toEqual(
+      SubmitResultsResponse.parse(await first.json()),
+    );
+    const listed = await call(`/api/builds/${build.id}/snapshots`, { headers: bearer(token) });
+    expect(ListSnapshotsResponse.parse(await listed.json()).snapshots).toHaveLength(1);
+  });
+});
+
 describe('/api/builds authorization', () => {
   it('hides builds of other projects behind 404', async () => {
     const owner = await createTestProject();

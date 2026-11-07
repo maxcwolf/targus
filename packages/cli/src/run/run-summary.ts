@@ -2,17 +2,26 @@ import { SnapshotState, type CheckRunMissing, type SubmitResultsResponse } from 
 
 import type { RunBuildOutput } from './run-build.ts';
 
-/** What `targus run` prints when the build has no check run, by reason. */
-const missingCheckRun: Record<CheckRunMissing, string> = {
+/** What `targus run` prints when the build has no check run, by reason other than `failed`. */
+const missingCheckRun: Record<Exclude<CheckRunMissing, 'failed'>, string> = {
   no_installation: 'check run: none (the project has no GitHub App installation)',
   no_github_app: 'check run: none (the server has no GitHub App configured)',
-  failed: 'check run not created: GitHub failed; the next review of this build creates it',
+  pending: 'check run: still being created by an earlier attempt or a review',
 };
 
-/** The check run line. A server older than `checkRunMissing` sends no reason. */
-function checkRunLine({ checkRun, checkRunMissing }: SubmitResultsResponse): string {
+/**
+ * The check run line. A server older than `checkRunMissing` sends no reason. When GitHub failed,
+ * the next review creates the check run, and a build with nothing to review gets no review, so
+ * running `targus run` again is what retries it.
+ */
+function checkRunLine({ checkRun, checkRunMissing, summary }: SubmitResultsResponse): string {
   if (checkRun !== null) return `check run: ${checkRun.id}`;
-  return missingCheckRun[checkRunMissing ?? 'no_installation'];
+  if (checkRunMissing !== 'failed') return missingCheckRun[checkRunMissing ?? 'no_installation'];
+  const retry =
+    summary.pendingCount > 0
+      ? 'the next review of this build creates it'
+      : 'run `targus run` again to retry';
+  return `check run not created: GitHub failed; ${retry}`;
 }
 
 /**

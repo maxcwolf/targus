@@ -1,6 +1,10 @@
 import { compareSnapshot, type BaselineEntry, type StoryResult } from '@targus/core';
 
-import type { CaptureResult, CompareImages } from '../capture/capture-stories.ts';
+import {
+  storyErrorMessage,
+  type CaptureResult,
+  type CompareImages,
+} from '../capture/capture-stories.ts';
 import type { TargusApi } from './targus-api.ts';
 
 /** Every story is captured once per build, so it is always the default variant (plan.md 6). */
@@ -40,7 +44,10 @@ export function isCaptured(story: CaptureResult): story is CapturedStory {
   return story.error === null && story.png !== null && story.hash !== null;
 }
 
-/** A story whose render errored: no image, so nothing to diff (ADR 0004, rule 6). */
+/**
+ * A story whose render errored: no image, so nothing to diff (ADR 0004, rule 6). The message is
+ * never empty, even from a capture an older CLI wrote, as the server requires one.
+ */
 export function errorResult(story: CaptureResult): StoryResult {
   return {
     storyId: story.id,
@@ -53,7 +60,7 @@ export function errorResult(story: CaptureResult): StoryResult {
     height: null,
     diffHash: null,
     diffRatio: null,
-    error: story.error ?? 'the story produced no capture',
+    error: story.error === null ? 'the story produced no capture' : storyErrorMessage(story.error),
     blank: false,
   };
 }

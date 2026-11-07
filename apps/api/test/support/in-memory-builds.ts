@@ -205,6 +205,7 @@ export function createInMemoryBuilds(
   const builds: BuildRecord[] = [];
   const snapshots = new Map<string, SnapshotRecord[]>();
   const versions = new Map<string, number>();
+  const digests = new Map<string, string>();
   const find = (match: (build: BuildRecord) => boolean) =>
     Promise.resolve(builds.find(match) ?? null);
   const patch: Patch = (buildId, fields) => {
@@ -220,7 +221,7 @@ export function createInMemoryBuilds(
     findById: (projectId, buildId) => find((b) => b.projectId === projectId && b.id === buildId),
     findAnyById: (buildId) => find((b) => b.id === buildId),
     ...buildQueries(builds),
-    completeWithResults(buildId, records, { status, tally, completedAt }) {
+    completeWithResults(buildId, records, { status, tally, completedAt, resultsDigest }) {
       if (builds.find((b) => b.id === buildId)?.status !== 'in_progress') {
         return Promise.resolve(false);
       }
@@ -232,8 +233,10 @@ export function createInMemoryBuilds(
         records.map((record) => ({ ...record, buildId })),
       );
       patch(buildId, { status, tally, completedAt: completedAt.toISOString() });
+      digests.set(buildId, resultsDigest);
       return Promise.resolve(true);
     },
+    findResultsDigest: (buildId) => Promise.resolve(digests.get(buildId) ?? null),
     ...checkRunClaims(builds, patch),
     listSnapshots: (buildId) => Promise.resolve(storyOrder(snapshots.get(buildId) ?? [])),
     ...snapshotReviews({ builds, snapshots, versions, patch, approvals }),

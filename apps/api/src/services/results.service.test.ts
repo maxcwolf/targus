@@ -173,7 +173,7 @@ describe('submitResults with approvals', () => {
 });
 
 describe('submitResults validation', () => {
-  it('rejects resubmission, duplicate stories and builds of other projects', async () => {
+  it('rejects other results, duplicate stories and builds of other projects', async () => {
     const { deps, project } = await setup();
     const buildId = await openBuild(deps, project, sha('a'));
     const other = await deps.projects.create(newProject('other'));
@@ -186,7 +186,7 @@ describe('submitResults validation', () => {
     ).rejects.toMatchObject({ code: 'bad_request' });
     const one = { durationMs: 1, results: [storyResult('x')] };
     await submit(deps, project, buildId, one);
-    await expect(submit(deps, project, buildId, one)).rejects.toMatchObject({
+    await expect(submit(deps, project, buildId, { ...one, durationMs: 2 })).rejects.toMatchObject({
       code: 'conflict',
     });
     await expect(submit(deps, other, buildId, one)).rejects.toMatchObject({

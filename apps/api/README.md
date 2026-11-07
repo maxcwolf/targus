@@ -82,6 +82,11 @@ another sha, branch, PR, merge base, trigger or device answers 409 `conflict`. T
 in `builds.idempotency_key`, unique per project (migration 0007). Without a key every request
 opens a new build.
 
+`POST /api/builds/:id/results` is safe to retry too (ADR 0031): the build stores the SHA-256 of
+the request that completed it (`builds.results_digest`, migration 0009), and the same request sent
+again answers 200 with the build's summary as of now, creating the check run if the first attempt
+could not; any other results for a completed build answer 409 `conflict`.
+
 Reviews: only `changed` and `new` snapshots of a build that has its results can be reviewed (409
 otherwise); repeating a decision is a no-op. Approving records the snapshot's hash pair in
 `approvals`, so later builds carry it forward (plan.md section 6, rule 3); denying removes that

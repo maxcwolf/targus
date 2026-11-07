@@ -116,8 +116,9 @@ export async function errorDetail(response: Response): Promise<ErrorDetail> {
 }
 
 /**
- * A non-2xx answer. A 409 on a retry most likely means the try before it was applied and only
- * its response was lost, so the message says so.
+ * A non-2xx answer. The server answers a resend of results it already stored as it did the
+ * first time (ADR 0031), so a 409 on a retry of a results submission means the build holds
+ * other results, and the message says so.
  */
 export function statusError(
   { method, route }: Described,
@@ -126,8 +127,8 @@ export function statusError(
   attempt: number,
 ): ApiRequestError {
   const lostResponse =
-    status === 409 && attempt > 1
-      ? '; an earlier attempt may have succeeded before its response was lost'
+    status === 409 && attempt > 1 && route.endsWith('/results')
+      ? '; the build already has different results, from another submission'
       : '';
   return new ApiRequestError(
     errorCodeForStatus(status),

@@ -86,7 +86,8 @@ function requestCheckRun(
  * Create the build's check run in the state of `summary` and store its id, when its org has a
  * GitHub App installation. Two requests that both find the build without one (the results and
  * a review, or two reviews) do not both create one: the creation is claimed first, and the
- * request that loses the claim leaves it to the winner. Best effort throughout, since the
+ * request that loses the claim leaves it to the winner with the outcome `pending` (the build
+ * may also have got its check run since it was read). Best effort throughout, since the
  * results or the review are already stored: a GitHub or D1 failure is logged, the claim is
  * released, and the outcome is `failed`, so the next review tries again.
  */
@@ -103,7 +104,8 @@ export async function createCheckRun(
   const claimed = await bestEffort(deps, 'check_run_claim_failed', () =>
     deps.builds.claimCheckRun(build.id, claimedAt, staleBefore),
   );
-  if (claimed !== true) return { missing: 'failed' };
+  if (claimed === null) return { missing: 'failed' };
+  if (!claimed) return { missing: 'pending' };
   const id = await requestCheckRun(deps, installationId, project, build, summary);
   if (id !== null && id > 0) {
     await bestEffort(deps, 'check_run_id_not_stored', () =>

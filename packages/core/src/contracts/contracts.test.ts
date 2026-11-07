@@ -298,6 +298,7 @@ describe('SubmitResultsResponse', () => {
     expect(parse({ checkRun: null, checkRunMissing: 'failed' }).data?.checkRunMissing).toBe(
       'failed',
     );
+    expect(parse({ checkRun: null, checkRunMissing: 'pending' }).success).toBe(true);
     expect(parse({ checkRun: null, checkRunMissing: 'gone' }).success).toBe(false);
   });
 });

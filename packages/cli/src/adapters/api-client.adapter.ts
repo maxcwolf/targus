@@ -51,8 +51,9 @@ interface ApiRequest {
   readonly body?: RequestInit['body'];
   readonly contentType?: string;
   /**
-   * Safe to send twice: uploads are content-addressed, submissions are guarded on the server, and
-   * a build opened under an idempotency key is opened once (ADR 0027).
+   * Safe to send twice: uploads are content-addressed, a submission is stored once and a resend
+   * of it is answered as a replay (ADR 0031), and a build opened under an idempotency key is
+   * opened once (ADR 0027).
    */
   readonly idempotent: boolean;
 }
@@ -114,7 +115,11 @@ export class TargusApiClient implements TargusApi {
     return this.send(request, async (response) => new Uint8Array(await response.arrayBuffer()));
   }
 
-  /** Retried: the server stores results only while the build is open, so a resend is a 409. */
+  /**
+   * Retried: the server stores results only while the build is open, and answers a resend of
+   * the body that completed it as it answered the first (ADR 0031), so a retry after a lost
+   * response ends the run normally. Each attempt sends the same serialized body.
+   */
   async submitResults(
     buildId: string,
     request: SubmitResultsRequest,

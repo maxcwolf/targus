@@ -32,7 +32,7 @@ describe('createCheckRun claims', () => {
       createCheckRun(deps, project, build, base),
     ]);
 
-    expect(outcomes).toEqual([{ id: 901 }, { missing: 'failed' }]);
+    expect(outcomes).toEqual([{ id: 901 }, { missing: 'pending' }]);
     expect(github.creates).toHaveLength(1);
     expect(deps.builds.builds[0]?.checkRunId).toBe(901);
   });
@@ -54,7 +54,7 @@ describe('createCheckRun claims', () => {
     const { deps, project, build } = await setup(github);
     await deps.builds.claimCheckRun(build.id, deps.clock.now(), deps.clock.now());
 
-    expect(await createCheckRun(deps, project, build, base)).toEqual({ missing: 'failed' });
+    expect(await createCheckRun(deps, project, build, base)).toEqual({ missing: 'pending' });
     deps.clock.advance(5 * 60_000 + 1);
     expect(await createCheckRun(deps, project, build, base)).toEqual({ id: 901 });
   });

@@ -75,5 +75,10 @@ export function records(buildId: string, prefix: string, count: number): Snapsho
 
 /** A `pending` completion whose tally is that of `snapshots`. */
 export function completionOf(snapshots: readonly SnapshotRecord[]): BuildCompletion {
-  return { status: 'pending', tally: tallySnapshots(snapshots), completedAt };
+  return {
+    status: 'pending',
+    tally: tallySnapshots(snapshots),
+    completedAt,
+    resultsDigest: `digest-of-${String(snapshots.length)}`,
+  };
 }

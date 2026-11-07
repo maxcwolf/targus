@@ -40,6 +40,7 @@ async function setup() {
     status: 'pending',
     tally,
     completedAt: deps.clock.now(),
+    resultsDigest: 'digest',
   });
   await deps.builds.setCheckRunId(build.id, 901);
   const reviewer = await signInReviewer(deps, 'octocat');

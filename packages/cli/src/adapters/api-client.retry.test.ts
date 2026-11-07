@@ -153,8 +153,8 @@ describe('TargusApiClient retries by request', () => {
     ).toEqual({
       code: 'conflict',
       message:
-        'POST /api/builds/b1/results failed with 409: build b1 already has results; an earlier ' +
-        'attempt may have succeeded before its response was lost',
+        'POST /api/builds/b1/results failed with 409: build b1 already has results; the build ' +
+        'already has different results, from another submission',
     });
   });
 
@@ -169,7 +169,39 @@ describe('TargusApiClient retries by request', () => {
   });
 });
 
+describe('TargusApiClient resubmitting results', () => {
+  it('ends normally when a retry after a lost response is answered as a replay', async () => {
+    const bodies: unknown[] = [];
+    // Stores the first submission but loses its response; the server answers the same body
+    // again with the stored outcome (ADR 0031).
+    const fetch: Fetch = (_url, init) => {
+      bodies.push(init.body);
+      if (bodies.length === 1) return Promise.reject(new TypeError('fetch failed'));
+      return Promise.resolve(Response.json(submitResponse));
+    };
+    const { api, warnings } = client(fetch);
+    const results = { results: [], durationMs: 1, threshold: 0.001 };
+
+    expect(await api.submitResults('b1', results)).toEqual(submitResponse);
+    expect(bodies).toEqual([JSON.stringify(results), JSON.stringify(results)]);
+    expect(warnings).toEqual([
+      'warning: POST /api/builds/b1/results: cannot reach https://targus.test; retrying in ' +
+        '500ms (attempt 2 of 4)',
+    ]);
+  });
+});
+
 describe('TargusApiClient opening a build under an idempotency key', () => {
+  it('reports a 409 on a retry without the hint about results', async () => {
+    const conflict = Response.json({ error: { message: 'key used by b1' } }, { status: 409 });
+    const stub = scripted(new Response('', { status: 502 }), conflict);
+    const { api } = client(stub.fetch);
+
+    expect(
+      (await failure(api.createBuild({ ...buildRequest, idempotencyKey: 'run-1' }))).message,
+    ).toBe('POST /api/builds failed with 409: key used by b1');
+  });
+
   it('retries after a timeout with the same key, and the server opens one build', async () => {
     const opened = new Map<string, string>();
     const keys: (string | undefined)[] = [];

@@ -76,9 +76,11 @@ export type ListSnapshotsResponse = z.infer<typeof ListSnapshotsResponse>;
 
 /**
  * Why a build has no check run: its org has no GitHub App installation, the server has no
- * GitHub App configured, or GitHub failed to create it (the next review of the build does).
+ * GitHub App configured, GitHub failed to create it (the next review or replay tries again), or
+ * another request is still creating it (`pending`, as when a retried submission arrives while
+ * the first attempt waits on GitHub).
  */
-export const CheckRunMissing = z.enum(['no_installation', 'no_github_app', 'failed']);
+export const CheckRunMissing = z.enum(['no_installation', 'no_github_app', 'failed', 'pending']);
 export type CheckRunMissing = z.infer<typeof CheckRunMissing>;
 
 /**

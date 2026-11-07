@@ -14,6 +14,18 @@ export interface TargusErrorBoundaryProps {
   readonly children?: ReactNode;
 }
 
+/**
+ * The message to report: never empty, since the CLI cannot submit an error result without one.
+ * A story may throw `new Error()`, or a value whose string is empty.
+ */
+function messageOf(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.trim() !== '') return message;
+  return error instanceof Error
+    ? `${error.name} thrown with no message`
+    : 'the story threw an empty value';
+}
+
 interface TargusErrorBoundaryState {
   readonly failed: boolean;
 }
@@ -39,7 +51,7 @@ export class TargusErrorBoundary extends Component<
     this.reported = true;
     this.props.report({
       storyId: this.props.storyId,
-      message: error instanceof Error ? error.message : String(error),
+      message: messageOf(error),
       stack: error instanceof Error ? (error.stack ?? null) : null,
       componentStack: info.componentStack ?? null,
     });

@@ -91,7 +91,12 @@ async function storesCompletionAndCheckRun(harness: BuildHarness): Promise<void>
   const { projectId, buildId } = await openBuild(harness, 'bc-status');
 
   expect(
-    await repository.completeWithResults(buildId, [], { status: 'denied', tally, completedAt }),
+    await repository.completeWithResults(buildId, [], {
+      status: 'denied',
+      tally,
+      completedAt,
+      resultsDigest: 'digest',
+    }),
   ).toBe(true);
   await repository.setCheckRunId(buildId, 55);
   await repository.setCheckRunId('bc-none', 56);

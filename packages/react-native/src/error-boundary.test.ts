@@ -20,4 +20,17 @@ describe('TargusErrorBoundary.componentDidCatch', () => {
       componentStack: null,
     });
   });
+
+  it.each([
+    [new Error(), 'Error thrown with no message'],
+    [new TypeError('  '), 'TypeError thrown with no message'],
+    ['', 'the story threw an empty value'],
+  ])('never reports an empty message (%o)', (error, message) => {
+    const report = vi.fn<(error: StoryErrorReport) => void>();
+    new TargusErrorBoundary({ storyId: 'story--a', report }).componentDidCatch(error, {
+      componentStack: null,
+    });
+
+    expect(report).toHaveBeenCalledWith(expect.objectContaining({ message }));
+  });
 });

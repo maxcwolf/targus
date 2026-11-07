@@ -44,7 +44,11 @@ const git: GitMetadata = {
 };
 
 /** Answers a request itself instead of the fake server, or `null` to let the server answer. */
-type Override = (method: string, pathname: string) => Response | null;
+type Override = (
+  method: string,
+  pathname: string,
+  body: RequestInit['body'],
+) => Response | null | Promise<Response | null>;
 
 type Route = (api: FakeTargusApi, pathname: string, body: RequestInit['body']) => Promise<unknown>;
 
@@ -78,7 +82,7 @@ function serve(api: FakeTargusApi, override: Override): Fetch {
   return async (url, init) => {
     const { pathname } = new URL(url);
     const method = init.method ?? 'GET';
-    const answer = override(method, pathname);
+    const answer = await override(method, pathname, init.body);
     if (answer !== null) return answer;
     for (const [routeMethod, pattern, handle] of routes) {
       const match = pattern.exec(pathname);
@@ -269,7 +273,7 @@ describe('targus run when submitting results fails', () => {
     expect(api.callsOf('uploadImage')).toHaveLength(3);
   });
 
-  it('says an earlier attempt may have landed when a retry meets a 409', async () => {
+  it('says the build has other results when a retry meets a 409', async () => {
     let tries = 0;
     const lostResponse: Override = (method, pathname) => {
       if (method !== 'POST' || !pathname.endsWith('/results')) return null;
@@ -286,6 +290,33 @@ describe('targus run when submitting results fails', () => {
 
     expect(exitCode).toBe(failureExitCode);
     expect(stderr).toContain('409: build build-1 already has results');
-    expect(stderr).toContain('an earlier attempt may have succeeded before its response was lost');
+    expect(stderr).toContain('the build already has different results, from another submission');
+  });
+});
+
+describe('targus run when a results response is lost', () => {
+  it('ends normally when the retry after a lost response is answered as a replay', async () => {
+    let first: { readonly body: string; readonly response: unknown } | null = null;
+    // The server stores the first attempt but its answer is lost; it replays it (ADR 0031).
+    const lostOnce: Override = async (method, pathname, body) => {
+      if (method !== 'POST' || !pathname.endsWith('/results') || typeof body !== 'string') {
+        return null;
+      }
+      if (first !== null) {
+        return body === first.body
+          ? Response.json(first.response)
+          : new Response('', { status: 409 });
+      }
+      const request = SubmitResultsRequest.parse(JSON.parse(body));
+      first = { body, response: await api.submitResults('build-1', request) };
+      return new Response('', { status: 504, statusText: 'Gateway Timeout' });
+    };
+
+    const { exitCode, stderr } = await fromCapture(lostOnce);
+
+    expect({ exitCode, stderr }).toEqual({ exitCode: 0, stderr: '' });
+    expect(api.callsOf('submitResults')).toHaveLength(1);
+    expect(lines.some((line) => line.includes('504') && line.includes('retrying'))).toBe(true);
+    expect(lines).toContain('build: build-1');
   });
 });

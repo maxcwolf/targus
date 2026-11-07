@@ -15,7 +15,8 @@ import { createBuild } from './build.service.ts';
 import { submitResults } from './results.service.ts';
 
 // Submitting results must be safe to retry: whatever fails, the build is either still open
-// with nothing stored (retry succeeds) or complete with its results (retry is a conflict).
+// with nothing stored (retry succeeds) or complete with its results (the same request is
+// answered as a replay, other results are a conflict; ADR 0031).
 const request: SubmitResultsRequest = {
   durationMs: 1,
   threshold: 0.001,
@@ -56,19 +57,32 @@ describe('submitResults twice', () => {
     expect(storedStories(deps, buildId)).toEqual(['fresh', 'other']);
   });
 
-  it('lets one of two racing submissions through and answers the other with a conflict', async () => {
+  it('stores one of two racing submissions and answers the other with a conflict', async () => {
     const { deps, project, buildId } = await setup();
+    const other = { ...request, durationMs: 2 };
 
     // Both pass the early status check before either has written anything.
     const outcomes = await Promise.allSettled([
       submitResults(deps, project, buildId, request),
-      submitResults(deps, project, buildId, request),
+      submitResults(deps, project, buildId, other),
     ]);
 
     expect(outcomes.map((outcome) => outcome.status).sort()).toEqual(['fulfilled', 'rejected']);
     expect(outcomes.find((outcome) => outcome.status === 'rejected')).toMatchObject({
       reason: { code: 'conflict' },
     });
+    expect(storedStories(deps, buildId)).toEqual(['fresh', 'other']);
+  });
+
+  it('answers both of two racing copies of one submission, storing it once', async () => {
+    const { deps, project, buildId } = await setup();
+
+    const [first, second] = await Promise.all([
+      submitResults(deps, project, buildId, request),
+      submitResults(deps, project, buildId, request),
+    ]);
+
+    expect(second.summary).toEqual(first.summary);
     expect(storedStories(deps, buildId)).toEqual(['fresh', 'other']);
   });
 });
@@ -92,9 +106,10 @@ describe('submitResults after a failure', () => {
     expect(storedStories(deps, buildId)).toEqual(['fresh', 'other']);
   });
 
-  it('keeps the build complete when storing the check run fails, so a retry is a conflict', async () => {
+  it('keeps the build complete when storing the check run fails, and creates no second one', async () => {
+    const createCheckRun = vi.fn().mockResolvedValue({ id: 77 });
     const github: GitHubClient = {
-      createCheckRun: vi.fn().mockResolvedValue({ id: 77 }),
+      createCheckRun,
       updateCheckRun: vi.fn(),
       isOrgMember: vi.fn(),
       installationAccountId: vi.fn(),
@@ -112,8 +127,11 @@ describe('submitResults after a failure', () => {
     expect(deps.log.warnings).toEqual([
       { event: 'check_run_id_not_stored', reason: 'D1 is unavailable' },
     ]);
-    await expect(submitResults(deps, project, buildId, request)).rejects.toMatchObject({
-      code: 'conflict',
+    // The claim on creating it is still held, so the replay leaves it to its holder.
+    expect(await submitResults(deps, project, buildId, request)).toMatchObject({
+      checkRun: null,
+      checkRunMissing: 'pending',
     });
+    expect(createCheckRun).toHaveBeenCalledTimes(1);
   });
 });

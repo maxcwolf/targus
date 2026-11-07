@@ -91,6 +91,10 @@ export const builds = sqliteTable(
     // The CLI's key for this build, so a retried `POST /api/builds` returns this build instead
     // of opening another (ADR 0027). Null for a build opened without one.
     idempotencyKey: text('idempotency_key'),
+    // SHA-256 of the results request that completed this build, so a resend of the same body
+    // is answered as the first was instead of with a conflict (ADR 0031). Null while
+    // `in_progress`, and for builds completed before the column existed.
+    resultsDigest: text('results_digest'),
   },
   (table) => [
     // Covers the project_id foreign key and the baseline lookup by project and sha.

@@ -210,5 +210,5 @@ export function asProject(project: Project): Principal {
 
 /** A `completeWithResults` completion with an empty tally. */
 export function completion(status: BuildStatus, completedAt: Date): BuildCompletion {
-  return { status, tally: emptyTally, completedAt };
+  return { status, tally: emptyTally, completedAt, resultsDigest: `digest-${status}` };
 }

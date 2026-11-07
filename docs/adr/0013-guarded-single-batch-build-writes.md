@@ -2,7 +2,7 @@
 
 ## Status
 
-accepted, amended by 0026
+accepted, amended by 0026 and 0031
 
 ## Amended by
 
@@ -10,6 +10,9 @@ accepted, amended by 0026
   are written in its guarded batch, approve-all reports the snapshots another review decided
   first, and a check-run update is resent when a newer review committed while it was sent. The
   two races listed last under Negative are closed.
+- [0031](0031-replayable-results-submission.md): a submission whose write finds the build
+  already complete is answered as a replay when it is the same request as the one stored, and
+  with 409 only otherwise (decision 1).
 
 ## Date
 

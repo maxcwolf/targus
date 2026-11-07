@@ -64,6 +64,13 @@
       "when": 1794009020688,
       "tag": "0008_drop_snapshot_hash_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794076702780,
+      "tag": "0009_build_results_digest",
+      "breakpoints": true
     }
   ]
 }

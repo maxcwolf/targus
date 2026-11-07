@@ -105,12 +105,14 @@ async function ignoresSecondSubmission(harness: BuildHarness): Promise<void> {
   const first = records(buildId, 'br-once-first', 2);
   const second = records(buildId, 'br-once-second', 3);
 
+  expect(await repository.findResultsDigest(buildId)).toBeNull();
   expect(await repository.completeWithResults(buildId, first, completionOf(first))).toBe(true);
   const stored = await repository.findById(projectId, buildId);
   const failed = { ...completionOf(second), status: 'failed' as const };
   expect(await repository.completeWithResults(buildId, second, failed)).toBe(false);
 
   expect(await repository.listSnapshots(buildId)).toEqual(first);
+  expect(await repository.findResultsDigest(buildId)).toBe(completionOf(first).resultsDigest);
   expect(await repository.findById(projectId, buildId)).toEqual(stored);
   expect(stored).toMatchObject({
     status: 'pending',
@@ -143,6 +145,7 @@ async function unknownBuild({ repository }: BuildHarness): Promise<void> {
 
   expect(await repository.listSnapshots('br-none')).toEqual([]);
   expect(await repository.findSnapshotById('br-none-000')).toBeNull();
+  expect(await repository.findResultsDigest('br-none')).toBeNull();
 }
 
 /** `completeWithResults` and the snapshot reads of a builds repository. */
@@ -159,7 +162,7 @@ export function describeBuildResultsContract(name: string, harness: Harness): vo
   });
 
   describe(`${name} completeWithResults happens once`, () => {
-    it('ignores a second submission, leaving the first one as stored', () =>
+    it('ignores a second submission, leaving the first one and its digest as stored', () =>
       ignoresSecondSubmission(harness()));
     it('lets exactly one of two racing submissions through', () => oneOfTwoRacing(harness()));
     it('completes no unknown build and stores none of its snapshots', () =>

@@ -41,6 +41,8 @@ export interface BuildCompletion {
   readonly status: BuildStatus;
   readonly tally: SnapshotTally;
   readonly completedAt: Date;
+  /** SHA-256 of the results request, so a resend of it can be told from other results. */
+  readonly resultsDigest: string;
 }
 
 /** A build's snapshots as of one read, and the review version they were read at. */
@@ -87,6 +89,11 @@ export interface ApiBuildRepository extends BuildRepository {
     records: readonly SnapshotRecord[],
     completion: BuildCompletion,
   ): Promise<boolean>;
+  /**
+   * The digest `completeWithResults` stored with the build's results; null while the build is
+   * `in_progress`, for a build completed before digests were kept, or for an unknown build.
+   */
+  findResultsDigest(buildId: string): Promise<string | null>;
   /** Remember the check run created for a completed build, replacing any claim on it. */
   setCheckRunId(buildId: string, checkRunId: number): Promise<void>;
   /**
@@ -236,7 +243,7 @@ export class D1BuildRepository implements ApiBuildRepository {
     records: readonly SnapshotRecord[],
     completion: BuildCompletion,
   ): Promise<boolean> {
-    const { status, tally, completedAt } = completion;
+    const { status, tally, completedAt, resultsDigest } = completion;
     const rows = records.map((record) => toSnapshotRow(buildId, record));
     const clear = this.db
       .delete(snapshots)
@@ -244,11 +251,20 @@ export class D1BuildRepository implements ApiBuildRepository {
     const inserts = guardedSnapshotInserts(rows, buildInProgress(buildId), 2);
     const complete = this.db
       .update(builds)
-      .set({ status, completedAt, ...tallyColumns(tally) })
+      .set({ status, completedAt, resultsDigest, ...tallyColumns(tally) })
       .where(and(eq(builds.id, buildId), eq(builds.status, 'in_progress')))
       .returning({ id: builds.id });
     const results = await runBatch(this.database, [clear.toSQL(), ...inserts, complete.toSQL()]);
     return results.at(-1)?.results.length === 1;
+  }
+
+  async findResultsDigest(buildId: string): Promise<string | null> {
+    const row = await this.db
+      .select({ resultsDigest: builds.resultsDigest })
+      .from(builds)
+      .where(eq(builds.id, buildId))
+      .get();
+    return row?.resultsDigest ?? null;
   }
 
   async setCheckRunId(buildId: string, checkRunId: number): Promise<void> {

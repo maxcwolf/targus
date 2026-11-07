@@ -76,6 +76,18 @@ export interface CaptureStoriesInput {
   readonly signal?: AbortSignal;
 }
 
+/** What an error result says for a story that threw an error with an empty message. */
+export const noErrorMessage = 'the story threw an error with no message';
+
+/**
+ * A story's error as the server takes it: never empty, since one empty message would get the
+ * whole results body refused. A story may throw `new Error()`, and an older decorator reports
+ * its empty message as it is.
+ */
+export function storyErrorMessage(message: string): string {
+  return message.trim() === '' ? noErrorMessage : message;
+}
+
 /** Keep the stories matching `filter`, then the first `limit` of them. */
 export function selectStories(
   stories: readonly StoryIndexEntry[],
@@ -131,7 +143,7 @@ async function captureStory(
     ...emptyResult(story),
     renderMs,
     captureMs: elapsedMs(clock, started),
-    error,
+    error: storyErrorMessage(error),
   });
   let renderMs: number | null = null;
   try {
@@ -206,5 +218,6 @@ function elapsedMs(clock: Clock, since: Date): number {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  if (!(error instanceof Error)) return String(error);
+  return error.message.trim() === '' ? `${error.name} thrown with no message` : error.message;
 }

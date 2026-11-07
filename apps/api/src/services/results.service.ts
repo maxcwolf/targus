@@ -16,6 +16,7 @@ import type { Project } from '../repositories/project.repository.ts';
 import { baselineEntries, requireBuild } from './build.service.ts';
 import { createCheckRun, followNewerReviews, reviewUrlOf } from './check-run.ts';
 import type { ServiceDeps } from './deps.ts';
+import { replayResults, resultsDigest } from './results-replay.ts';
 
 type ResultsDeps = Pick<
   ServiceDeps,
@@ -198,8 +199,10 @@ function requireSameThreshold(deps: ResultsDeps, request: SubmitResultsRequest):
 /**
  * `POST /api/builds/:id/results`: classify every story against the baseline and the project's
  * approvals, store the snapshots and the folded build status in one write, then create the
- * check run (once; when that fails the response says so and the next review creates it). The write applies only while the build is `in_progress`, so a retry or a racing
- * second submission is a `conflict`, never a half-stored build.
+ * check run (once; when that fails the response says so and the next review creates it). The write applies only while the build is `in_progress`, so a racing
+ * second submission never half-stores a build. A submission for a build that already has
+ * results is a replay when it is the same request, answered as the first was, and otherwise a
+ * `conflict` (ADR 0031).
  */
 export async function submitResults(
   deps: ResultsDeps,
@@ -208,8 +211,8 @@ export async function submitResults(
   request: SubmitResultsRequest,
 ): Promise<SubmitResultsResponse> {
   const build = await requireBuild(deps, project, buildId);
-  const alreadyDone = () => new TargusError('conflict', `build ${buildId} already has results`);
-  if (build.status !== 'in_progress') throw alreadyDone();
+  const digest = await resultsDigest(request);
+  if (build.status !== 'in_progress') return replayResults(deps, project, build, digest);
   requireSameThreshold(deps, request);
   await requireUploaded(deps, project, request.results);
   const records = classify(
@@ -220,8 +223,15 @@ export async function submitResults(
   );
   const tally = tallySnapshots(records);
   const summary = buildStatusFromTally(tally);
-  const completion = { status: summary.status, tally, completedAt: deps.clock.now() };
-  if (!(await deps.builds.completeWithResults(build.id, records, completion))) throw alreadyDone();
+  const completion = {
+    status: summary.status,
+    tally,
+    completedAt: deps.clock.now(),
+    resultsDigest: digest,
+  };
+  if (!(await deps.builds.completeWithResults(build.id, records, completion))) {
+    return replayResults(deps, project, await requireBuild(deps, project, buildId), digest);
+  }
 
   const outcome = await createCheckRun(deps, project, build, summary);
   // A review may have committed while the check run was being created (ADR 0026).
