@@ -79,3 +79,11 @@ describe('libraryStories', () => {
     expect(stories).toEqual([]);
   });
 });
+
+describe('libraryStories for an unstable story', () => {
+  it('shows the kept baseline, not the capture nobody reviewed (ADR 0030)', () => {
+    const stories = libraryStories([snapshot({ storyId: 'spinner', state: 'unstable' })]);
+
+    expect(stories).toMatchObject([{ storyId: 'spinner', imageHash: baseline }]);
+  });
+});

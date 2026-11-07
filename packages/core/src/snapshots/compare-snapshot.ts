@@ -74,7 +74,9 @@ function requireImage(imageHash: ImageHash | null): ImageHash {
  * - the render errored: `error`, `pending` but never approvable, and it fails the build;
  * - no baseline: `new`, `approved` only if a new-story approval (`fromHash` null) matches;
  * - same hash, or diff ratio at or under the threshold: `unchanged`;
- * - unstable story: `unstable`, which never blocks the build;
+ * - unstable story: `unstable`, `approved` so it never blocks the build, though its capture
+ *   never becomes the baseline (`acceptedImageHash`, ADR 0030). A story without a baseline is
+ *   `new` first, so an `unstable` one always has a baseline to keep;
  * - otherwise `changed`, `approved` only if an approval for this exact hash pair exists.
  *
  * A story that is in neither the build nor the baseline, and a capture with neither an error nor

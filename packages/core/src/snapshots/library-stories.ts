@@ -4,7 +4,8 @@ import { acceptedImageHash } from './accepted-image-hash.ts';
 
 /**
  * The stories a build contributes to the library: each one that still exists, with its accepted
- * image (plan.md section 6, rule 5). A `removed` story is gone, and a story without an accepted
+ * image (plan.md section 6, rule 5), which for an `unstable` story is its baseline (ADR 0030).
+ * A `removed` story is gone, and a story without an accepted
  * image (a new one nobody approved, or one that errored with no baseline) has nothing to show.
  */
 export function libraryStories(snapshots: readonly Snapshot[]): LibraryStory[] {

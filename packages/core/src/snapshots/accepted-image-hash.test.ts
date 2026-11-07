@@ -16,7 +16,6 @@ describe('acceptedImageHash', () => {
     ['unchanged', 'approved'],
     ['changed', 'approved'],
     ['new', 'approved'],
-    ['unstable', 'approved'],
   ] as const)('accepts the captured image of a %s snapshot that is %s', (state, review) => {
     expect(acceptedImageHash(snapshot(state, review))).toBe(current);
   });
@@ -24,9 +23,18 @@ describe('acceptedImageHash', () => {
   it.each([
     ['changed', 'pending'],
     ['changed', 'denied'],
+    ['unstable', 'approved'],
     ['unstable', 'pending'],
   ] as const)('keeps the baseline image of a %s snapshot that is %s', (state, review) => {
     expect(acceptedImageHash(snapshot(state, review))).toBe(baseline);
+  });
+
+  it('never adopts an unstable capture, though it is approved so that it never blocks', () => {
+    // compareSnapshot stores every unstable story as approved (ADR 0030).
+    const unstable = snapshot('unstable', 'approved');
+
+    expect(acceptedImageHash(unstable)).toBe(unstable.baselineHash);
+    expect(acceptedImageHash(unstable)).not.toBe(unstable.imageHash);
   });
 
   it('keeps the baseline image of a story whose render errored', () => {

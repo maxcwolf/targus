@@ -6,7 +6,9 @@ const notices: Partial<Record<SnapshotState, string>> = {
     'This story failed to render in this build, so there is nothing to approve. A later build ' +
     'that captures it will clear the error.',
   removed: 'The baseline has this story and this build does not. Nothing to review.',
-  unstable: 'Captures of this story differed between attempts. Unstable stories never block.',
+  unstable:
+    'Captures of this story differed between attempts. Unstable stories never block, and an ' +
+    'unstable capture never becomes the baseline: the story keeps its accepted image.',
   unchanged: 'Matches the baseline. Nothing to review.',
 };
 

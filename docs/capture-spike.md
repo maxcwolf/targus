@@ -127,7 +127,8 @@ Storybook RN. Go.
    is what makes captures correct; both stay, with `parameters.targus.delay` per story.
 3. **Spinners are inherently unstable.** Native `ActivityIndicator` cannot be frozen from JS.
    v1 policy: an `unstable` snapshot is reported and shown in the UI but never blocks the check,
-   and a story can opt out with `parameters.targus.skip`. Candidate for v1.1: auto-mask the
+   its capture never becomes the baseline (ADR 0030), and a story can opt out with
+   `parameters.targus.skip`. Candidate for v1.1: auto-mask the
    union of regions that differ between the stability captures and diff the rest.
 4. **No status bar.** With `onDeviceUI: false` Storybook RN renders `<StatusBar hidden />`, so
    the simctl status-bar override is moot. Keep it anyway (harmless, and protects a project

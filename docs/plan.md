@@ -150,7 +150,8 @@ Internals:
 - Settle logic (built): after `storyRendered`, wait `--settle` (default 300 ms) and screenshot.
   Then screenshot again after `--stability-gap` (default 150 ms) and compare. If the two
   differ, retry with a doubled settle up to `--attempts` (default 3) and mark the story
-  `unstable`, rather than silently diffing noise. `unstable` never blocks the check.
+  `unstable`, rather than silently diffing noise. `unstable` never blocks the check, and its
+  capture never becomes the baseline (ADR 0030).
   Per-story `parameters.targus.delay` and `parameters.targus.skip` (built, ADR 0022): the
   `withTargus` decorator reports them over the channel once the story commits; `delay` (0 to
   10 000 ms) replaces `--settle` for that story, and a `skip` story is neither captured nor
@@ -274,8 +275,8 @@ Writes that change a build's state are single guarded D1 batches (ADR 0013).
 
 ### Baseline and approval rules
 
-These are ADR 0004; core implements them, and the API applies them when results are submitted
-and when a reviewer decides.
+These are ADR 0004, with rule 5 amended by ADR 0030; core implements them, and the API applies
+them when results are submitted and when a reviewer decides.
 
 1. A PR build's baseline is the most recent successful build on its merge-base commit, else
    the nearest first-parent ancestor with one.
@@ -287,8 +288,13 @@ and when a reviewer decides.
    PR does not require re-review. Denying withdraws that approval.
 4. A `main` build applies rule 3; anything still `changed` on main is `pending` and surfaces in
    the UI, since it reached main without review.
-5. The accepted image for a story in a build is `image_hash` when approved or unchanged, else
-   `baseline_hash`. That is what the next build compares against.
+5. The accepted image for a story in a build is `image_hash` when it is unchanged, or approved
+   and not `unstable`, else `baseline_hash`. That is what the next build compares against. An
+   `unstable` story is stored `approved` only so that it never blocks the check; nobody
+   reviewed its capture, so it keeps its previous accepted image (ADR 0030). The next build
+   that captures it stably compares against that image, and a difference is `changed` and
+   reviewed as usual. A story that is unstable on every run keeps its old baseline until it
+   captures stably once.
 6. A story whose render errors is stored with state `error`, keeps its previous accepted image
    as baseline, and fails the build until a later build captures it.
 
@@ -304,7 +310,9 @@ Native rendering has more noise than react-native-web. Mitigations, cheapest fir
   The CLI still applies `simctl status_bar override` (9:41, full battery and signal) for
   projects that show it.
 - Spinners (built as reporting): native `ActivityIndicator` cannot be frozen; such stories come
-  out `unstable` (16 of 354 in the pilot app) and are reported, not blocking. Auto-masking the animated
+  out `unstable` (16 of 354 in the pilot app) and are reported, not blocking. An unstable capture never
+  becomes the baseline, so a regression in such a story surfaces on its next stable capture
+  instead of being adopted (section 6, rule 5; ADR 0030). Auto-masking the animated
   region is a v1.1 candidate.
 - Device pinning (partly built): `targus run --device-name` is stored on the build.
   **Not built:** pinning the simulator device type and iOS runtime in a project config. The

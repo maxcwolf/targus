@@ -2,7 +2,14 @@
 
 ## Status
 
-accepted
+accepted, amended by [0030](0030-an-unstable-capture-never-becomes-the-baseline.md)
+
+## Amended by
+
+- [0030](0030-an-unstable-capture-never-becomes-the-baseline.md): rule 5 no longer treats an
+  `unstable` snapshot as approved for the baseline. It is stored `approved` only so that it never
+  blocks the check, so it keeps its `baseline_hash` as its accepted image, as an `error` snapshot
+  does under rule 6.
 
 ## Date
 

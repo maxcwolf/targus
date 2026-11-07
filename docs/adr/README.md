@@ -18,7 +18,7 @@ the same change.
 | [0001](0001-hosted-service-with-chromatic-like-review.md) | Hosted service with a Chromatic-like review UI | accepted |
 | [0002](0002-cloudflare-free-tier-hosting.md) | Cloudflare free tier hosting: Workers, R2 and D1 | accepted, amended 2026-11-06 |
 | [0003](0003-diff-on-ci-runner-not-server.md) | Pixel diffing on the CI runner, not the server | accepted, amended by [0014](0014-upload-record-grants-image-access.md) and [0016](0016-cli-measures-server-classifies.md) |
-| [0004](0004-baseline-and-approval-rules.md) | Baseline and approval rules | accepted |
+| [0004](0004-baseline-and-approval-rules.md) | Baseline and approval rules | accepted, amended by [0030](0030-an-unstable-capture-never-becomes-the-baseline.md) |
 | [0005](0005-cached-native-build-with-js-rebundle.md) | Cached native build with a per-run JS rebundle | accepted, amended 2026-11-06 |
 | [0006](0006-ios-only-full-screen-capture-for-v1.md) | iOS only, full-screen capture for v1 | accepted, amended 2026-11-06 |
 | [0007](0007-org-scoped-tenancy.md) | Org-scoped tenancy from day one | accepted, amended by [0011](0011-github-login-sessions-and-org-authorization.md), [0012](0012-personal-accounts-as-single-member-orgs.md) and [0014](0014-upload-record-grants-image-access.md) |
@@ -43,3 +43,4 @@ the same change.
 | [0026](0026-review-approvals-and-check-runs-follow-the-review-version.md) | Approvals commit with the review, and check runs follow the review version | accepted |
 | [0027](0027-idempotency-key-for-opening-a-build.md) | An idempotency key makes opening a build safe to retry | accepted |
 | [0028](0028-server-owns-the-diff-threshold.md) | The server owns the diff threshold | accepted |
+| [0030](0030-an-unstable-capture-never-becomes-the-baseline.md) | An unstable capture never becomes the baseline | accepted |
