@@ -12,8 +12,8 @@ import { z } from 'zod';
 import { formatDuration } from '../duration.ts';
 import {
   ChannelEvent,
-  isRenderedFor,
   isTargusEvent,
+  renderSignalFor,
   targusReport,
   targusReportFor,
 } from './channel-events.ts';
@@ -73,9 +73,11 @@ export class WsStorybookChannel implements StorybookChannel {
   private readonly listeners = new Set<Listener>();
   private readonly pending = new Set<(error: Error) => void>();
   /**
-   * The decorator's last report per story, kept even when no selection waits: the report can
-   * land in the same socket read as `storyRendered`, or before a selection of a story that is
-   * already on screen. A story's parameters do not change within a run.
+   * The decorator's report per story, kept even when no selection waits: the report can land in
+   * the same socket read as `storyRendered`, or before a selection of a story that is already on
+   * screen. A render error is never replaced by a later non-error report, since the decorator
+   * may send the story's parameters after it (ADR 0004: an error fails the build); selecting
+   * the story again clears it, unless Storybook answers that the story on screen is unchanged.
    */
   private readonly reports = new Map<string, StorySelection>();
   /** Whether the app runs `withTargus`: unknown until a targus event or a missed report. */
@@ -162,14 +164,20 @@ export class WsStorybookChannel implements StorybookChannel {
    * the channel stops waiting, until a targus event shows the decorator after all.
    */
   async selectStory(storyId: string, timeoutMs: number): Promise<StorySelection> {
+    // A fresh render reports afresh, so an earlier report, an error above all, must not answer
+    // for it. Only `storyUnchanged` says the earlier render is still what the screen shows.
+    const earlier = this.reports.get(storyId);
+    this.reports.delete(storyId);
     const first = this.waitFor(
-      (event) => (isRenderedFor(event, storyId) ? 'rendered' : targusReportFor(event, storyId)),
+      (event) => renderSignalFor(event, storyId) ?? targusReportFor(event, storyId),
       timeoutMs,
       `storyRendered ${storyId}`,
     );
     this.send('setCurrentStory', [{ storyId }]);
     const signal = await first;
-    return signal === 'rendered' ? this.reportAfterRender(storyId) : signal;
+    if (typeof signal !== 'string') return signal;
+    if (signal === 'unchanged' && earlier !== undefined) this.remember(storyId, earlier);
+    return this.reportAfterRender(storyId);
   }
 
   whenDisconnected(): Promise<void> {
@@ -220,7 +228,13 @@ export class WsStorybookChannel implements StorybookChannel {
   private observe(event: ChannelEvent): void {
     if (isTargusEvent(event)) this.decorator = true;
     const report = targusReport(event);
-    if (report !== undefined) this.reports.set(report.storyId, report.selection);
+    if (report !== undefined) this.remember(report.storyId, report.selection);
+  }
+
+  /** Keep `selection` as the story's report, unless that would hide a render error. */
+  private remember(storyId: string, selection: StorySelection): void {
+    if (selection.kind !== 'error' && this.reports.get(storyId)?.kind === 'error') return;
+    this.reports.set(storyId, selection);
   }
 
   private dispatch(data: RawData): void {

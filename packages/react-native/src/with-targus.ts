@@ -49,8 +49,9 @@ interface ParametersReporterProps {
 
 /**
  * Reports the story's parameters after it commits. Storybook RN emits `storyRendered` before
- * React renders the story, so this effect is the first signal that the story is on screen. A
- * child's render error is reported in the commit phase, before this passive effect runs.
+ * React renders the story, so this effect is the first signal that the story is on screen. It
+ * sits inside the error boundary: a story that throws while rendering never commits it, so the
+ * app sends only `targus/storyError` for that story.
  */
 function ParametersReporter({ storyId, targus, emit, children }: ParametersReporterProps) {
   useEffect(() => {
@@ -74,20 +75,20 @@ export interface WithTargusOptions {
 /**
  * Build the decorator around an `emit` function. It wraps each story in `TargusErrorBoundary`,
  * reports render errors as `targus/storyError`, and reports `parameters.targus` as
- * `targus/storyParameters` once the story commits. Reduced motion and the locked date land with
- * plan.md section 7.
+ * `targus/storyParameters` once the story commits without a render error. Reduced motion and
+ * the locked date land with plan.md section 7.
  */
 export function createWithTargus({ emit }: WithTargusOptions): TargusDecorator {
   return (Story, context) =>
-    createElement(ParametersReporter, {
+    createElement(TargusErrorBoundary, {
       storyId: context.id,
-      targus: targusOf(context.parameters),
-      emit,
-      children: createElement(TargusErrorBoundary, {
+      report: (report) => {
+        emit(storyErrorEvent, report);
+      },
+      children: createElement(ParametersReporter, {
         storyId: context.id,
-        report: (report) => {
-          emit(storyErrorEvent, report);
-        },
+        targus: targusOf(context.parameters),
+        emit,
         children: createElement(Story),
       }),
     });

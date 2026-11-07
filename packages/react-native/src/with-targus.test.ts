@@ -156,15 +156,12 @@ describe('createWithTargus parameters', () => {
     ]);
   });
 
-  it('reports a render error before the parameters, once each', async () => {
+  it('reports only the render error for a story that throws, not its parameters', async () => {
     const emit = vi.fn();
 
     await render(createWithTargus({ emit })(Broken, { id: 'x', parameters: { targus: {} } }));
 
-    expect(emit.mock.calls.map(([event]: unknown[]) => event)).toEqual([
-      storyErrorEvent,
-      storyParametersEvent,
-    ]);
+    expect(emit.mock.calls.map(([event]: unknown[]) => event)).toEqual([storyErrorEvent]);
   });
 
   it('does not report again when the same story re-renders', async () => {

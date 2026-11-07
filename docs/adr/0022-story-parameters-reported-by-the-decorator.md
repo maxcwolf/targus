@@ -7,6 +7,14 @@ serialises with telejson, which sends `undefined` as the string `_undefined_`, s
 without `parameters.targus` was rejected. The decorator now leaves `targus` out of the payload
 when the story sets none, and the CLI decodes `_undefined_` before validating.
 
+Amended again 2026-11-06: a story that threw could pass. The parameters reporter sat outside
+the error boundary, so the app sent `targus/storyParameters` right after `targus/storyError`,
+and when both reached the CLI before the selection read them the parameters replaced the
+cached error, so the blank screen was captured. The CLI now never lets a non-error report
+replace a cached error, and a new selection of a story drops its cached report unless
+Storybook answers `storyUnchanged`. The decorator now puts the reporter inside the boundary,
+so a story that throws while rendering sends only `targus/storyError`.
+
 ## Date
 
 2026-11-06
@@ -35,9 +43,9 @@ The decorator is the one place in the app that sees each story's merged paramete
 
 We will have the `withTargus` decorator report each story's raw `parameters.targus` in a
 `targus/storyParameters` channel event `{ storyId, targus }`, from a `useEffect` of a wrapper
-component, so it fires once the story has committed. A render error is reported from the error
-boundary's `componentDidCatch`, which runs in the commit phase before that effect, so the error
-arrives first.
+component inside the error boundary, so it fires once the story has committed. A render error is
+reported from the error boundary's `componentDidCatch` instead, and the wrapper of a story that
+throws never commits, so that story sends no parameters.
 
 The CLI validates the value with core's `StoryParameters` zod schema: `delay` a number from 0 to
 `maxStoryDelayMs` (10 000), `skip` a boolean, unknown keys ignored. An invalid value makes the
@@ -48,7 +56,10 @@ unvalidated so the bound lives in one place.
 (`targus/storyParameters` or `targus/storyError`) for up to `reportGraceMs` (1 s), and returns
 `rendered` with the parameters, or `error`. It remembers every report it sees, so a report that
 lands in the same socket read as `storyRendered`, or one sent before the selection of a story
-already on screen (`storyUnchanged`), is not lost. An app without the decorator never reports:
+already on screen (`storyUnchanged`), is not lost. A remembered error is never replaced by a
+later non-error report for the same story, whatever decorator version sent it, so an error
+always fails the build (ADR 0004). Selecting a story again forgets its report, because the new
+render reports afresh, unless Storybook answers `storyUnchanged`. An app without the decorator never reports:
 after the first miss the channel stops waiting, and any later `targus/` event turns waiting back
 on. If the app drops the channel during that wait, the selection answers nothing, like a render
 wait, so the crash watch of ADR 0021 ends the run and `close()` rejects the wait; it never turns

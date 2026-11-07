@@ -13,7 +13,13 @@ export type ChannelEvent = z.infer<typeof ChannelEvent>;
 const StoryErrorPayload = z.object({ storyId: z.string(), message: z.string() });
 const StoryIdPayload = z.object({ storyId: z.string() });
 
-const renderedEvents = new Set(['storyRendered', 'storyUnchanged']);
+/** How Storybook answered a selection: it rendered the story, or the story was already shown. */
+type RenderSignal = 'rendered' | 'unchanged';
+
+const renderSignals = new Map<string, RenderSignal>([
+  ['storyRendered', 'rendered'],
+  ['storyUnchanged', 'unchanged'],
+]);
 
 /** Events only the `withTargus` decorator sends; seeing one means the app runs it. */
 export function isTargusEvent(event: ChannelEvent): boolean {
@@ -21,8 +27,9 @@ export function isTargusEvent(event: ChannelEvent): boolean {
 }
 
 /** `storyRendered`/`storyUnchanged` for `storyId`; the id comes as a string or `{ storyId }`. */
-export function isRenderedFor(event: ChannelEvent, storyId: string): boolean {
-  return renderedEvents.has(event.type) && eventStoryId(event.args[0]) === storyId;
+export function renderSignalFor(event: ChannelEvent, storyId: string): RenderSignal | undefined {
+  const signal = renderSignals.get(event.type);
+  return signal !== undefined && eventStoryId(event.args[0]) === storyId ? signal : undefined;
 }
 
 /** What the decorator reported from inside a story: its render error or its parameters. */
