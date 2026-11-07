@@ -47,9 +47,8 @@ describe('a session that expires mid-visit', () => {
       'href',
       signInHref(path),
     );
-    expect(screen.getByText(/^Not saved: your session has expired/)).toHaveAttribute(
-      'role',
-      'alert',
+    expect(screen.getByRole('alert', { name: 'Failed decisions' })).toHaveTextContent(
+      'Button / Primary: Approve failed. Not saved: your session has expired.',
     );
     expect(screen.getByRole('status', { name: 'Review' })).not.toHaveTextContent('Approved');
     expect(screen.queryByText(/^Approved Button/)).not.toBeInTheDocument();

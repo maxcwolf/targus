@@ -34,11 +34,17 @@ function belongsToControl(target: EventTarget | null, key: string): boolean {
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
+const noKeys: readonly string[] = [];
+
 /**
  * Single-key shortcuts on the window. Ignored when the focused control owns the key (see
  * `belongsToControl`) and when a modifier is held (so browser shortcuts keep working).
+ *
+ * A held key repeats its keydown. The keys in `noRepeat` act once per press and ignore the
+ * repeats (still claiming them), so holding `a` approves one snapshot, not each one that
+ * auto-advance brings up. The other keys keep repeating: holding `j` walks the list.
  */
-export function useHotkeys(keys: Hotkeys): void {
+export function useHotkeys(keys: Hotkeys, noRepeat: readonly string[] = noKeys): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -46,11 +52,12 @@ export function useHotkeys(keys: Hotkeys): void {
       const handler = keys[event.key];
       if (!handler) return;
       event.preventDefault();
+      if (event.repeat && noRepeat.includes(event.key)) return;
       handler();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [keys]);
+  }, [keys, noRepeat]);
 }

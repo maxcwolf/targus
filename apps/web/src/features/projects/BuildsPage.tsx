@@ -8,7 +8,7 @@ import { commitUrl, formatDateTime, pullRequestUrl, shortSha } from '../../compo
 import { Skeleton } from '../../components/Skeleton.tsx';
 import { StatusChip } from '../../components/StatusChip.tsx';
 import { StatusCircle } from '../../components/StatusCircle.tsx';
-import { ErrorView, NotFound } from '../errors/index.ts';
+import { ErrorView, NotFound, RefetchNotice } from '../errors/index.ts';
 import { BuildCounts } from './BuildCounts.tsx';
 import { LoadMoreBuilds } from './LoadMoreBuilds.tsx';
 import { useProjects } from './useProjects.ts';
@@ -70,9 +70,18 @@ function BuildsList({ project }: { readonly project: ProjectSummary }): ReactEle
   // Only a failed first page replaces the list; a failed later page is shown beside it.
   if (builds.isLoadingError) return <ErrorView error={builds.error} />;
   const items = builds.data.pages.flatMap((page) => page.builds);
-  if (items.length === 0) return <p className="muted">No builds yet.</p>;
+  const stale = <RefetchNotice error={builds.isRefetchError ? builds.error : null} />;
+  if (items.length === 0) {
+    return (
+      <>
+        {stale}
+        <p className="muted">No builds yet.</p>
+      </>
+    );
+  }
   return (
     <>
+      {stale}
       <ul className="card list-card">
         {items.map((item) => (
           <BuildRow key={item.build.id} item={item} repo={project.repo} />
@@ -93,11 +102,12 @@ function BuildsList({ project }: { readonly project: ProjectSummary }): ReactEle
 export function BuildsPage({ projectId }: { readonly projectId: string }): ReactElement {
   const projects = useProjects();
   if (projects.isPending) return <Skeleton label="Loading…" rows={6} />;
-  if (projects.isError) return <ErrorView error={projects.error} />;
+  if (projects.isLoadingError) return <ErrorView error={projects.error} />;
   const project = projects.data.projects.find((candidate) => candidate.id === projectId);
   if (!project) return <NotFound message="No project with this id, or you cannot see it." />;
   return (
     <section>
+      <RefetchNotice error={projects.error} />
       <header className="page-header">
         <h1 className="page-title">{project.name}</h1>
         <p className="mono muted">{project.repo}</p>

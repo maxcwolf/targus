@@ -121,6 +121,65 @@ test('a reviewer approves a baseline, then denies and approves a changed story',
   expect((await getBuild(request, token, prBuildId)).summary.status).toBe('accepted');
 });
 
+/** Sign in on a fresh main build and open its first story, in the All filter, ready to decide. */
+async function openFirstStory(page: Page, request: APIRequestContext): Promise<void> {
+  await signInNextAs(request, 'octocat');
+  const { mainBuildId } = await publishBuilds(request, dir);
+  await signInOn(page, `/builds/${mainBuildId}`);
+  await page.goto(`/builds/${mainBuildId}?filter=all`);
+  await page.locator('.story-link').first().click();
+  await expect(page).toHaveURL(/\/snapshots\/[^?]+\?filter=all$/);
+  await expect(page.getByRole('button', { name: 'Approve' })).toBeEnabled();
+}
+
+const isReviewPost = (method: string, url: string): boolean =>
+  method === 'POST' && /\/api\/snapshots\/[^/]+\/review$/.test(url);
+
+test('holding a sends one approve', async ({ page, request }) => {
+  test.setTimeout(120_000);
+  await openFirstStory(page, request);
+  let reviews = 0;
+  page.on('request', (sent) => {
+    if (isReviewPost(sent.method(), sent.url())) reviews += 1;
+  });
+
+  // Each further down of a held key is a repeat, as the browser sends while it is held.
+  for (let press = 0; press < 5; press += 1) await page.keyboard.down('a');
+  await page.keyboard.up('a');
+
+  await expect(page.getByRole('status', { name: 'Review' })).toHaveText('Approved');
+  expect(reviews).toBe(1);
+});
+
+test('a decision that fails after moving on is still listed', async ({ page, request }) => {
+  test.setTimeout(120_000);
+  await openFirstStory(page, request);
+  const heading = page.getByRole('heading', { level: 1 });
+  const story = await heading.textContent();
+  let release = (): void => undefined;
+  const moved = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(
+    (url) => isReviewPost('POST', url.href),
+    async (route) => {
+      await moved;
+      await route.fulfill({
+        status: 500,
+        json: { error: { code: 'internal', message: 'Database is busy' } },
+      });
+    },
+  );
+
+  await page.keyboard.press('a');
+  await page.keyboard.press('j');
+  await expect(heading).not.toHaveText(story ?? '');
+  release();
+
+  const failures = page.getByRole('alert', { name: 'Failed decisions' });
+  await expect(failures).toContainText('Approve failed. Database is busy');
+});
+
 test('a GitHub user outside the org cannot review', async ({ page, request }) => {
   test.setTimeout(120_000);
   const { mainBuildId } = await publishBuilds(request, dir);

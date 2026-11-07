@@ -3,6 +3,13 @@
 export { BuildPage } from './BuildPage.tsx';
 export { applyBuildUpdate } from './cache.ts';
 export {
+  forgetSupersededDecisions,
+  reviewMutationKey,
+  type ReviewVariables,
+  useDecisionInFlight,
+} from './decisions.ts';
+export { FailedDecisions } from './FailedDecisions.tsx';
+export {
   componentTitle,
   effectiveFilter,
   groupByTitle,

@@ -13,9 +13,15 @@ export type BuildData =
       readonly snapshots: readonly Snapshot[];
       /** Undefined only if the project list does not include the build's project. */
       readonly project: ProjectSummary | undefined;
+      /** A failed refetch of data already on screen: the page stays and says so. */
+      readonly refetchError: Error | null;
     };
 
-/** Everything the build and snapshot pages need: the build, its snapshots and its project. */
+/**
+ * Everything the build and snapshot pages need: the build, its snapshots and its project. An
+ * error replaces the page only while there is nothing to show; once all three have loaded, a
+ * failed refetch keeps the cached data and is reported as `refetchError`.
+ */
 export function useBuildData(buildId: string): BuildData {
   const build = useQuery({ queryKey: queryKeys.build(buildId), queryFn: () => getBuild(buildId) });
   const snapshots = useQuery({
@@ -25,13 +31,15 @@ export function useBuildData(buildId: string): BuildData {
   const projects = useProjects();
 
   const error = build.error ?? snapshots.error ?? projects.error;
-  if (error) return { status: 'error', error };
-  if (!build.data || !snapshots.data || !projects.data) return { status: 'pending' };
+  if (!build.data || !snapshots.data || !projects.data) {
+    return error ? { status: 'error', error } : { status: 'pending' };
+  }
   const projectId = build.data.build.projectId;
   return {
     status: 'success',
     build: build.data,
     snapshots: snapshots.data.snapshots,
     project: projects.data.projects.find((project) => project.id === projectId),
+    refetchError: error,
   };
 }

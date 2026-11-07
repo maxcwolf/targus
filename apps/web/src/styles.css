@@ -1152,6 +1152,17 @@ p {
 .session-expired p {
   margin: 0;
 }
+.failed-decisions p,
+.failed-decisions ul {
+  margin: 0;
+}
+.failed-decisions ul {
+  margin-top: 4px;
+  padding-left: 18px;
+}
+.failed-decisions li + li {
+  margin-top: 4px;
+}
 .viewer-head {
   display: flex;
   flex-wrap: wrap;

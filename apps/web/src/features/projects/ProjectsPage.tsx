@@ -2,18 +2,20 @@ import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
 import { Skeleton } from '../../components/Skeleton.tsx';
-import { ErrorView } from '../errors/index.ts';
+import { ErrorView, RefetchNotice } from '../errors/index.ts';
 import { useProjects } from './useProjects.ts';
 
 /** `/`: every project the reviewer can see, as cards. Never auto-redirects. */
 export function ProjectsPage(): ReactElement | null {
   const projects = useProjects();
   if (projects.isPending) return <Skeleton label="Loading projects…" rows={3} />;
-  if (projects.isError) return <ErrorView error={projects.error} />;
+  // Only a failed first load replaces the page; a failed refetch keeps the list on screen.
+  if (projects.isLoadingError) return <ErrorView error={projects.error} />;
 
   const list = projects.data.projects;
   return (
     <section>
+      <RefetchNotice error={projects.error} />
       <h1 className="page-title">Projects</h1>
       {list.length === 0 ? (
         <p className="muted">No projects yet. A maintainer creates them with the admin API.</p>

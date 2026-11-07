@@ -213,6 +213,30 @@ describe('auto-advance and toast', () => {
   });
 });
 
+describe('a decision key held down', () => {
+  it('approves one snapshot, not each one auto-advance brings up', async () => {
+    const { router } = await openSnapshot('/builds/build-12/snapshots/snap-new?filter=unreviewed');
+    loadImages();
+
+    press('a');
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/builds/build-12/snapshots/snap-changed');
+    });
+    loadImages();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Approve' })).toBeEnabled();
+    });
+    // The browser's auto-repeat while the key stays down.
+    fireEvent.keyDown(window, { key: 'a', repeat: true });
+    fireEvent.keyDown(window, { key: 'd', repeat: true });
+    // Give a review the repeat started time to reach the API, as it would if it could.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(reviewBadge()).toHaveTextContent('Unreviewed');
+    expect(apiState.calls).toEqual(['POST /api/snapshots/snap-new/review']);
+  });
+});
+
 describe('auto-advance staying put', () => {
   it('stays put when no pending snapshot follows, so the decision can be reversed', async () => {
     await openSnapshot('/builds/build-12/snapshots/snap-changed?filter=unreviewed');

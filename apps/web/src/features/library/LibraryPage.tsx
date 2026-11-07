@@ -6,7 +6,7 @@ import { type ReactElement, useState } from 'react';
 import { getLibrary, queryKeys } from '../../api-client/index.ts';
 import { commitUrl, formatDateTime, shortSha, storyLabel } from '../../components/format.ts';
 import { Skeleton } from '../../components/Skeleton.tsx';
-import { ErrorView, NotFound } from '../errors/index.ts';
+import { ErrorView, NotFound, RefetchNotice } from '../errors/index.ts';
 import { useProjects } from '../projects/index.ts';
 import { LibrarySidebar } from './LibrarySidebar.tsx';
 import { matchesQuery, storyKey } from './stories.ts';
@@ -49,9 +49,14 @@ function LibraryHeader(props: {
   );
 }
 
-function EmptyLibrary({ project }: { readonly project: ProjectSummary }): ReactElement {
+function EmptyLibrary(props: {
+  readonly project: ProjectSummary;
+  readonly refetchError: Error | null;
+}): ReactElement {
+  const { project } = props;
   return (
     <section className="library-empty">
+      <RefetchNotice error={props.refetchError} />
       <h1 className="page-title">Library</h1>
       <p className="muted">
         No accepted build on <span className="mono">{project.defaultBranch}</span> yet. Once a build
@@ -69,6 +74,7 @@ function LibraryContent(props: {
   readonly build: Build;
   readonly stories: GetLibraryResponse['stories'];
   readonly selected: string | undefined;
+  readonly refetchError: Error | null;
 }): ReactElement {
   const { project, build, stories, selected } = props;
   const [query, setQuery] = useState('');
@@ -96,6 +102,7 @@ function LibraryContent(props: {
         onQuery={setQuery}
       />
       <section className="library-main">
+        <RefetchNotice error={props.refetchError} />
         <LibraryHeader project={project} build={build} count={stories.length} />
         {main}
       </section>
@@ -117,11 +124,21 @@ export function LibraryPage({ projectId, story }: LibraryPageProps): ReactElemen
   if (projects.isPending || library.isPending) {
     return <Skeleton label="Loading library…" variant="viewer" />;
   }
-  if (library.isError) return <ErrorView error={library.error} />;
-  if (projects.isError) return <ErrorView error={projects.error} />;
+  // Only a failed first load replaces the page; a failed refetch keeps it on screen.
+  if (library.isLoadingError) return <ErrorView error={library.error} />;
+  if (projects.isLoadingError) return <ErrorView error={projects.error} />;
   const project = projects.data.projects.find((candidate) => candidate.id === projectId);
   if (!project) return <NotFound message="No project with this id, or you cannot see it." />;
   const { build, stories } = library.data;
-  if (build === null) return <EmptyLibrary project={project} />;
-  return <LibraryContent project={project} build={build} stories={stories} selected={story} />;
+  const refetchError = library.error ?? projects.error;
+  if (build === null) return <EmptyLibrary project={project} refetchError={refetchError} />;
+  return (
+    <LibraryContent
+      project={project}
+      build={build}
+      stories={stories}
+      selected={story}
+      refetchError={refetchError}
+    />
+  );
 }

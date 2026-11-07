@@ -45,7 +45,23 @@ function useShownId(snapshotId: string): RefObject<string | null> {
   return shown;
 }
 
-/** j/k and ←/→ move, a/d decide, Esc goes back to the build. */
+/**
+ * Whether the snapshot can be decided now: reviewable, its build finished, its images seen, and
+ * no decision on it already in flight (two in flight could settle in either order).
+ */
+function canDecide(
+  item: BuildWithSummary,
+  snapshot: Snapshot,
+  imagesLoaded: boolean,
+  inFlight: boolean,
+): boolean {
+  return isReviewable(snapshot) && item.build.status !== 'in_progress' && imagesLoaded && !inFlight;
+}
+
+/** The decision keys act once per press: holding one must not decide snapshot after snapshot. */
+const decisionKeys: readonly string[] = ['a', 'd'];
+
+/** j/k and ←/→ move (and repeat while held), a/d decide, Esc goes back to the build. */
 function useShortcuts(
   move: (target: 'next' | 'previous') => void,
   decide: (decision: ReviewDecision) => void,
@@ -57,19 +73,22 @@ function useShortcuts(
   const previous = (): void => {
     move('previous');
   };
-  useHotkeys({
-    j: next,
-    ArrowRight: next,
-    k: previous,
-    ArrowLeft: previous,
-    a: () => {
-      decide('approve');
+  useHotkeys(
+    {
+      j: next,
+      ArrowRight: next,
+      k: previous,
+      ArrowLeft: previous,
+      a: () => {
+        decide('approve');
+      },
+      d: () => {
+        decide('deny');
+      },
+      Escape: back,
     },
-    d: () => {
-      decide('deny');
-    },
-    Escape: back,
-  });
+    decisionKeys,
+  );
 }
 
 /**
@@ -92,7 +111,7 @@ export function useSnapshotReview({
   const index = list.findIndex((candidate) => candidate.id === snapshot.id);
   const previous = list[index - 1];
   const next = list[index + 1];
-  const canReview = isReviewable(snapshot) && item.build.status !== 'in_progress' && imagesLoaded;
+  const canReview = canDecide(item, snapshot, imagesLoaded, review.isPending);
 
   const goTo = (target: Snapshot | undefined): void => {
     if (!target) return;
@@ -103,7 +122,7 @@ export function useSnapshotReview({
     });
   };
   const decide = (decision: ReviewDecision): void => {
-    if (!canReview || review.isPending) return;
+    if (!canReview) return;
     const advanceTo = advanceTarget(list, index, filter);
     const verb = decision === 'approve' ? 'Approved' : 'Denied';
     const message = `${verb} ${componentTitle(snapshot)} / ${storyName(snapshot)}`;
@@ -115,7 +134,7 @@ export function useSnapshotReview({
         notify(message);
         if (shown.current === snapshot.id) goTo(advanceTo);
       },
-      () => undefined, // the error is rendered from review.error
+      () => undefined, // FailedDecisions lists the failure, wherever the reviewer is by then
     );
   };
   useShortcuts(

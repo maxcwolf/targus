@@ -6,8 +6,13 @@ import { getBuild, queryKeys } from '../../api-client/index.ts';
 import { shortSha } from '../../components/format.ts';
 import { Skeleton } from '../../components/Skeleton.tsx';
 import { Toast } from '../../components/Toast.tsx';
-import { effectiveFilter, type SnapshotFilter, useBuildData } from '../build/index.ts';
-import { ErrorView, NotFound } from '../errors/index.ts';
+import {
+  effectiveFilter,
+  FailedDecisions,
+  type SnapshotFilter,
+  useBuildData,
+} from '../build/index.ts';
+import { ErrorView, NotFound, RefetchNotice } from '../errors/index.ts';
 import { ReviewActions } from './ReviewActions.tsx';
 import { SnapshotBar } from './SnapshotBar.tsx';
 import { SnapshotSidebar } from './SnapshotSidebar.tsx';
@@ -29,6 +34,7 @@ interface DetailProps {
   readonly snapshots: readonly Snapshot[];
   readonly snapshot: Snapshot;
   readonly filter: SnapshotFilter;
+  readonly refetchError: Error | null;
 }
 
 /** The baseline build, for "Build 11 on main" and the BASELINE line. Null when there is none. */
@@ -68,19 +74,16 @@ function viewerLabels(
 }
 
 function SnapshotContent(props: {
+  readonly buildId: string;
+  readonly snapshots: readonly Snapshot[];
   readonly snapshot: Snapshot;
   readonly viewer: ViewerState;
   readonly labels: ViewerLabels;
   readonly baseline: BuildWithSummary | null | undefined;
-  readonly error: Error | null;
 }): ReactElement {
   return (
     <div className="snapshot-content">
-      {props.error ? (
-        <p role="alert" className="error-text">
-          {props.error.message}
-        </p>
-      ) : null}
+      <FailedDecisions buildId={props.buildId} snapshots={props.snapshots} />
       <StateNotice state={props.snapshot.state} />
       <SnapshotViewer snapshot={props.snapshot} viewer={props.viewer} labels={props.labels} />
       <BaselineSection baseline={props.baseline} />
@@ -107,6 +110,7 @@ function SnapshotDetail(props: DetailProps): ReactElement {
         filter={filter}
       />
       <section className="snapshot-main">
+        <RefetchNotice error={props.refetchError} />
         <SnapshotBar
           item={item}
           snapshot={snapshot}
@@ -125,11 +129,12 @@ function SnapshotDetail(props: DetailProps): ReactElement {
           }
         />
         <SnapshotContent
+          buildId={item.build.id}
+          snapshots={props.snapshots}
           snapshot={snapshot}
           viewer={viewer}
           labels={viewerLabels(item, baseline)}
           baseline={baseline}
-          error={review.error}
         />
       </section>
       <Toast message={toast.message} id={toast.id} />
@@ -151,6 +156,7 @@ export function SnapshotPage({ buildId, snapshotId, filter }: SnapshotPageProps)
       snapshots={data.snapshots}
       snapshot={snapshot}
       filter={effectiveFilter(filter, data.snapshots)}
+      refetchError={data.refetchError}
     />
   );
 }

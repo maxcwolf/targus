@@ -43,6 +43,31 @@ describe('useHotkeys', () => {
   });
 });
 
+describe('useHotkeys with a key held down', () => {
+  it('keeps repeating a key by default', () => {
+    const { j } = setup();
+    fireEvent.keyDown(window, { key: 'j' });
+    fireEvent.keyDown(window, { key: 'j', repeat: true });
+    expect(j).toHaveBeenCalledTimes(2);
+  });
+
+  it('acts once per press for a key that does not repeat, still claiming the repeats', () => {
+    const keys = { a: vi.fn(), j: vi.fn() };
+    renderHook(() => {
+      useHotkeys(keys, ['a']);
+    });
+    expect(fireEvent.keyDown(window, { key: 'a' })).toBe(false);
+    expect(fireEvent.keyDown(window, { key: 'a', repeat: true })).toBe(false);
+    fireEvent.keyDown(window, { key: 'a', repeat: true });
+    fireEvent.keyDown(window, { key: 'j', repeat: true });
+    expect(keys.a).toHaveBeenCalledOnce();
+    expect(keys.j).toHaveBeenCalledOnce();
+
+    fireEvent.keyDown(window, { key: 'a' });
+    expect(keys.a).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('useHotkeys with a focused control', () => {
   it.each([
     ['a text input', '<input type="text">', undefined],

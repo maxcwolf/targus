@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query';
 import { createMemoryHistory } from '@tanstack/react-router';
 import { fireEvent, render, type RenderResult } from '@testing-library/react';
 
@@ -7,13 +8,15 @@ import { createAppRouter } from '../app/router.tsx';
 
 export interface RenderedApp extends RenderResult {
   readonly router: ReturnType<typeof createAppRouter>;
+  readonly queryClient: QueryClient;
 }
 
 /** The whole app (providers, auth gate, router) at `path`, against the MSW API. */
 export function renderApp(path: string): RenderedApp {
   const router = createAppRouter(createMemoryHistory({ initialEntries: [path] }));
-  const result = render(<App router={router} queryClient={createQueryClient({ retry: false })} />);
-  return { ...result, router };
+  const queryClient = createQueryClient({ retry: false });
+  const result = render(<App router={router} queryClient={queryClient} />);
+  return { ...result, router, queryClient };
 }
 
 /** jsdom never loads images, so fire `load` on every image on screen, as a browser would. */
