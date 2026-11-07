@@ -29,6 +29,16 @@ const IndexResponse = z.object({
 
 const indexRetryMs = 1000;
 
+/**
+ * How often each connected app gets Storybook's `{ type: 'ping' }`. Storybook's
+ * `WebsocketTransport` closes the socket with code 3008 after 20 s without a message (its 15 s
+ * heartbeat interval plus 5 s latency), and the channel only speaks when it switches story, so
+ * a story slower than that would drop the app and ADR 0021 would call it a crash. Storybook's
+ * own server pings every 15 s; this leaves more room for a busy simulator.
+ */
+export const heartbeatIntervalMs = 10_000;
+const ping = JSON.stringify({ type: 'ping' });
+
 /** How long a selection waits after `storyRendered` for the decorator's report (ADR 0022). */
 export const defaultReportGraceMs = 1000;
 
@@ -84,7 +94,11 @@ export class WsStorybookChannel implements StorybookChannel {
     });
     server.on('connection', (socket) => {
       this.clients.add(socket);
+      const heartbeat = setInterval(() => {
+        socket.send(ping);
+      }, heartbeatIntervalMs);
       socket.on('close', () => {
+        clearInterval(heartbeat);
         this.clients.delete(socket);
         if (this.clients.size === 0 && !this.closing) this.markDisconnected();
       });
@@ -217,7 +231,8 @@ export class WsStorybookChannel implements StorybookChannel {
       return;
     }
     const event = ChannelEvent.safeParse(json);
-    if (!event.success) return;
+    // The app answers each ping with `{ type: 'pong' }`; it carries nothing for a wait.
+    if (!event.success || event.data.type === 'pong') return;
     this.observe(event.data);
     for (const listener of [...this.listeners]) listener(event.data);
   }
