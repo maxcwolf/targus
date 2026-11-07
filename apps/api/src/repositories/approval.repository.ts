@@ -23,7 +23,7 @@ export interface ApprovalRepository {
 }
 
 /** One hash pair of one story; a null `fromHash` (a `new` story) matches SQL NULL. */
-function pairOf(
+export function approvalPairIs(
   projectId: string,
   storyId: string,
   variant: string,
@@ -69,7 +69,7 @@ export function createApprovalRepository(database: D1Database): ApprovalReposito
         .onConflictDoNothing();
     },
     async delete(...pair) {
-      await db.delete(approvals).where(pairOf(...pair));
+      await db.delete(approvals).where(approvalPairIs(...pair));
     },
   };
 }

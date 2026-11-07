@@ -162,6 +162,19 @@ describe('BuildPage actions', () => {
     expect(screen.getByRole('button', { name: 'Verify changes' })).toBeDisabled();
   });
 
+  it('says which changes approve-all left because another review decided them first', async () => {
+    apiState.deniedDuringApproveAll = ['snap-changed'];
+    renderApp('/builds/build-12');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Batch' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm: approve 2 changes' }));
+
+    expect(
+      await screen.findByText('1 change not approved: another review decided it first'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Build status' })).toHaveTextContent('Denied');
+  });
+
   it('shows the API error when approve-all fails', async () => {
     server.use(
       http.post('*/api/builds/:id/approve-all', () =>

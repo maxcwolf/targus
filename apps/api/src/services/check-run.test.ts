@@ -1,7 +1,7 @@
 import type { BuildStatusSummary } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { newBuild, newProject } from '../../test/support/fixtures.ts';
+import { newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.ts';
 import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
 import { createTestDeps } from '../../test/support/in-memory.ts';
 import { checkRunState, syncCheckRun } from './check-run.ts';
@@ -48,6 +48,8 @@ describe('checkRunState', () => {
 
 const failed = { ...base, status: 'denied', conclusion: 'failure', deniedCount: 1 } as const;
 const denied = { status: 'completed', conclusion: 'failure', summary: '1 change denied' };
+/** The summary of a review that left its unreviewed build at version 0. */
+const atVersion0 = { version: 0, summary: failed };
 
 async function syncSetup(installationId: number | null, github = createRecordingGitHub()) {
   const deps = createTestDeps({ github });
@@ -60,7 +62,7 @@ describe('syncCheckRun', () => {
   it('moves the build check run to the summary state', async () => {
     const { deps, github, project, build } = await syncSetup(42);
 
-    await syncCheckRun(deps, project, { ...build, checkRunId: 901 }, failed);
+    await syncCheckRun(deps, project, { ...build, checkRunId: 901 }, atVersion0);
 
     expect(github.updates).toEqual([
       {
@@ -74,7 +76,7 @@ describe('syncCheckRun', () => {
   it('creates and stores the check run when the build has none', async () => {
     const { deps, github, project, build } = await syncSetup(42);
 
-    await syncCheckRun(deps, project, build, failed);
+    await syncCheckRun(deps, project, build, atVersion0);
 
     expect(github.creates).toEqual([
       {
@@ -90,8 +92,8 @@ describe('syncCheckRun', () => {
   it('skips an org without an installation, with or without a check run', async () => {
     const { deps, github, project, build } = await syncSetup(null);
 
-    await syncCheckRun(deps, project, build, failed);
-    await syncCheckRun(deps, project, { ...build, checkRunId: 901 }, failed);
+    await syncCheckRun(deps, project, build, atVersion0);
+    await syncCheckRun(deps, project, { ...build, checkRunId: 901 }, atVersion0);
 
     expect(github.creates).toEqual([]);
     expect(github.updates).toEqual([]);
@@ -102,10 +104,89 @@ describe('syncCheckRun', () => {
     const { deps, project, build } = await syncSetup(42, github);
 
     await expect(
-      syncCheckRun(deps, project, { ...build, checkRunId: 901 }, failed),
+      syncCheckRun(deps, project, { ...build, checkRunId: 901 }, atVersion0),
     ).resolves.toBeUndefined();
     expect(deps.log.warnings).toEqual([
       { event: 'check_run_update_failed', reason: 'GitHub is down' },
     ]);
+  });
+});
+
+/** A build with one pending new snapshot, whose review version a newer review moved to 2. */
+async function reviewedSetup() {
+  const setup = await syncSetup(42);
+  setup.deps.builds.snapshots.set('b1', [snapshotRecord('s1', 'b1')]);
+  setup.deps.builds.versions.set('b1', 2);
+  return setup;
+}
+
+describe('syncCheckRun after a newer review', () => {
+  it('sends the newest summary again when a newer review committed meanwhile', async () => {
+    const { deps, github, project, build } = await reviewedSetup();
+
+    await syncCheckRun(
+      deps,
+      project,
+      { ...build, checkRunId: 901 },
+      { version: 1, summary: failed },
+    );
+
+    expect(github.updates.map((update) => update.state.summary)).toEqual([
+      '1 change denied',
+      '1 change awaiting review',
+    ]);
+  });
+
+  it('follows a check run it created with the newest summary', async () => {
+    const { deps, github, project, build } = await reviewedSetup();
+
+    await syncCheckRun(deps, project, build, { version: 1, summary: failed });
+
+    expect(github.creates.map((create) => create.state.summary)).toEqual(['1 change denied']);
+    expect(github.updates.map((update) => update.state.summary)).toEqual([
+      '1 change awaiting review',
+    ]);
+  });
+
+  it('updates a check run another request created first, and follows it', async () => {
+    const { deps, github, project, build } = await reviewedSetup();
+    await deps.builds.setCheckRunId('b1', 902);
+
+    // Read before the other request stored its check run, so this one tries to create it.
+    await syncCheckRun(deps, project, build, { version: 1, summary: failed });
+
+    expect(github.creates).toEqual([]);
+    expect(github.updates.map((update) => [update.checkRunId, update.state.summary])).toEqual([
+      [902, '1 change denied'],
+      [902, '1 change awaiting review'],
+    ]);
+  });
+});
+
+describe('syncCheckRun under constant review', () => {
+  it('gives up, with a warning, when newer reviews keep committing', async () => {
+    const { deps, github, project, build } = await reviewedSetup();
+    let version = 1;
+    const reads = deps.builds.readForReview.bind(deps.builds);
+    const racing = {
+      ...deps,
+      builds: {
+        ...deps.builds,
+        readForReview: async (buildId: string) => ({
+          ...(await reads(buildId)),
+          version: (version += 1),
+        }),
+      },
+    };
+
+    await syncCheckRun(
+      racing,
+      project,
+      { ...build, checkRunId: 901 },
+      { version: 1, summary: failed },
+    );
+
+    expect(github.updates).toHaveLength(5);
+    expect(deps.log.warnings).toEqual([{ event: 'check_run_update_superseded', attempts: 5 }]);
   });
 });

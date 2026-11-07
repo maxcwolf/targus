@@ -6,8 +6,13 @@ import {
   type BuildCompletion,
   type SnapshotRecord,
 } from '../../../src/repositories/build.repository.ts';
+import {
+  createApprovalRepository,
+  type ApprovalRepository,
+} from '../../../src/repositories/approval.repository.ts';
 import { createProjectRepository } from '../../../src/repositories/project.repository.ts';
 import { newBuild, newProject, snapshotRecord } from '../fixtures.ts';
+import { createInMemoryApprovals } from '../in-memory-approvals.ts';
 import { createInMemoryBuilds } from '../in-memory-builds.ts';
 import { createInMemoryProjects } from '../in-memory.ts';
 
@@ -17,6 +22,8 @@ import { createInMemoryProjects } from '../in-memory.ts';
  */
 export interface BuildHarness {
   readonly repository: ApiBuildRepository;
+  /** The approvals a committed review records and withdraws approvals in. */
+  readonly approvals: Pick<ApprovalRepository, 'create' | 'listForProject'>;
   /** A project id that `create` accepts builds for; `key` is unique per call. */
   readonly seedProject: (key: string) => Promise<string>;
 }
@@ -25,6 +32,7 @@ export interface BuildHarness {
 export function d1BuildHarness(database: D1Database): BuildHarness {
   return {
     repository: new D1BuildRepository(database),
+    approvals: createApprovalRepository(database),
     async seedProject(key) {
       return (await createProjectRepository(database).create(newProject(key))).id;
     },
@@ -34,8 +42,10 @@ export function d1BuildHarness(database: D1Database): BuildHarness {
 /** A fresh in-memory double over a projects double, which checks the same foreign key. */
 export function inMemoryBuildHarness(): BuildHarness {
   const projects = createInMemoryProjects();
+  const approvals = createInMemoryApprovals(projects);
   return {
-    repository: createInMemoryBuilds(projects),
+    repository: createInMemoryBuilds(projects, approvals),
+    approvals,
     async seedProject(key) {
       return (await projects.create(newProject(key))).id;
     },

@@ -52,11 +52,16 @@ export const ReviewSnapshotResponse = z.object({
 });
 export type ReviewSnapshotResponse = z.infer<typeof ReviewSnapshotResponse>;
 
-/** `POST /api/builds/:id/approve-all` response. `approvedCount` is how many were pending. */
+/**
+ * `POST /api/builds/:id/approve-all` response. `approvedCount` is how many pending changes this
+ * request approved; `skippedCount` is how many were pending when it started but were decided by
+ * another review before it committed, and so were left as that review decided them (ADR 0026).
+ */
 export const ApproveAllResponse = z.object({
   build: Build,
   summary: BuildStatusSummary,
   counts: SnapshotCounts,
   approvedCount: z.number().int().nonnegative(),
+  skippedCount: z.number().int().nonnegative(),
 });
 export type ApproveAllResponse = z.infer<typeof ApproveAllResponse>;

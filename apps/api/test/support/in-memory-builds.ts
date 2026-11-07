@@ -12,6 +12,7 @@ import {
 } from '../../src/repositories/build-page.ts';
 import type { ProjectRepository } from '../../src/repositories/project.repository.ts';
 import { compareText, foreignKeyViolation, uniqueViolation } from './d1-semantics.ts';
+import { createInMemoryApprovals, type InMemoryApprovals } from './in-memory-approvals.ts';
 
 // The in-memory double of the builds repository, for service unit tests. It and the D1 adapter
 // run the same contract suites (test/support/contracts/build*.contract.ts). Each write checks
@@ -85,13 +86,23 @@ function rejectedSnapshot(
 
 type Patch = (buildId: string, fields: Partial<BuildRecord>) => void;
 
-/** The snapshot-review half of the builds double. */
-function snapshotReviews(
-  snapshots: Map<string, SnapshotRecord[]>,
-  versions: Map<string, number>,
-  patch: Patch,
-  exists: (buildId: string) => boolean,
-): Pick<ApiBuildRepository, 'findSnapshotById' | 'readForReview' | 'commitReview'> {
+/** The state the snapshot-review half shares with the rest of the builds double. */
+interface ReviewState {
+  readonly builds: readonly BuildRecord[];
+  readonly snapshots: Map<string, SnapshotRecord[]>;
+  readonly versions: Map<string, number>;
+  readonly patch: Patch;
+  readonly approvals: InMemoryApprovals;
+}
+
+/** The snapshot-review half of the builds double; a review's approvals go to `approvals`. */
+function snapshotReviews({
+  builds,
+  snapshots,
+  versions,
+  patch,
+  approvals,
+}: ReviewState): Pick<ApiBuildRepository, 'findSnapshotById' | 'readForReview' | 'commitReview'> {
   return {
     findSnapshotById: (snapshotId) =>
       Promise.resolve(
@@ -105,7 +116,8 @@ function snapshotReviews(
     commitReview(buildId, readVersion, commit) {
       const version = versions.get(buildId) ?? 0;
       // No build row, no update: D1's guarded UPDATE matches nothing.
-      if (!exists(buildId) || version !== readVersion) return Promise.resolve(false);
+      const exists = builds.some((b) => b.id === buildId);
+      if (!exists || version !== readVersion) return Promise.resolve(false);
       const { snapshotIds, review, reviewedBy, reviewedAt, status, tally } = commit;
       const ids = new Set(snapshotIds);
       const decided = { review, reviewedBy, reviewedAt: reviewedAt.toISOString() };
@@ -113,6 +125,12 @@ function snapshotReviews(
         buildId,
         (snapshots.get(buildId) ?? []).map((s) => (ids.has(s.id) ? { ...s, ...decided } : s)),
       );
+      commit.approvals.withdraw.forEach((pair) => {
+        approvals.withdraw(pair);
+      });
+      commit.approvals.record.forEach(({ id, approval }) => {
+        approvals.record(id, approval);
+      });
       patch(buildId, { status, tally });
       versions.set(buildId, version + 1);
       return Promise.resolve(true);
@@ -176,8 +194,13 @@ function createBuild(
   };
 }
 
+/**
+ * `projects` is the projects double whose rows builds name; `approvals` is the approvals double
+ * a committed review records and withdraws approvals in.
+ */
 export function createInMemoryBuilds(
   projects: Pick<ProjectRepository, 'findById'>,
+  approvals: InMemoryApprovals = createInMemoryApprovals(projects),
 ): InMemoryBuilds {
   const builds: BuildRecord[] = [];
   const snapshots = new Map<string, SnapshotRecord[]>();
@@ -213,6 +236,6 @@ export function createInMemoryBuilds(
     },
     ...checkRunClaims(builds, patch),
     listSnapshots: (buildId) => Promise.resolve(storyOrder(snapshots.get(buildId) ?? [])),
-    ...snapshotReviews(snapshots, versions, patch, (id) => builds.some((b) => b.id === id)),
+    ...snapshotReviews({ builds, snapshots, versions, patch, approvals }),
   };
 }

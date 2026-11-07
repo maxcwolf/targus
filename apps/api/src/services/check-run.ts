@@ -1,4 +1,12 @@
-import type { Build, BuildStatusSummary, CheckRunMissing, CheckRunState } from '@targus/core';
+import {
+  buildStatusFromTally,
+  tallySnapshots,
+  type Build,
+  type BuildStatusSummary,
+  type CheckRunMissing,
+  type CheckRunState,
+  type CheckRunTarget,
+} from '@targus/core';
 
 import { failureReason } from '../logging/request-log.ts';
 import type { Project } from '../repositories/project.repository.ts';
@@ -109,27 +117,116 @@ export async function createCheckRun(
   return { missing: id === null ? 'failed' : 'no_github_app' };
 }
 
+/** A build's summary as of one review version. */
+export interface ReviewedSummary {
+  /** The build's `review_version` once the review that produced `summary` committed. */
+  readonly version: number;
+  readonly summary: BuildStatusSummary;
+}
+
+/** How many updates one sync sends at most, the first included, while newer reviews commit. */
+const syncAttempts = 5;
+
+function targetOf(installationId: number, project: Project, build: Build): CheckRunTarget {
+  return { installationId, repo: project.repo, headSha: build.sha };
+}
+
+/** Send `state`; false, with a warning, when GitHub fails. */
+async function sendUpdate(
+  deps: CheckRunDeps,
+  target: CheckRunTarget,
+  checkRunId: number,
+  state: CheckRunState,
+): Promise<boolean> {
+  const sent = await bestEffort(deps, 'check_run_update_failed', async () => {
+    await deps.github.updateCheckRun(target, checkRunId, state);
+    return true;
+  });
+  return sent === true;
+}
+
 /**
- * Move the build's check run to the state of its new summary after a review, creating it first
- * when the build has none yet (creating it failed when the results came in). Skipped when the
- * org has no installation; best effort, like `createCheckRun`: the review is already stored, so
- * a GitHub outage only leaves the check run stale or missing until the next review.
+ * Give a build that had no check run one in the state of `summary`, and answer its id, or null
+ * when it still has none. When another request created it first, the build is read again and
+ * the stored check run is updated here, since its creator may have looked for newer reviews
+ * before this one committed. One still being created is left to the claim holder, which looks
+ * for newer reviews after storing it.
+ */
+async function ensureCheckRun(
+  deps: CheckRunDeps,
+  target: CheckRunTarget,
+  project: Project,
+  build: Build,
+  summary: BuildStatusSummary,
+): Promise<number | null> {
+  const outcome = await createCheckRun(deps, project, build, summary);
+  if ('id' in outcome) return outcome.id;
+  const stored = await bestEffort(deps, 'check_run_reread_failed', () =>
+    deps.builds.findAnyById(build.id),
+  );
+  const checkRunId = stored?.checkRunId ?? null;
+  if (checkRunId === null) return null;
+  return (await sendUpdate(deps, target, checkRunId, checkRunState(summary))) ? checkRunId : null;
+}
+
+/**
+ * After the check run was set to `sent`: while a newer review has committed, send the newest
+ * summary again. Two reviews close together can finish their GitHub calls in either order
+ * (ADR 0026); the last call to finish is always followed by this check, so the check run ends
+ * on the state of the last review. Also run after the results create the check run (version 0).
+ */
+export async function followNewerReviews(
+  deps: CheckRunDeps,
+  project: Project,
+  build: Build,
+  checkRunId: number,
+  sent: ReviewedSummary,
+): Promise<void> {
+  const installationId = project.org.installationId;
+  if (installationId === null) return;
+  const target = targetOf(installationId, project, build);
+  let current = sent;
+  for (let sends = 1; ; sends += 1) {
+    const latest = await deps.builds.readForReview(build.id);
+    if (latest.version <= current.version) return;
+    if (sends === syncAttempts) break;
+    const summary = buildStatusFromTally(tallySnapshots(latest.snapshots));
+    current = { version: latest.version, summary };
+    if (!(await sendUpdate(deps, target, checkRunId, checkRunState(summary)))) return;
+  }
+  deps.log.warn('check_run_update_superseded', { attempts: syncAttempts });
+}
+
+/** Set the build's check run to `summary`, creating it when missing; its id, or null if none. */
+async function setCheckRun(
+  deps: CheckRunDeps,
+  target: CheckRunTarget,
+  project: Project,
+  build: Build,
+  summary: BuildStatusSummary,
+): Promise<number | null> {
+  const { checkRunId } = build;
+  if (checkRunId === null) return ensureCheckRun(deps, target, project, build, summary);
+  return (await sendUpdate(deps, target, checkRunId, checkRunState(summary))) ? checkRunId : null;
+}
+
+/**
+ * Move the build's check run to the state of a review's summary, creating it first when the
+ * build has none yet (creating it failed when the results came in), then resend while newer
+ * reviews have committed (`followNewerReviews`). Skipped when the org has no installation;
+ * best effort, like `createCheckRun`: the review is already stored, so a GitHub outage only
+ * leaves the check run stale or missing until the next review.
  */
 export async function syncCheckRun(
   deps: CheckRunDeps,
   project: Project,
   build: Build,
-  summary: BuildStatusSummary,
+  reviewed: ReviewedSummary,
 ): Promise<void> {
   const installationId = project.org.installationId;
   if (installationId === null) return;
-  const { checkRunId } = build;
-  if (checkRunId === null) {
-    await createCheckRun(deps, project, build, summary);
-    return;
-  }
-  const target = { installationId, repo: project.repo, headSha: build.sha };
-  await bestEffort(deps, 'check_run_update_failed', () =>
-    deps.github.updateCheckRun(target, checkRunId, checkRunState(summary)),
-  );
+  const target = targetOf(installationId, project, build);
+  const checkRunId = await setCheckRun(deps, target, project, build, reviewed.summary);
+  if (checkRunId === null) return;
+  await followNewerReviews(deps, project, build, checkRunId, reviewed);
 }

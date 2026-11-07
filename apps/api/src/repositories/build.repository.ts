@@ -4,7 +4,6 @@ import {
   type BuildRepository,
   type BuildStatus,
   type NewBuild,
-  type ReviewState,
   type SnapshotTally,
 } from '@targus/core';
 import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from 'drizzle-orm';
@@ -18,7 +17,6 @@ import {
   type BuildPage,
   type BuildPageRequest,
 } from './build-page.ts';
-import { chunkForD1 } from './d1-limits.ts';
 import {
   buildInProgress,
   checkRunClaim,
@@ -32,8 +30,11 @@ import {
   type SnapshotRecord,
 } from './build-rows.ts';
 
+import { reviewCommitStatements, type ReviewCommit } from './review-commit.ts';
+
 export type { BuildPage, BuildPageRequest } from './build-page.ts';
 export type { BuildRecord, SnapshotRecord } from './build-rows.ts';
+export type { ApprovalChanges, ApprovalIdentity, ReviewCommit } from './review-commit.ts';
 
 /** What `completeWithResults` writes on the build when its results arrive. */
 export interface BuildCompletion {
@@ -46,16 +47,6 @@ export interface BuildCompletion {
 export interface BuildReviewRead {
   readonly version: number;
   readonly snapshots: SnapshotRecord[];
-}
-
-/** A reviewer's decision on some snapshots of a build, and the status it folds the build to. */
-export interface ReviewCommit {
-  readonly snapshotIds: readonly string[];
-  readonly review: ReviewState;
-  readonly reviewedBy: string;
-  readonly reviewedAt: Date;
-  readonly status: BuildStatus;
-  readonly tally: SnapshotTally;
 }
 
 /** A build to open, with the caller's idempotency key when it sent one (ADR 0027). */
@@ -112,9 +103,10 @@ export interface ApiBuildRepository extends BuildRepository {
   /** The build's snapshots and its review version, read together. */
   readForReview(buildId: string): Promise<BuildReviewRead>;
   /**
-   * Write a review decision and the build's new status and tally in one transaction, only if
-   * the build is still at `readVersion`, and move it to the next version. False, with nothing
-   * written, when another review committed first; the caller re-reads and decides again.
+   * Write a review decision, the approvals it records or withdraws, and the build's new status
+   * and tally in one transaction, only if the build is still at `readVersion`, and move it to
+   * the next version. False, with nothing written, when another review committed first; the
+   * caller re-reads and decides again.
    */
   commitReview(buildId: string, readVersion: number, commit: ReviewCommit): Promise<boolean>;
 }
@@ -311,26 +303,13 @@ export class D1BuildRepository implements ApiBuildRepository {
   }
 
   /**
-   * One D1 batch (one transaction): the snapshot updates first, each guarded by the build still
-   * being at `readVersion`, then the build's update, which bumps the version under the same
-   * guard. So the tally written is always the one of the snapshots as stored at commit time.
+   * One D1 batch (one transaction), every statement guarded by the build still being at
+   * `readVersion` and the build's own update last (see review-commit.ts). So the tally written
+   * is always the one of the snapshots as stored at commit time, and the approvals change only
+   * with the decision that changes them.
    */
   async commitReview(buildId: string, readVersion: number, commit: ReviewCommit): Promise<boolean> {
-    const { snapshotIds, review, reviewedBy, reviewedAt, status, tally } = commit;
-    const atVersion = sql`EXISTS (SELECT 1 FROM ${builds} WHERE ${builds.id} = ${buildId} AND ${builds.reviewVersion} = ${readVersion})`;
-    // Each chunk binds its ids, the three SET values, the build id and the two guard values.
-    const decisions = chunkForD1(snapshotIds, 1, 6).map((ids) =>
-      this.db
-        .update(snapshots)
-        .set({ review, reviewedBy, reviewedAt })
-        .where(and(inArray(snapshots.id, ids), eq(snapshots.buildId, buildId), atVersion)),
-    );
-    const fold = this.db
-      .update(builds)
-      .set({ status, ...tallyColumns(tally), reviewVersion: sql`${builds.reviewVersion} + 1` })
-      .where(and(eq(builds.id, buildId), eq(builds.reviewVersion, readVersion)))
-      .returning({ id: builds.id });
-    const statements = [...decisions, fold].map((statement) => statement.toSQL());
+    const statements = reviewCommitStatements(this.db, buildId, readVersion, commit);
     const results = await runBatch(this.database, statements);
     return results.at(-1)?.results.length === 1;
   }

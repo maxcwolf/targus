@@ -2,7 +2,14 @@
 
 ## Status
 
-accepted
+accepted, amended by 0026
+
+## Amended by
+
+- [0026](0026-review-approvals-and-check-runs-follow-the-review-version.md): a review's approvals
+  are written in its guarded batch, approve-all reports the snapshots another review decided
+  first, and a check-run update is resent when a newer review committed while it was sent. The
+  two races listed last under Negative are closed.
 
 ## Date
 

@@ -43,6 +43,17 @@ function VerifyChanges({
   );
 }
 
+/** After an approve-all: the changes another review decided first, which it left alone. */
+function SkippedNote({ skipped }: { readonly skipped: number }): ReactElement | null {
+  if (skipped === 0) return null;
+  return (
+    <span role="status" className="muted">
+      {plural(skipped, 'change')} not approved: another review decided{' '}
+      {skipped === 1 ? 'it' : 'them'} first
+    </span>
+  );
+}
+
 /**
  * Chromatic's pair of build actions: "Verify changes" walks the reviewer through the unreviewed
  * changes one by one, "Batch" approves all of them at once after an inline confirmation.
@@ -72,6 +83,7 @@ export function BuildActions({ buildId, pending, uploading }: BuildActionsProps)
           {mutation.error.message}
         </span>
       ) : null}
+      <SkippedNote skipped={mutation.data?.skippedCount ?? 0} />
     </div>
   );
 }

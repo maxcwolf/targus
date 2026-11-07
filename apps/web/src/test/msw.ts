@@ -28,6 +28,8 @@ interface ApiState {
   library: GetLibraryResponse;
   /** `METHOD /path` of every mutating request, for assertions. */
   calls: string[];
+  /** Snapshots another reviewer denies while an approve-all runs, so it skips them. */
+  deniedDuringApproveAll: string[];
 }
 
 export const apiState: ApiState = {
@@ -36,6 +38,7 @@ export const apiState: ApiState = {
   snapshots: [],
   library: initialLibrary(),
   calls: [],
+  deniedDuringApproveAll: [],
 };
 
 export function resetApiState(): void {
@@ -44,6 +47,7 @@ export function resetApiState(): void {
   apiState.snapshots = initialSnapshots();
   apiState.library = initialLibrary();
   apiState.calls = [];
+  apiState.deniedDuringApproveAll = [];
 }
 resetApiState();
 
@@ -134,8 +138,12 @@ export const handlers = [
     const pending = apiState.snapshots.filter(
       (s) => s.buildId === build.id && needsReview(s.state) && s.review === 'pending',
     );
-    for (const snapshot of pending) decide(snapshot, 'approved');
-    return HttpResponse.json({ ...withSummary(build), approvedCount: pending.length });
+    const denied = pending.filter((s) => apiState.deniedDuringApproveAll.includes(s.id));
+    for (const snapshot of pending)
+      decide(snapshot, denied.includes(snapshot) ? 'denied' : 'approved');
+    const skippedCount = denied.length;
+    const approvedCount = pending.length - skippedCount;
+    return HttpResponse.json({ ...withSummary(build), approvedCount, skippedCount });
   }),
   http.get('*/api/images/:hash', () =>
     HttpResponse.arrayBuffer(new ArrayBuffer(0), { headers: { 'content-type': 'image/png' } }),

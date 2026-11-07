@@ -113,6 +113,7 @@ describe('submitResults against a baseline', () => {
       reviewedAt: deps.clock.now(),
       status: 'accepted',
       tally: emptyTally,
+      approvals: { record: [], withdraw: [] },
     });
 
     const second = await openBuild(deps, project, sha('b'), sha('a'));

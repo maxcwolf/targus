@@ -14,7 +14,7 @@ import {
 import type { SnapshotRecord } from '../repositories/build.repository.ts';
 import type { Project } from '../repositories/project.repository.ts';
 import { baselineEntries, requireBuild } from './build.service.ts';
-import { createCheckRun, reviewUrlOf } from './check-run.ts';
+import { createCheckRun, followNewerReviews, reviewUrlOf } from './check-run.ts';
 import type { ServiceDeps } from './deps.ts';
 
 type ResultsDeps = Pick<
@@ -207,6 +207,9 @@ export async function submitResults(
   if (!(await deps.builds.completeWithResults(build.id, records, completion))) throw alreadyDone();
 
   const outcome = await createCheckRun(deps, project, build, summary);
+  // A review may have committed while the check run was being created (ADR 0026).
+  if ('id' in outcome)
+    await followNewerReviews(deps, project, build, outcome.id, { version: 0, summary });
   return {
     build: { id: build.id, number: build.number },
     summary,

@@ -3,14 +3,12 @@ import {
   createFakeIdGenerator,
   emptyTally,
   type BuildStatus,
-  type Approval,
   type FakeClock,
 } from '@targus/core';
 
 import { NoopGitHubClient } from '../../src/adapters/github-client.adapter.ts';
 import { webCryptoTokens } from '../../src/adapters/token.adapter.ts';
 import type { ApiConfig } from '../../src/config.ts';
-import type { ApprovalRepository } from '../../src/repositories/approval.repository.ts';
 import type { BuildCompletion } from '../../src/repositories/build.repository.ts';
 import type {
   NewProject,
@@ -26,11 +24,13 @@ import {
   createInMemoryUsers,
   type FakeOAuth,
 } from './in-memory-auth.ts';
-import { compareText, foreignKeyViolation, uniqueViolation } from './d1-semantics.ts';
+import { compareText, uniqueViolation } from './d1-semantics.ts';
+import { createInMemoryApprovals, type InMemoryApprovals } from './in-memory-approvals.ts';
 import { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.ts';
 import { createInMemoryImages, type InMemoryImages } from './in-memory-images.ts';
 import { createRecordingLog, type RecordingLog } from './logs.ts';
 
+export { createInMemoryApprovals, type InMemoryApprovals } from './in-memory-approvals.ts';
 export { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.ts';
 
 // In-memory doubles of the API's repositories, for service unit tests. Each double and its D1
@@ -140,54 +140,6 @@ export function createInMemoryProjects(): InMemoryProjects {
   };
 }
 
-/** Whether an approval is of this story's hash pair. */
-const samePair =
-  (projectId: string, storyId: string, variant: string, fromHash: string | null, toHash: string) =>
-  (approval: Approval) =>
-    approval.projectId === projectId &&
-    approval.storyId === storyId &&
-    approval.variant === variant &&
-    approval.fromHash === fromHash &&
-    approval.toHash === toHash;
-
-/**
- * `all` holds the approvals in insertion order; `listForProject` orders them as D1 does. An
- * approval names a project of `projects`, as D1's foreign key on project_id requires.
- */
-export function createInMemoryApprovals(
-  projects: Pick<ProjectRepository, 'findById'>,
-): ApprovalRepository & { readonly all: Approval[] } {
-  const all: Approval[] = [];
-  const ids = new Map<Approval, string>();
-  const oldestFirst = (a: Approval, b: Approval) =>
-    compareText(a.approvedAt, b.approvedAt) || compareText(ids.get(a) ?? '', ids.get(b) ?? '');
-  return {
-    all,
-    listForProject: (projectId) =>
-      Promise.resolve(all.filter((a) => a.projectId === projectId).sort(oldestFirst)),
-    async create(id, input) {
-      // The foreign key first: ON CONFLICT DO NOTHING does not cover it.
-      if ((await projects.findById(input.projectId)) === null) {
-        return foreignKeyViolation('approvals.project_id');
-      }
-      // ON CONFLICT DO NOTHING with no target: the primary key and both identity indexes (a null
-      // fromHash included) each make it a no-op. D1 stores approvedAt as epoch milliseconds.
-      const approval = { ...input, approvedAt: new Date(input.approvedAt).toISOString() };
-      const { projectId, storyId, variant, fromHash, toHash } = approval;
-      const taken = [...ids.values()].includes(id);
-      if (taken || all.some(samePair(projectId, storyId, variant, fromHash, toHash))) return;
-      all.push(approval);
-      ids.set(approval, id);
-    },
-    delete(...pair) {
-      const keep = all.filter((approval) => !samePair(...pair)(approval));
-      for (const gone of all.filter((approval) => !keep.includes(approval))) ids.delete(gone);
-      all.splice(0, all.length, ...keep);
-      return Promise.resolve();
-    },
-  };
-}
-
 export const testConfig: ApiConfig = {
   version: '0.0.0-test',
   publicUrl: 'https://targus.test',
@@ -204,7 +156,7 @@ export interface TestDeps extends ServiceDeps {
   readonly clock: FakeClock;
   readonly projects: InMemoryProjects;
   readonly builds: InMemoryBuilds;
-  readonly approvals: ReturnType<typeof createInMemoryApprovals>;
+  readonly approvals: InMemoryApprovals;
   readonly images: InMemoryImages;
   readonly imageStore: InMemoryImages;
   readonly users: ReturnType<typeof createInMemoryUsers>;
@@ -227,6 +179,8 @@ export function createTestDeps(overrides: TestOverrides = {}): TestDeps {
   const users = createInMemoryUsers();
   const projects = overrides.projects ?? createInMemoryProjects();
   const memberships = overrides.memberships ?? createInMemoryMemberships({ users, orgs: projects });
+  // A review commits its approvals with its decision, so the builds double writes to this one.
+  const approvals = createInMemoryApprovals(projects);
   // The images double answers `uploaderOrgs` from the same projects and membership cache.
   const images = createInMemoryImages({ projects, memberships });
   return {
@@ -235,8 +189,8 @@ export function createTestDeps(overrides: TestOverrides = {}): TestDeps {
     ids: createFakeIdGenerator(),
     tokens: webCryptoTokens,
     projects,
-    builds: createInMemoryBuilds(projects),
-    approvals: createInMemoryApprovals(projects),
+    builds: createInMemoryBuilds(projects, approvals),
+    approvals,
     images,
     imageStore: images,
     users,
