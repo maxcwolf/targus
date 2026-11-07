@@ -92,6 +92,12 @@ error: the targus API at https://targus.example.com rejected TARGUS_TOKEN: expor
 An API that does not answer that route (a URL that is not the targus API, or an API older than the
 CLI) exits `1`. `targus capture` makes no API call.
 
+A capture with no stories exits `1` before a build is opened, since an empty build would mark
+every baseline story removed, pass the check and, on the default branch, become the next
+baseline. When the story index was empty (a broken `stories` glob, an app built without
+Storybook, or a `--filter` that matched nothing) the error says so; when every story was left out
+by `parameters.targus.skip` it says that instead. The API refuses an empty results submission too.
+
 Branch and PR number come from CircleCI (`CIRCLE_BRANCH`, `CIRCLE_PULL_REQUEST`,
 `CIRCLE_PR_NUMBER`) or GitHub Actions (`GITHUB_HEAD_REF`, `GITHUB_REF_NAME`, `GITHUB_REF`);
 `--branch` and `--pr` override them. A build on `--base-branch` without a PR is a `main` build;

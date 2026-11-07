@@ -66,7 +66,7 @@ describe('/api/builds authorization', () => {
     const results = await postJson(`/api/builds/${build.id}/results`, stranger.token, {
       durationMs: 1,
       threshold: 0.001,
-      results: [],
+      results: [storyResult('button')],
     });
     expect(results.status).toBe(404);
   });
@@ -99,6 +99,25 @@ describe('/api/builds authorization', () => {
   });
 });
 
+describe('/api/builds results with no stories', () => {
+  it('refuses results with no stories and leaves the build open', async () => {
+    const { token } = await createTestProject();
+    const created = await postJson('/api/builds', token, createBuildRequest(sha('e')));
+    const { build } = CreateBuildResponse.parse(await created.json());
+
+    const empty = await postJson(`/api/builds/${build.id}/results`, token, {
+      durationMs: 1,
+      threshold: 0.001,
+      results: [],
+    });
+
+    expect(empty.status).toBe(400);
+    expect(await empty.text()).toContain('no story results');
+    const read = await call(`/api/builds/${build.id}`, { headers: bearer(token) });
+    expect(await read.json()).toMatchObject({ build: { status: 'in_progress' } });
+  });
+});
+
 describe('/api/builds for reviewers', () => {
   it('lets a member read a build and its snapshots with the session cookie', async () => {
     const { buildId } = await projectWithBuild([storyResult('button')]);
@@ -115,7 +134,7 @@ describe('/api/builds for reviewers', () => {
   });
 
   it('forbids outsiders and requires a session or a token', async () => {
-    const { buildId } = await projectWithBuild([]);
+    const { buildId } = await projectWithBuild([storyResult('button')]);
     const { cookie } = await signIn('outsider');
 
     expect((await getAsReviewer(`/api/builds/${buildId}`, cookie)).status).toBe(403);

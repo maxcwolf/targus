@@ -184,15 +184,12 @@ describe('submitResults validation', () => {
         results: [storyResult('x'), storyResult('x')],
       }),
     ).rejects.toMatchObject({ code: 'bad_request' });
-    await submit(deps, project, buildId, { durationMs: 1, results: [] });
-    await expect(
-      submit(deps, project, buildId, { durationMs: 1, results: [] }),
-    ).rejects.toMatchObject({
+    const one = { durationMs: 1, results: [storyResult('x')] };
+    await submit(deps, project, buildId, one);
+    await expect(submit(deps, project, buildId, one)).rejects.toMatchObject({
       code: 'conflict',
     });
-    await expect(
-      submit(deps, other, buildId, { durationMs: 1, results: [] }),
-    ).rejects.toMatchObject({
+    await expect(submit(deps, other, buildId, one)).rejects.toMatchObject({
       code: 'not_found',
     });
   });
@@ -286,7 +283,7 @@ describe('submitResults without a check run', () => {
 
     const first = await openBuild(without.deps, without.project, sha('a'));
     const second = await openBuild(withNoop.deps, withNoop.project, sha('a'));
-    const results = { durationMs: 1, results: [] };
+    const results = { durationMs: 1, results: [storyResult('a')] };
 
     expect(await submit(without.deps, without.project, first, results)).toMatchObject({
       checkRun: null,
@@ -311,15 +308,15 @@ describe('submitResults without a check run', () => {
 
     const response = await submit(deps, project, buildId, {
       durationMs: 1,
-      results: [],
+      results: [storyResult('a')],
     });
 
     expect(response).toMatchObject({
       checkRun: null,
       checkRunMissing: 'failed',
-      summary: { status: 'passed' },
+      summary: { status: 'pending' },
     });
-    expect(deps.builds.builds[0]?.status).toBe('passed');
+    expect(deps.builds.builds[0]?.status).toBe('pending');
     expect(deps.log.warnings).toEqual([
       { event: 'check_run_create_failed', reason: 'GitHub is down' },
     ]);

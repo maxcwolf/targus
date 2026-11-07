@@ -13,7 +13,7 @@ import { signIn } from '../../test/support/session.ts';
 
 describe('GET /api/projects', () => {
   it('lists the projects of the reviewer orgs only', async () => {
-    const { project } = await projectWithBuild([]);
+    const { project } = await projectWithBuild([storyResult('button')]);
     const member = await signIn('octocat');
     const outsider = await signIn('outsider');
 
@@ -48,7 +48,7 @@ describe('GET /api/projects/:id/builds', () => {
   });
 
   it('pages to the oldest build with nextCursor, and a request without a query reads one page', async () => {
-    const { project, token, buildId } = await projectWithBuild([]);
+    const { project, token, buildId } = await projectWithBuild([storyResult('button')]);
     const created = await postJson('/api/builds', token, createBuildRequest(sha('b')));
     const newest = CreateBuildResponse.parse(await created.json()).build.id;
     const { cookie } = await signIn('octocat');
@@ -72,7 +72,7 @@ describe('GET /api/projects/:id/builds', () => {
 
 describe('GET /api/projects/:id/builds cursors', () => {
   it('answers 400 for an empty or forged cursor', async () => {
-    const { project } = await projectWithBuild([]);
+    const { project } = await projectWithBuild([storyResult('button')]);
     const { cookie } = await signIn('octocat');
 
     for (const cursor of ['', 'forged', btoa('n:0')]) {
@@ -86,7 +86,7 @@ describe('GET /api/projects/:id/builds cursors', () => {
 
 describe('GET /api/projects/:id/builds access', () => {
   it('validates the limit and answers 403 outside the org and 404 for unknown projects', async () => {
-    const { project } = await projectWithBuild([]);
+    const { project } = await projectWithBuild([storyResult('button')]);
     const member = await signIn('octocat');
     const outsider = await signIn('outsider');
     const builds = `/api/projects/${project.id}/builds`;

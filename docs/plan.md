@@ -64,6 +64,7 @@ Consumer's CI macOS job (the pilot app: not built yet)      targus service (Clou
    ├─ host the Storybook channel on ws://localhost:7007
    ├─ ask app for story index
    ├─ for each story: select ─► wait rendered ─► settle ─► screenshot ─► hash
+   ├─ no stories captured ─► fail, no build opened
    ├─ POST /api/builds (git metadata + snapshot list) ─► resolve baseline build
    │                                     ◄── baseline hashes + hashes this project has not uploaded
    ├─ download baselines that differ, diff locally (pixelmatch)
@@ -156,6 +157,11 @@ Internals:
   `withTargus` decorator reports them over the channel once the story commits; `delay` (0 to
   10 000 ms) replaces `--settle` for that story, and a `skip` story is neither captured nor
   submitted. An invalid value makes the story an error.
+- Empty capture refused (built): a capture with no stories, because the story index was empty
+  or every story was skipped, fails before `POST /api/builds`, and the API answers 400 to results
+  with no stories. Otherwise every baseline story would be `removed`, which needs no review, so
+  a broken story glob would pass the check and, on the default branch, become the baseline.
+  A collapsed but non-empty index is not detected.
 - Error detection (built): Storybook RN's error boundary emits nothing on the channel, so the
   `withTargus` decorator wraps each story in its own boundary and emits `targus/storyError`. The
   CLI records the error instead of a snapshot, and the build fails (ADR 0004, rule 6).

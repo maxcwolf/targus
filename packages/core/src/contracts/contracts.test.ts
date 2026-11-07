@@ -187,14 +187,25 @@ describe('SubmitResultsRequest', () => {
   });
 
   it('rejects a diff ratio above 1, a negative duration and a missing threshold', () => {
-    const request = { results: [], durationMs: 1, threshold: 0.001 };
+    const request = { results: [result], durationMs: 1, threshold: 0.001 };
 
+    expect(SubmitResultsRequest.safeParse(request).success).toBe(true);
     expect(
       SubmitResultsRequest.safeParse({ ...request, results: [{ ...result, diffRatio: 1.5 }] })
         .success,
     ).toBe(false);
     expect(SubmitResultsRequest.safeParse({ ...request, durationMs: -1 }).success).toBe(false);
-    expect(SubmitResultsRequest.safeParse({ results: [], durationMs: 1 }).success).toBe(false);
+    expect(SubmitResultsRequest.safeParse({ results: [result], durationMs: 1 }).success).toBe(
+      false,
+    );
+  });
+
+  it('rejects a submission with no results, which would mark every baseline story removed', () => {
+    const parsed = SubmitResultsRequest.safeParse({ results: [], durationMs: 1, threshold: 0.001 });
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues.map((issue) => issue.path)).toEqual([['results']]);
+    expect(parsed.error?.issues[0]?.message).toContain('no story results');
   });
 });
 

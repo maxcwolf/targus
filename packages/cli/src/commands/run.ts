@@ -186,6 +186,9 @@ export async function runRun(
     compareImages: compareWithCore,
     hash: sha256Hex,
     isBlank: isBlankPng,
+    ...(source.kind === 'simulator' && options.filter !== undefined
+      ? { filter: options.filter }
+      : {}),
   });
   for (const line of formatRunSummary(output)) deps.log(line);
   return output;

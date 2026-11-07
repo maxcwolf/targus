@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Exec } from '../adapters/exec.adapter.ts';
 import type { GitMetadata } from '../adapters/git.adapter.ts';
+import { writeCaptureOutput } from '../capture/manifest.ts';
 import type { CaptureCommandOptions } from './capture.ts';
 import { loadConfig, type CliConfig } from '../config.ts';
 import { fixtureCaptureReport, writeFixtureCapture } from '../fixtures/fixture-capture.ts';
@@ -250,5 +251,41 @@ describe('runRun failures', () => {
     );
 
     expect(lines[1]).toMatch(/^warning: could not fetch main from origin; using origin\/main/);
+  });
+});
+
+describe('runRun with an empty capture', () => {
+  it('refuses a capture of an empty story index after capturing, before opening a build', async () => {
+    const empty = {
+      stories: [],
+      skipped: [],
+      startedAt: '2026-01-01T00:00:00.000Z',
+      durationMs: 0,
+    };
+    const run = {
+      udid: 'SIM',
+      bundleId: 'co.example',
+      appPath: null,
+      settleMs: 0,
+      stabilityGapMs: 0,
+    };
+    const emptyIndex = deps({
+      capture: async (capture) => {
+        captures.push(capture);
+        await writeCaptureOutput(capture.out, empty, run);
+      },
+    });
+
+    expect(
+      await codeOf(runRun(options({ udid: 'SIM', app: 'A.app' }), config, emptyIndex)),
+    ).toMatch(/^bad_request: the capture had no stories/);
+    expect(captures).toHaveLength(1);
+    expect(api.calls).toEqual([{ method: 'currentProject' }]);
+
+    expect(
+      await codeOf(
+        runRun(options({ udid: 'SIM', app: 'A.app', filter: 'Button' }), config, emptyIndex),
+      ),
+    ).toMatch(/^bad_request: no story matched --filter "Button"/);
   });
 });

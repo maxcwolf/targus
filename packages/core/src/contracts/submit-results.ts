@@ -54,10 +54,14 @@ export type StoryResult = z.infer<typeof StoryResult>;
 /**
  * `POST /api/builds/:id/results` request body: every story's result, the run duration, and the
  * threshold the CLI diffed with, which is the one `POST /api/builds` returned. The server
- * rejects results measured with any other threshold (ADR 0028).
+ * rejects results measured with any other threshold (ADR 0028). At least one result: with none,
+ * every baseline story would be `removed`, which needs no review, so a broken story glob would
+ * pass the check and, on the default branch, become the next baseline.
  */
 export const SubmitResultsRequest = z.object({
-  results: z.array(StoryResult),
+  results: z
+    .array(StoryResult)
+    .min(1, 'no story results: an empty build would mark every baseline story removed'),
   durationMs: z.number().int().nonnegative(),
   threshold: DiffThreshold,
 });

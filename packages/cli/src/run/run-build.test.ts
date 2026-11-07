@@ -289,6 +289,42 @@ describe('runBuild server mismatch', () => {
   });
 });
 
+describe('runBuild with no stories', () => {
+  it('refuses an empty story index without opening a build', async () => {
+    const api = createFakeTargusApi();
+
+    const run = runBuild(input(api, []));
+
+    await expect(run).rejects.toMatchObject({ code: 'bad_request' });
+    await expect(run).rejects.toThrow(
+      /^the capture had no stories, .*`stories` glob.*or loosen --filter if the capture used one$/,
+    );
+    expect(api.calls).toEqual([]);
+  });
+
+  it('names the filter, without claiming the index was empty, when a filter was given', async () => {
+    const api = createFakeTargusApi();
+
+    const run = runBuild(input(api, [], { filter: 'Button' }));
+
+    await expect(run).rejects.toThrow(
+      /^no story matched --filter "Button", or the story index had none, .*: loosen --filter, or check the `stories` glob/,
+    );
+    expect(api.calls).toEqual([]);
+  });
+
+  it('refuses a capture whose every story is skipped, and says so', async () => {
+    const api = createFakeTargusApi();
+    const skippedAll = (ids: string[]) => input(api, [], { report: report([], ids) });
+
+    await expect(runBuild(skippedAll(['a', 'b']))).rejects.toThrow(
+      'all 2 stories are skipped by `parameters.targus.skip`',
+    );
+    await expect(runBuild(skippedAll(['a']))).rejects.toThrow('the only story is skipped');
+    expect(api.calls).toEqual([]);
+  });
+});
+
 describe('createBuildRequest', () => {
   it('needs a branch', () => {
     const api = createFakeTargusApi();

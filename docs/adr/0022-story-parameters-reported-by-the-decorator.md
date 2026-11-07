@@ -15,6 +15,13 @@ replace a cached error, and a new selection of a story drops its cached report u
 Storybook answers `storyUnchanged`. The decorator now puts the reporter inside the boundary,
 so a story that throws while rendering sends only `targus/storyError`.
 
+Amended again 2026-11-07: skipping single stories still never blocks the check, but a run that would
+submit zero results is refused before any build is created. Submitting nothing would mark every
+baseline story `removed`, which needs no review, so the check would pass and, on the default
+branch, the empty build would become the next baseline. `targus run` exits 1 when the story index
+is empty, when `--filter` matched nothing, or when every story is skipped, and the API answers
+400 to a `POST /api/builds/:id/results` whose `results` list is empty.
+
 ## Date
 
 2026-11-06
@@ -75,7 +82,8 @@ summary, `targus compare` does not list it as removed, and `targus run` prints i
 line. The server, which does not know about skips, records a baseline story that is now skipped
 as `removed`. That state is informational and already approved (ADR 0004), so it is never a
 visual change and never blocks the check. Teaching the server about skips is a contract change
-left for later (see Consequences).
+left for later (see Consequences). A run with no story left to submit is refused instead (see the
+2026-11-07 amendment).
 
 ## Consequences
 

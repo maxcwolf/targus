@@ -43,9 +43,10 @@ src/cloudflare/    the Worker edge: bindings, env -> deps (D1, R2), and the Work
 | `POST /api/snapshots/:id/review`      | session                  | `{ "decision": "approve" \| "deny" }`; updates the check run          |
 | `POST /api/builds/:id/approve-all`    | session                  | Approve every pending change; answers `approvedCount`, `skippedCount` |
 
-Every body and response is a zod contract from `@targus/core`. A build's `summary.status` is
-`in_progress` (no conclusion, every count 0) until its results arrive, then the fold of its
-snapshots; `counts` is how many snapshots are in each state. Both come from the tally stored on
+Every body and response is a zod contract from `@targus/core`. Results with no stories answer
+400, since an empty build would mark every baseline story removed and pass. A build's
+`summary.status` is `in_progress` (no conclusion, every count 0) until its results arrive, then
+the fold of its snapshots; `counts` is how many snapshots are in each state. Both come from the tally stored on
 the build row, so the builds list never reads snapshots. `build.checkRunId` is the `targus/ios`
 check run, or null when none was created. Only `passed` and `accepted` builds (core's
 `baselineBuildStatuses`) serve as baselines, so a build still `pending` review is never the
