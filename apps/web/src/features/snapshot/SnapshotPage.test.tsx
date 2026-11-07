@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { hash } from '../../test/fixtures.ts';
 import { apiError, apiState, server } from '../../test/msw.ts';
-import { renderApp } from '../../test/render.tsx';
+import { loadImages, renderApp } from '../../test/render.tsx';
 
 const img = (digit: string): string => `/api/images/${hash(digit)}`;
 
@@ -149,6 +149,7 @@ describe('SnapshotPage missing images', () => {
 describe('SnapshotPage review', () => {
   it('approves, then reverses to deny, updating the badges', async () => {
     await openSnapshot('/builds/build-12/snapshots/snap-changed?filter=unreviewed');
+    loadImages();
     const review = screen.getByRole('status', { name: 'Review' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
@@ -174,6 +175,7 @@ describe('SnapshotPage review', () => {
       http.post('*/api/snapshots/:id/review', () => apiError(409, 'conflict', 'Not reviewable')),
     );
     await openSnapshot('/builds/build-12/snapshots/snap-new');
+    loadImages();
 
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Not reviewable');

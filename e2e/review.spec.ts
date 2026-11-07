@@ -100,6 +100,10 @@ test('a reviewer approves a baseline, then denies and approves a changed story',
   await page.getByRole('link', { name: 'Verify changes' }).click();
   await expect(page).toHaveURL(/\/snapshots\/[^?]+\?filter=unreviewed$/);
   await expect(page.getByRole('heading', { name: /Red/ })).toBeVisible();
+  // Deny and Approve open only once every capture on screen has loaded in the browser.
+  await expect(page.getByRole('img', { name: 'Baseline' })).toHaveClass(/is-loaded/);
+  await expect(page.getByRole('img', { name: 'New' })).toHaveClass(/is-loaded/);
+  await expect(page.getByRole('button', { name: 'Approve' })).toBeEnabled();
 
   await page.getByRole('button', { name: 'Deny' }).click();
   await expect(page.getByRole('status', { name: 'Review' })).toHaveText('Denied');

@@ -6,6 +6,8 @@ import { SnapshotImage } from './SnapshotImage.tsx';
 export interface CompareSliderProps {
   readonly baselineSrc: string;
   readonly currentSrc: string;
+  /** Called with each image's URL once it has loaded. */
+  readonly onImageLoad: (src: string) => void;
 }
 
 /**
@@ -14,17 +16,22 @@ export interface CompareSliderProps {
  * image, so dragging anywhere and the arrow keys both move the split. A drag lets go of focus when
  * it ends, so the review shortcuts work straight after it.
  */
-export function CompareSlider({ baselineSrc, currentSrc }: CompareSliderProps): ReactElement {
+export function CompareSlider({
+  baselineSrc,
+  currentSrc,
+  onImageLoad,
+}: CompareSliderProps): ReactElement {
   const [position, setPosition] = useState(50);
   return (
     <div className="compare-slider">
       <div className="frame">
-        <SnapshotImage src={currentSrc} alt="New" />
+        <SnapshotImage src={currentSrc} alt="New" onLoad={onImageLoad} />
         <SnapshotImage
           src={baselineSrc}
           alt="Baseline"
           className="overlay"
           style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}
+          onLoad={onImageLoad}
         />
         <div className="split-line" style={{ left: `${position}%` }} aria-hidden="true">
           <span className="split-grip" />

@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { apiState } from '../../test/msw.ts';
-import { renderApp } from '../../test/render.tsx';
+import { loadImages, renderApp } from '../../test/render.tsx';
 
 async function openSnapshot(path: string): Promise<ReturnType<typeof renderApp>> {
   const app = renderApp(path);
@@ -131,6 +131,7 @@ describe('shortcuts with the Diff opacity slider focused', () => {
   it('still takes j/k and a/d while a slider has keyboard focus', async () => {
     await openSnapshot('/builds/build-12/snapshots/snap-changed?filter=all');
     fireEvent.click(screen.getByRole('button', { name: 'Diff' }));
+    loadImages();
     const slider = screen.getByRole('slider', { name: 'Diff opacity' });
     slider.focus();
     await waitFor(() => {
@@ -181,6 +182,7 @@ describe('shortcuts after the compare slider', () => {
 describe('auto-advance and toast', () => {
   it('after approving with a in Unreviewed, shows the next snapshot everywhere', async () => {
     const { router } = await openSnapshot('/builds/build-12/snapshots/snap-new?filter=unreviewed');
+    loadImages();
 
     press('a');
 
@@ -198,6 +200,7 @@ describe('auto-advance and toast', () => {
     // Approved, so it left the Unreviewed list.
     expect(within(sidebar).queryByRole('link', { name: 'Large' })).not.toBeInTheDocument();
     expect(reviewBadge()).toHaveTextContent('Unreviewed');
+    loadImages();
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Deny' })).toBeEnabled();
     });
@@ -213,6 +216,7 @@ describe('auto-advance and toast', () => {
 describe('auto-advance staying put', () => {
   it('stays put when no pending snapshot follows, so the decision can be reversed', async () => {
     await openSnapshot('/builds/build-12/snapshots/snap-changed?filter=unreviewed');
+    loadImages();
 
     fireEvent.click(screen.getByRole('button', { name: 'Deny' }));
     expect(await screen.findByText('Denied Button / Primary')).toBeInTheDocument();
@@ -228,6 +232,7 @@ describe('auto-advance staying put', () => {
 
   it('does not advance outside Unreviewed, and fades the toast after about 2.5 s', async () => {
     await openSnapshot('/builds/build-12/snapshots/snap-new?filter=all');
+    loadImages();
 
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
     const toast = await screen.findByText('Approved Avatar / Large');

@@ -17,6 +17,8 @@ export interface SnapshotReviewInput {
   readonly snapshots: readonly Snapshot[];
   readonly snapshot: Snapshot;
   readonly filter: SnapshotFilter;
+  /** Whether every image on screen for `snapshot` has loaded: no decision on unseen pixels. */
+  readonly imagesLoaded: boolean;
   readonly notify: (message: string) => void;
 }
 
@@ -79,6 +81,7 @@ export function useSnapshotReview({
   snapshots,
   snapshot,
   filter,
+  imagesLoaded,
   notify,
 }: SnapshotReviewInput) {
   const buildId = item.build.id;
@@ -89,7 +92,7 @@ export function useSnapshotReview({
   const index = list.findIndex((candidate) => candidate.id === snapshot.id);
   const previous = list[index - 1];
   const next = list[index + 1];
-  const canReview = isReviewable(snapshot) && item.build.status !== 'in_progress';
+  const canReview = isReviewable(snapshot) && item.build.status !== 'in_progress' && imagesLoaded;
 
   const goTo = (target: Snapshot | undefined): void => {
     if (!target) return;

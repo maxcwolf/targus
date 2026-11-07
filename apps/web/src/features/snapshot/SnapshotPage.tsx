@@ -95,6 +95,7 @@ function SnapshotDetail(props: DetailProps): ReactElement {
   const baseline = useBaseline(item.build.baselineBuildId);
   const { review, list, index, previous, next, canReview, decide } = useSnapshotReview({
     ...props,
+    imagesLoaded: viewer.imagesLoaded,
     notify: toast.show,
   });
   return (

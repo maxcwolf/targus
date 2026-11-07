@@ -21,10 +21,13 @@ export interface ImagePaneProps {
   readonly snapshot: Snapshot;
   /** Lay the pixelmatch diff over the new capture at this opacity (0..100); null for none. */
   readonly diffOpacity: number | null;
+  /** Called with each image's URL once it has loaded. */
+  readonly onImageLoad: (src: string) => void;
 }
 
 /** One capture on a white card, optionally with the diff over it, or why it is missing. */
-export function ImagePane({ kind, snapshot, diffOpacity }: ImagePaneProps): ReactElement {
+export function ImagePane(props: ImagePaneProps): ReactElement {
+  const { kind, snapshot, diffOpacity, onImageLoad } = props;
   const hash = kind === 'baseline' ? snapshot.baselineHash : snapshot.imageHash;
   if (hash === null) {
     return (
@@ -40,13 +43,14 @@ export function ImagePane({ kind, snapshot, diffOpacity }: ImagePaneProps): Reac
         className="frame"
         title={diffHash ? 'Red pixels are the changes pixelmatch found' : undefined}
       >
-        <SnapshotImage src={imageUrl(hash)} alt={titles[kind]} />
+        <SnapshotImage src={imageUrl(hash)} alt={titles[kind]} onLoad={onImageLoad} />
         {diffHash ? (
           <SnapshotImage
             src={imageUrl(diffHash)}
             alt="Diff"
             className="overlay"
             style={{ opacity: (diffOpacity ?? 100) / 100 }}
+            onLoad={onImageLoad}
           />
         ) : null}
       </div>

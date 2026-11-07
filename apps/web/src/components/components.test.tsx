@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ConfirmButton } from './ConfirmButton.tsx';
 import { CrashPanel } from './CrashPanel.tsx';
 import { formatPercent, plural } from './format.ts';
+import { SnapshotImage } from './SnapshotImage.tsx';
 
 describe('ConfirmButton', () => {
   it('needs a second click and can be cancelled', () => {
@@ -66,5 +67,30 @@ describe('CrashPanel', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong');
     fireEvent.click(screen.getByRole('button', { name: 'Reload page' }));
     expect(onReload).toHaveBeenCalledOnce();
+  });
+});
+
+describe('SnapshotImage', () => {
+  it('loads without a listener, and names an unlabelled image that fails', () => {
+    const { container } = render(<SnapshotImage src="/a.png" alt="" />);
+    const image = container.querySelector('img');
+    if (!image) throw new Error('expected an img');
+
+    fireEvent.load(image);
+    expect(image).toHaveClass('is-loaded');
+    fireEvent.error(image);
+    expect(screen.getByRole('img', { name: 'Could not load this image' })).toBeInTheDocument();
+  });
+
+  it('starts over, as a placeholder, when its src changes', () => {
+    const { container, rerender } = render(<SnapshotImage src="/a.png" alt="Thumb" />);
+    const first = container.querySelector('img');
+    if (!first) throw new Error('expected an img');
+    fireEvent.load(first);
+
+    rerender(<SnapshotImage src="/b.png" alt="Thumb" />);
+
+    expect(first).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Thumb' })).toHaveClass('is-loading');
   });
 });

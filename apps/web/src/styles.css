@@ -1243,6 +1243,27 @@ p {
 .snapshot-image {
   display: block;
 }
+/* Until a capture has loaded, its box is a neutral placeholder, never the previous picture. */
+.snapshot-image.is-loading {
+  min-width: 160px;
+  min-height: 200px;
+  background: var(--fill);
+}
+.image-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 200px;
+  min-height: 200px;
+  padding: 16px;
+  border: 1px dashed var(--negative);
+  border-radius: var(--radius);
+  background: var(--negative-tint);
+  color: var(--negative-text);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
 .zoom-fit .frame .snapshot-image {
   height: auto;
   width: auto;

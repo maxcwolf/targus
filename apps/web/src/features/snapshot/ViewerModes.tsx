@@ -15,8 +15,18 @@ function TwoUp({ snapshot, viewer }: ModeProps): ReactElement {
   const diffOpacity = viewer.diff ? viewer.opacity : null;
   return (
     <div className="two-up">
-      <ImagePane kind="baseline" snapshot={snapshot} diffOpacity={null} />
-      <ImagePane kind="current" snapshot={snapshot} diffOpacity={diffOpacity} />
+      <ImagePane
+        kind="baseline"
+        snapshot={snapshot}
+        diffOpacity={null}
+        onImageLoad={viewer.onImageLoad}
+      />
+      <ImagePane
+        kind="current"
+        snapshot={snapshot}
+        diffOpacity={diffOpacity}
+        onImageLoad={viewer.onImageLoad}
+      />
     </div>
   );
 }
@@ -28,6 +38,7 @@ function OneUp({ snapshot, viewer }: ModeProps): ReactElement {
         kind={viewer.side}
         snapshot={snapshot}
         diffOpacity={viewer.diff ? viewer.opacity : null}
+        onImageLoad={viewer.onImageLoad}
       />
     </div>
   );
@@ -45,7 +56,11 @@ function Slider({ snapshot, viewer }: ModeProps): ReactElement {
   }
   return (
     <div className="capture">
-      <CompareSlider baselineSrc={imageUrl(baselineHash)} currentSrc={imageUrl(imageHash)} />
+      <CompareSlider
+        baselineSrc={imageUrl(baselineHash)}
+        currentSrc={imageUrl(imageHash)}
+        onImageLoad={viewer.onImageLoad}
+      />
     </div>
   );
 }
