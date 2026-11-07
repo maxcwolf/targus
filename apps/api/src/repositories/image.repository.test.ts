@@ -40,12 +40,13 @@ describeImageContract('createImageRepository (local D1)', () => ({
 
 describeImageContract('in-memory images double', () => {
   const projects = createInMemoryProjects();
-  const memberships = createInMemoryMemberships();
+  const users = createInMemoryUsers();
+  const memberships = createInMemoryMemberships({ users, orgs: projects });
   const images = createInMemoryImages({ projects, memberships });
   return {
     images,
     projects,
-    users: createInMemoryUsers(),
+    users,
     memberships,
     stored: (hash) => Promise.resolve(images.records.get(hash) ?? null),
   };

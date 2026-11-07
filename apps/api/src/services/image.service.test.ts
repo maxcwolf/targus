@@ -3,27 +3,19 @@ import { describe, expect, it } from 'vitest';
 import { imageHash, newProject } from '../../test/support/fixtures.ts';
 import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
 import { signInReviewer } from '../../test/support/in-memory-auth.ts';
-import { createTestDeps } from '../../test/support/in-memory.ts';
+import { createTestDeps, type TestDeps } from '../../test/support/in-memory.ts';
 import { pngFixture } from '../../test/support/png.ts';
 import type { Project } from '../repositories/project.repository.ts';
 import { getImage, uploadImage } from './image.service.ts';
 import type { Principal, Reviewer } from './principal.ts';
 
-function projectOf(key: string): Project {
-  return {
-    id: `project-${key}`,
-    orgId: `org-${key}`,
-    repo: `org-${key}/app`,
-    name: key,
-    defaultBranch: 'main',
-    createdAt: new Date(0),
-    org: { githubOrg: `org-${key}`, installationId: null, githubAccountId: null },
-  };
+/** Test deps with two projects of different orgs: `uploader` and `otherTenant`. */
+async function setup(deps: TestDeps = createTestDeps()) {
+  const uploader = await deps.projects.create(newProject('img'));
+  const otherTenant = await deps.projects.create(newProject('elsewhere'));
+  const anyProject: Principal = { kind: 'project', project: uploader };
+  return { deps, uploader, otherTenant, anyProject };
 }
-
-const uploader = projectOf('img');
-const anyProject: Principal = { kind: 'project', project: uploader };
-const otherTenant = projectOf('elsewhere');
 
 function asReviewer(reviewer: Reviewer): Principal {
   return { kind: 'reviewer', reviewer };
@@ -31,7 +23,7 @@ function asReviewer(reviewer: Reviewer): Principal {
 
 describe('uploadImage', () => {
   it('stores a PNG under its hash and records its size and dimensions', async () => {
-    const deps = createTestDeps();
+    const { deps, uploader, anyProject } = await setup();
     const png = await pngFixture(3, 2, 10);
 
     expect(await uploadImage(deps, uploader, png.hash, png.bytes)).toEqual({
@@ -49,7 +41,7 @@ describe('uploadImage', () => {
   });
 
   it('is idempotent and touches an image it already has', async () => {
-    const deps = createTestDeps();
+    const { deps, uploader } = await setup();
     const png = await pngFixture(1, 1, 20);
     await uploadImage(deps, uploader, png.hash, png.bytes);
     deps.clock.advance(1000);
@@ -62,15 +54,16 @@ describe('uploadImage', () => {
   });
 
   it('rejects a body whose sha256 is not the path hash', async () => {
+    const { deps, uploader } = await setup();
     const png = await pngFixture(1, 1, 30);
 
-    await expect(
-      uploadImage(createTestDeps(), uploader, imageHash('a'), png.bytes),
-    ).rejects.toThrow('body sha256 does not match the path hash');
+    await expect(uploadImage(deps, uploader, imageHash('a'), png.bytes)).rejects.toThrow(
+      'body sha256 does not match the path hash',
+    );
   });
 
   it('rejects bodies that are not PNGs and malformed hashes', async () => {
-    const deps = createTestDeps();
+    const { deps, uploader } = await setup();
     const png = await pngFixture(1, 1, 40);
 
     await expect(uploadImage(deps, uploader, imageHash('a'), new Uint8Array(40))).rejects.toThrow(
@@ -84,7 +77,8 @@ describe('uploadImage', () => {
 
 describe('getImage', () => {
   it('answers not_found for an unknown hash', async () => {
-    await expect(getImage(createTestDeps(), anyProject, imageHash('f'))).rejects.toMatchObject({
+    const { deps, anyProject } = await setup();
+    await expect(getImage(deps, anyProject, imageHash('f'))).rejects.toMatchObject({
       code: 'not_found',
     });
   });
@@ -92,7 +86,7 @@ describe('getImage', () => {
 
 describe('getImage for project tokens', () => {
   it('hides an image from a project that did not upload it, exactly like a missing one', async () => {
-    const deps = createTestDeps();
+    const { deps, uploader, otherTenant, anyProject } = await setup();
     const png = await pngFixture(2, 2, 45);
     await uploadImage(deps, uploader, png.hash, png.bytes);
     const stranger: Principal = { kind: 'project', project: otherTenant };
@@ -105,7 +99,7 @@ describe('getImage for project tokens', () => {
   });
 
   it('serves it once that project has sent the same bytes itself', async () => {
-    const deps = createTestDeps();
+    const { deps, uploader, otherTenant } = await setup();
     const png = await pngFixture(2, 2, 46);
     await uploadImage(deps, uploader, png.hash, png.bytes);
 
@@ -119,7 +113,7 @@ describe('getImage for project tokens', () => {
   });
 
   it('does not count a rejected upload', async () => {
-    const deps = createTestDeps();
+    const { deps, uploader, otherTenant } = await setup();
     const png = await pngFixture(2, 2, 47);
     await uploadImage(deps, uploader, png.hash, png.bytes);
     const forged = await pngFixture(2, 2, 48);
@@ -138,8 +132,7 @@ describe('getImage for reviewers', () => {
     const theirs = await deps.projects.create(newProject('img-theirs'));
     const png = await pngFixture(2, 2, 50);
     const other = await pngFixture(2, 2, 60);
-    // `uploader` has no project row, like a project that no longer exists.
-    for (const project of [uploader, theirs, mine]) {
+    for (const project of [theirs, mine]) {
       await uploadImage(deps, project, png.hash, png.bytes);
     }
     await uploadImage(deps, theirs, other.hash, other.bytes);

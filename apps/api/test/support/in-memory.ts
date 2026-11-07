@@ -26,7 +26,7 @@ import {
   createInMemoryUsers,
   type FakeOAuth,
 } from './in-memory-auth.ts';
-import { compareText, uniqueViolation } from './d1-semantics.ts';
+import { compareText, foreignKeyViolation, uniqueViolation } from './d1-semantics.ts';
 import { createInMemoryBuilds, type InMemoryBuilds } from './in-memory-builds.ts';
 import { createInMemoryImages, type InMemoryImages } from './in-memory-images.ts';
 import { createRecordingLog, type RecordingLog } from './logs.ts';
@@ -85,7 +85,14 @@ function setAccountId(
   }
 }
 
-export function createInMemoryProjects(): ProjectRepository & { readonly all: Project[] } {
+/** The projects double, which also keeps the orgs its projects create. */
+export interface InMemoryProjects extends ProjectRepository {
+  readonly all: Project[];
+  /** Whether an org row with this id exists, for the doubles whose rows name an org. */
+  orgExists(orgId: string): boolean;
+}
+
+export function createInMemoryProjects(): InMemoryProjects {
   const all: Project[] = [];
   const orgs = new Map<string, OrgRow>();
   const tokenHashes = new Map<string, string>();
@@ -118,6 +125,7 @@ export function createInMemoryProjects(): ProjectRepository & { readonly all: Pr
       tokenHashes.set(input.tokenHash, project.id);
       return Promise.resolve(project);
     },
+    orgExists: (orgId) => [...orgs.values()].some((org) => org.orgId === orgId),
     setOrgAccountId(...update) {
       setAccountId(orgs, all, update);
       return Promise.resolve();
@@ -142,8 +150,13 @@ const samePair =
     approval.fromHash === fromHash &&
     approval.toHash === toHash;
 
-/** `all` holds the approvals in insertion order; `listForProject` orders them as D1 does. */
-export function createInMemoryApprovals(): ApprovalRepository & { readonly all: Approval[] } {
+/**
+ * `all` holds the approvals in insertion order; `listForProject` orders them as D1 does. An
+ * approval names a project of `projects`, as D1's foreign key on project_id requires.
+ */
+export function createInMemoryApprovals(
+  projects: Pick<ProjectRepository, 'findById'>,
+): ApprovalRepository & { readonly all: Approval[] } {
   const all: Approval[] = [];
   const ids = new Map<Approval, string>();
   const oldestFirst = (a: Approval, b: Approval) =>
@@ -152,18 +165,19 @@ export function createInMemoryApprovals(): ApprovalRepository & { readonly all: 
     all,
     listForProject: (projectId) =>
       Promise.resolve(all.filter((a) => a.projectId === projectId).sort(oldestFirst)),
-    create(id, input) {
+    async create(id, input) {
+      // The foreign key first: ON CONFLICT DO NOTHING does not cover it.
+      if ((await projects.findById(input.projectId)) === null) {
+        return foreignKeyViolation('approvals.project_id');
+      }
       // ON CONFLICT DO NOTHING with no target: the primary key and both identity indexes (a null
       // fromHash included) each make it a no-op. D1 stores approvedAt as epoch milliseconds.
       const approval = { ...input, approvedAt: new Date(input.approvedAt).toISOString() };
       const { projectId, storyId, variant, fromHash, toHash } = approval;
       const taken = [...ids.values()].includes(id);
-      if (taken || all.some(samePair(projectId, storyId, variant, fromHash, toHash))) {
-        return Promise.resolve();
-      }
+      if (taken || all.some(samePair(projectId, storyId, variant, fromHash, toHash))) return;
       all.push(approval);
       ids.set(approval, id);
-      return Promise.resolve();
     },
     delete(...pair) {
       const keep = all.filter((approval) => !samePair(...pair)(approval));
@@ -188,7 +202,7 @@ export const testConfig: ApiConfig = {
 
 export interface TestDeps extends ServiceDeps {
   readonly clock: FakeClock;
-  readonly projects: ReturnType<typeof createInMemoryProjects>;
+  readonly projects: InMemoryProjects;
   readonly builds: InMemoryBuilds;
   readonly approvals: ReturnType<typeof createInMemoryApprovals>;
   readonly images: InMemoryImages;
@@ -200,23 +214,29 @@ export interface TestDeps extends ServiceDeps {
   readonly log: RecordingLog;
 }
 
-export function createTestDeps(overrides: Partial<ServiceDeps> = {}): TestDeps {
+/** What a test may replace; a replaced projects double is the parent of the other doubles. */
+export type TestOverrides = Partial<Omit<ServiceDeps, 'projects'>> & {
+  readonly projects?: InMemoryProjects;
+};
+
+/**
+ * Service deps of in-memory doubles that check their foreign keys against each other, as D1
+ * does: a build, approval or upload needs its project, a cached membership its user and org.
+ */
+export function createTestDeps(overrides: TestOverrides = {}): TestDeps {
   const users = createInMemoryUsers();
-  const projects = createInMemoryProjects();
-  const memberships = createInMemoryMemberships();
+  const projects = overrides.projects ?? createInMemoryProjects();
+  const memberships = overrides.memberships ?? createInMemoryMemberships({ users, orgs: projects });
   // The images double answers `uploaderOrgs` from the same projects and membership cache.
-  const images = createInMemoryImages({
-    projects: overrides.projects ?? projects,
-    memberships: overrides.memberships ?? memberships,
-  });
+  const images = createInMemoryImages({ projects, memberships });
   return {
     config: testConfig,
     clock: createFakeClock(),
     ids: createFakeIdGenerator(),
     tokens: webCryptoTokens,
     projects,
-    builds: createInMemoryBuilds(),
-    approvals: createInMemoryApprovals(),
+    builds: createInMemoryBuilds(projects),
+    approvals: createInMemoryApprovals(projects),
     images,
     imageStore: images,
     users,

@@ -213,7 +213,8 @@ describe('submitResults image ownership', () => {
       { hash: imageHash('9'), sizeBytes: 1, width: 1, height: 1 },
       deps.clock.now(),
     );
-    await deps.images.recordUpload('project-other', imageHash('9'), deps.clock.now());
+    const other = await deps.projects.create(newProject('other'));
+    await deps.images.recordUpload(other.id, imageHash('9'), deps.clock.now());
     await deps.images.recordUpload(project.id, imageHash('1'), deps.clock.now());
 
     for (const result of [

@@ -9,7 +9,7 @@ import type { NewSession, SessionRepository } from '../../src/repositories/sessi
 import type { UserRepository } from '../../src/repositories/user.repository.ts';
 import type { ServiceDeps } from '../../src/services/deps.ts';
 import type { Reviewer } from '../../src/services/principal.ts';
-import { uniqueViolation } from './d1-semantics.ts';
+import { foreignKeyViolation, uniqueViolation } from './d1-semantics.ts';
 
 // In-memory doubles of the login side: users, sessions, the membership cache and GitHub OAuth.
 
@@ -41,7 +41,7 @@ export function createInMemorySessions(
       // The foreign key on user_id, as D1 enforces it; then the primary key, with no await
       // between the check and the write.
       if ((await users.findById(session.userId)) === null) {
-        throw new Error('FOREIGN KEY constraint failed: sessions.user_id');
+        return foreignKeyViolation('sessions.user_id');
       }
       if (all.has(session.idHash)) return uniqueViolation('sessions.id_hash');
       all.set(session.idHash, session);
@@ -64,7 +64,13 @@ export function createInMemorySessions(
   };
 }
 
-export function createInMemoryMemberships(): MembershipRepository & {
+/** The parents a cached membership names: a user, and an org, which the projects double keeps. */
+export interface MembershipParents {
+  readonly users: Pick<UserRepository, 'findById'>;
+  readonly orgs: { readonly orgExists: (orgId: string) => boolean };
+}
+
+export function createInMemoryMemberships(parents: MembershipParents): MembershipRepository & {
   readonly all: Map<string, CachedMembership>;
 } {
   const all = new Map<string, CachedMembership>();
@@ -72,9 +78,13 @@ export function createInMemoryMemberships(): MembershipRepository & {
   return {
     all,
     get: (userId, orgId) => Promise.resolve(all.get(key(userId, orgId)) ?? null),
-    set(userId, orgId, member, checkedAt) {
+    // The foreign keys on user_id and org_id, as D1 enforces them; then the upsert.
+    async set(userId, orgId, member, checkedAt) {
+      if ((await parents.users.findById(userId)) === null) {
+        return foreignKeyViolation('org_memberships.user_id');
+      }
+      if (!parents.orgs.orgExists(orgId)) return foreignKeyViolation('org_memberships.org_id');
       all.set(key(userId, orgId), { member, checkedAt });
-      return Promise.resolve();
     },
   };
 }

@@ -10,11 +10,13 @@ import {
   decodeBuildCursor,
   toBuildPage,
 } from '../../src/repositories/build-page.ts';
-import { compareText, uniqueViolation } from './d1-semantics.ts';
+import type { ProjectRepository } from '../../src/repositories/project.repository.ts';
+import { compareText, foreignKeyViolation, uniqueViolation } from './d1-semantics.ts';
 
 // The in-memory double of the builds repository, for service unit tests. It and the D1 adapter
 // run the same contract suites (test/support/contracts/build*.contract.ts). Each write checks
-// its guard and applies with no await in between, as one D1 transaction would.
+// its guard and applies with no await in between, as one D1 transaction would. A build names a
+// project of the projects double it is given, as D1's foreign key on project_id requires.
 
 export interface InMemoryBuilds extends ApiBuildRepository {
   readonly builds: BuildRecord[];
@@ -119,25 +121,34 @@ function snapshotReviews(
 }
 
 /**
- * `create` of the builds double. As the D1 upsert, a key the project already used returns its
- * build, unchanged, before the id is checked (`builds_project_idempotency_key_unique`).
+ * `create` of the builds double. The foreign key on project_id first, as D1 enforces it; then,
+ * as the D1 upsert, a key the project already used returns its build, unchanged, before the id
+ * is checked (`builds_project_idempotency_key_unique`). No await between the checks and the write.
  */
-function createBuild(builds: BuildRecord[]): ApiBuildRepository['create'] {
+function createBuild(
+  builds: BuildRecord[],
+  projects: Pick<ProjectRepository, 'findById'>,
+): ApiBuildRepository['create'] {
   const keys = new Map<string, string>();
-  return ({ idempotencyKey, ...build }, tally = emptyTally) => {
+  return async ({ idempotencyKey, ...build }, tally = emptyTally) => {
+    if ((await projects.findById(build.projectId)) === null) {
+      return foreignKeyViolation('builds.project_id');
+    }
     const key = idempotencyKey == null ? null : `${build.projectId}\u0000${idempotencyKey}`;
     const replayed = key === null ? undefined : builds.find((b) => b.id === keys.get(key));
-    if (replayed !== undefined) return Promise.resolve(replayed);
+    if (replayed !== undefined) return replayed;
     if (builds.some((other) => other.id === build.id)) return uniqueViolation('builds.id');
     const number = builds.filter((other) => other.projectId === build.projectId).length + 1;
     const created = { ...build, number, tally };
     builds.push(created);
     if (key !== null) keys.set(key, build.id);
-    return Promise.resolve(created);
+    return created;
   };
 }
 
-export function createInMemoryBuilds(): InMemoryBuilds {
+export function createInMemoryBuilds(
+  projects: Pick<ProjectRepository, 'findById'>,
+): InMemoryBuilds {
   const builds: BuildRecord[] = [];
   const snapshots = new Map<string, SnapshotRecord[]>();
   const versions = new Map<string, number>();
@@ -152,7 +163,7 @@ export function createInMemoryBuilds(): InMemoryBuilds {
     builds,
     snapshots,
     versions,
-    create: createBuild(builds),
+    create: createBuild(builds, projects),
     findById: (projectId, buildId) => find((b) => b.projectId === projectId && b.id === buildId),
     findAnyById: (buildId) => find((b) => b.id === buildId),
     ...buildQueries(builds),

@@ -1,6 +1,7 @@
 import { baselineResolutionCases, baselineShaOrder, emptyTally } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
+import { isForeignKeyViolation } from '../d1-semantics.ts';
 import { newBuild, sha } from '../fixtures.ts';
 import { completedAt, openBuild, type BuildHarness } from './build-harness.ts';
 
@@ -43,6 +44,17 @@ async function rejectsTakenId(harness: BuildHarness): Promise<void> {
 
   expect(await repository.findById(projectId, buildId)).toEqual(stored);
   expect((await repository.create(newBuild('bc-taken-2', projectId))).number).toBe(2);
+}
+
+async function rejectsMissingProject({ repository, seedProject }: BuildHarness): Promise<void> {
+  await expect(repository.create(newBuild('bc-orphan', 'project-bc-none'))).rejects.toSatisfy(
+    isForeignKeyViolation,
+  );
+
+  // Nothing was stored: the id is free for a build of a real project, which is its first.
+  expect(await repository.findAnyById('bc-orphan')).toBeNull();
+  const projectId = await seedProject('bc-orphan');
+  expect((await repository.create(newBuild('bc-orphan', projectId))).number).toBe(1);
 }
 
 async function oneBuildPerKey({ repository, seedProject }: BuildHarness): Promise<void> {
@@ -162,6 +174,8 @@ export function describeBuildContract(name: string, harness: Harness): void {
       numbersPerProject(harness()));
     it('rejects a build whose id is taken, keeping the first and its number', () =>
       rejectsTakenId(harness()));
+    it('rejects a build of a project that does not exist, storing nothing', () =>
+      rejectsMissingProject(harness()));
     it('opens one build per idempotency key and project, returning it to every replay', () =>
       oneBuildPerKey(harness()));
     it('stores the completion, its tally and the check run id', () =>

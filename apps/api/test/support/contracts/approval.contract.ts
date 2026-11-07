@@ -2,6 +2,7 @@ import type { Approval } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import type { ApprovalRepository } from '../../../src/repositories/approval.repository.ts';
+import { isForeignKeyViolation } from '../d1-semantics.ts';
 import { imageHash } from '../fixtures.ts';
 
 /** An approvals repository, D1's or the double's, and how to make a project to approve in. */
@@ -84,6 +85,18 @@ async function ignoresTakenId({ repository, seedProject }: ApprovalHarness): Pro
   expect(await repository.listForProject(projectId)).toEqual([first]);
 }
 
+async function rejectsMissingProject({ repository, seedProject }: ApprovalHarness): Promise<void> {
+  const orphan = approvalOf('project-ac-none');
+
+  await expect(repository.create('ac-orphan', orphan)).rejects.toSatisfy(isForeignKeyViolation);
+
+  // Nothing was stored: the id is free for an approval in a real project.
+  expect(await repository.listForProject('project-ac-none')).toEqual([]);
+  const projectId = await seedProject('ac-orphan');
+  await repository.create('ac-orphan', approvalOf(projectId));
+  expect(await repository.listForProject(projectId)).toEqual([approvalOf(projectId)]);
+}
+
 async function deletesThePair({ repository, seedProject }: ApprovalHarness): Promise<void> {
   const projectId = await seedProject('ac-del');
   const changed = approvalOf(projectId);
@@ -110,6 +123,8 @@ export function describeApprovalContract(name: string, harness: Harness): void {
     it('keeps the first approval of a hash pair, a null fromHash included', () =>
       keepsFirstOfPair(harness()));
     it('ignores an approval whose id is taken', () => ignoresTakenId(harness()));
+    it('rejects an approval in a project that does not exist, storing nothing', () =>
+      rejectsMissingProject(harness()));
     it('deletes exactly the given hash pair, after which it may be approved again', () =>
       deletesThePair(harness()));
   });

@@ -4,6 +4,7 @@ import type { ImageRecord, ImageRepository } from '../../../src/repositories/ima
 import type { MembershipRepository } from '../../../src/repositories/membership.repository.ts';
 import type { ProjectRepository } from '../../../src/repositories/project.repository.ts';
 import type { UserRepository } from '../../../src/repositories/user.repository.ts';
+import { isForeignKeyViolation } from '../d1-semantics.ts';
 import { newProject } from '../fixtures.ts';
 
 /**
@@ -76,6 +77,17 @@ async function remembersUploads({ images, projects }: ImageHarness): Promise<voi
   expect(await images.notUploadedBy(a.id, [])).toEqual([]);
   // An upload says nothing about the shared metadata table.
   expect(await images.missing([one])).toEqual([one]);
+}
+
+async function rejectsUploadOfMissingProject({ images }: ImageHarness): Promise<void> {
+  const hash = tagged('ic-up-orphan');
+
+  await expect(images.recordUpload('project-ic-none', hash, at)).rejects.toSatisfy(
+    isForeignKeyViolation,
+  );
+
+  expect(await images.notUploadedBy('project-ic-none', [hash])).toEqual([hash]);
+  expect(await images.uploaderOrgs(hash, 'ic-nobody')).toEqual([]);
 }
 
 async function uploadsBeyondParameterLimit({ images, projects }: ImageHarness): Promise<void> {
@@ -166,6 +178,8 @@ export function describeImageContract(name: string, harness: Harness): void {
   describe(`${name} image uploads`, () => {
     it('remembers uploads per project, once, and answers in input order', () =>
       remembersUploads(harness()));
+    it('rejects an upload by a project that does not exist, storing nothing', () =>
+      rejectsUploadOfMissingProject(harness()));
     it('answers for more hashes than D1 binds parameters', () =>
       uploadsBeyondParameterLimit(harness()));
     it('lists each org that uploaded a hash once, with the user cached membership', () =>

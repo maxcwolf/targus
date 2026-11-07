@@ -7,6 +7,7 @@ import type {
 } from '../../src/repositories/image.repository.ts';
 import type { MembershipRepository } from '../../src/repositories/membership.repository.ts';
 import type { ProjectRepository } from '../../src/repositories/project.repository.ts';
+import { foreignKeyViolation } from './d1-semantics.ts';
 
 export interface InMemoryImages extends ImageRepository, ImageStore {
   readonly records: Map<string, ImageRecord & { lastReferencedAt: Date }>;
@@ -15,7 +16,10 @@ export interface InMemoryImages extends ImageRepository, ImageStore {
   readonly uploads: Map<string, Set<string>>;
 }
 
-/** What `uploaderOrgs` joins: the projects and membership doubles of the same test deps. */
+/**
+ * What `uploaderOrgs` joins, and what `recordUpload` checks its project against (the foreign
+ * key on project_id): the projects and membership doubles of the same test deps.
+ */
 export interface UploaderSources {
   readonly projects: Pick<ProjectRepository, 'findById'>;
   readonly memberships: Pick<MembershipRepository, 'get'>;
@@ -68,10 +72,11 @@ export function createInMemoryImages(sources: UploaderSources): InMemoryImages {
       return Promise.resolve();
     },
     get: (hash) => Promise.resolve(bytes.get(hash)?.slice() ?? null),
-    // Unlike D1, no foreign key on the project: service tests upload as made-up projects.
-    recordUpload(projectId, hash) {
+    async recordUpload(projectId, hash) {
+      if ((await sources.projects.findById(projectId)) === null) {
+        return foreignKeyViolation('project_images.project_id');
+      }
       uploads.set(projectId, (uploads.get(projectId) ?? new Set()).add(hash));
-      return Promise.resolve();
     },
     notUploadedBy: (projectId, hashes) =>
       Promise.resolve(hashes.filter((hash) => uploads.get(projectId)?.has(hash) !== true)),

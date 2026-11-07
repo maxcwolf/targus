@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { SessionRepository } from '../../../src/repositories/session.repository.ts';
 import type { UserRepository } from '../../../src/repositories/user.repository.ts';
+import { isForeignKeyViolation } from '../d1-semantics.ts';
 
 /** A sessions repository, D1's or the double's, over the users repository it joins. */
 export interface SessionHarness {
@@ -57,7 +58,7 @@ async function rejectsTakenHash({ repository, users }: SessionHarness): Promise<
 async function rejectsUnknownUser({ repository, users }: SessionHarness): Promise<void> {
   const session = { idHash: 'sc-orphan', userId: 'sc-nobody', createdAt: at, expiresAt: later(5) };
 
-  await expect(repository.create(session)).rejects.toThrow();
+  await expect(repository.create(session)).rejects.toSatisfy(isForeignKeyViolation);
 
   // Nothing was stored under the id hash: it is free for a real user's session.
   const user = await signUp(users, 'sc-user-5', 9205);

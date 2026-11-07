@@ -9,6 +9,7 @@ import {
 import { createProjectRepository } from '../../../src/repositories/project.repository.ts';
 import { newBuild, newProject, snapshotRecord } from '../fixtures.ts';
 import { createInMemoryBuilds } from '../in-memory-builds.ts';
+import { createInMemoryProjects } from '../in-memory.ts';
 
 /**
  * A builds repository, D1's or the double's, and how to make a project its builds may belong
@@ -30,11 +31,14 @@ export function d1BuildHarness(database: D1Database): BuildHarness {
   };
 }
 
-/** A fresh in-memory double, which checks no foreign key. */
+/** A fresh in-memory double over a projects double, which checks the same foreign key. */
 export function inMemoryBuildHarness(): BuildHarness {
+  const projects = createInMemoryProjects();
   return {
-    repository: createInMemoryBuilds(),
-    seedProject: (key) => Promise.resolve(`project-${key}`),
+    repository: createInMemoryBuilds(projects),
+    async seedProject(key) {
+      return (await projects.create(newProject(key))).id;
+    },
   };
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { MembershipRepository } from '../../../src/repositories/membership.repository.ts';
+import { isForeignKeyViolation } from '../d1-semantics.ts';
 
 /** A membership cache, D1's or the double's, and how to make the user and org it caches. */
 export interface MembershipHarness {
@@ -42,10 +43,24 @@ async function onePerUserAndOrg({ repository, seed }: MembershipHarness): Promis
   expect(await repository.get('mc-user-3', 'mc-org-2')).toBeNull();
 }
 
+async function rejectsMissingParent({ repository, seed }: MembershipHarness): Promise<void> {
+  await seed('mc-user-4', 'mc-org-4');
+
+  for (const [userId, orgId] of [
+    ['mc-user-none', 'mc-org-4'],
+    ['mc-user-4', 'mc-org-none'],
+  ] as const) {
+    await expect(repository.set(userId, orgId, true, at)).rejects.toSatisfy(isForeignKeyViolation);
+    expect(await repository.get(userId, orgId)).toBeNull();
+  }
+}
+
 /** The contract of `MembershipRepository`, for the D1 adapter and the in-memory double. */
 export function describeMembershipContract(name: string, harness: Harness): void {
   describe(`${name} membership cache`, () => {
     it('caches one answer per user and org, replacing it on set', () => replacesOnSet(harness()));
     it('keeps the answers of different users and orgs apart', () => onePerUserAndOrg(harness()));
+    it('rejects an answer for a user or an org that does not exist, storing nothing', () =>
+      rejectsMissingParent(harness()));
   });
 }

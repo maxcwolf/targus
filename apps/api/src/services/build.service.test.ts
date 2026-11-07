@@ -40,7 +40,8 @@ describe('createBuild', () => {
       await deps.images.record({ hash, sizeBytes: 1, width: 1, height: 1 }, deps.clock.now());
     }
     await deps.images.recordUpload(project.id, imageHash('1'), deps.clock.now());
-    await deps.images.recordUpload('project-other', imageHash('2'), deps.clock.now());
+    const other = await deps.projects.create(newProject('other'));
+    await deps.images.recordUpload(other.id, imageHash('2'), deps.clock.now());
     deps.clock.advance(5000);
 
     const response = await createBuild(

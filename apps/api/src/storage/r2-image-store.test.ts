@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 
 import { describeImageStoreContract } from '../../test/support/contracts/image-store.contract.ts';
 import { imageHash } from '../../test/support/fixtures.ts';
-import { createInMemoryMemberships } from '../../test/support/in-memory-auth.ts';
+import {
+  createInMemoryMemberships,
+  createInMemoryUsers,
+} from '../../test/support/in-memory-auth.ts';
 import { createInMemoryImages } from '../../test/support/in-memory-images.ts';
 import { createInMemoryProjects } from '../../test/support/in-memory.ts';
 import { createImageRepository } from '../repositories/image.repository.ts';
@@ -20,10 +23,9 @@ describeImageStoreContract('R2ImageStore (local R2 + D1)', () => {
 });
 
 describeImageStoreContract('in-memory images double', () => {
-  const images = createInMemoryImages({
-    projects: createInMemoryProjects(),
-    memberships: createInMemoryMemberships(),
-  });
+  const projects = createInMemoryProjects();
+  const memberships = createInMemoryMemberships({ users: createInMemoryUsers(), orgs: projects });
+  const images = createInMemoryImages({ projects, memberships });
   return {
     store: images,
     record: (hash) => images.record({ hash, sizeBytes: 1, width: 1, height: 1 }, at),

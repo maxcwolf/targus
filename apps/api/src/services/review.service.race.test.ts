@@ -11,7 +11,12 @@ import {
 } from '../../test/support/fixtures.ts';
 import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
 import { signInReviewer } from '../../test/support/in-memory-auth.ts';
-import { createInMemoryBuilds, createTestDeps } from '../../test/support/in-memory.ts';
+import {
+  createInMemoryBuilds,
+  createInMemoryProjects,
+  createTestDeps,
+  type InMemoryBuilds,
+} from '../../test/support/in-memory.ts';
 import { createBuild } from './build.service.ts';
 import { approveAll, reviewSnapshot } from './review.service.ts';
 
@@ -19,12 +24,18 @@ import { approveAll, reviewSnapshot } from './review.service.ts';
 // from the snapshots it read; that tally must never be written once another review has
 // changed the snapshots since.
 
-/** A pending build with a changed and a new story, and a hook run right after a review reads. */
-async function setup(builds: ApiBuildRepository = createInMemoryBuilds()) {
+/**
+ * A pending build with a changed and a new story, and a hook run right after a review reads.
+ * `wrap` may replace methods of the builds double.
+ */
+async function setup(wrap: (builds: InMemoryBuilds) => ApiBuildRepository = (builds) => builds) {
   let afterRead: (() => Promise<unknown>) | null = null;
   const github = createRecordingGitHub(['octocat', 'hubot']);
+  const projects = createInMemoryProjects();
+  const builds = wrap(createInMemoryBuilds(projects));
   const deps = createTestDeps({
     github,
+    projects,
     builds: {
       ...builds,
       async readForReview(buildId) {
@@ -91,9 +102,8 @@ describe('concurrent reviews of one build', () => {
   });
 
   it('gives up with a conflict, recording no approval, when every commit loses', async () => {
-    const builds = createInMemoryBuilds();
     const commitReview = vi.fn<ApiBuildRepository['commitReview']>().mockResolvedValue(false);
-    const { deps, github, octocat } = await setup({ ...builds, commitReview });
+    const { deps, github, octocat } = await setup((builds) => ({ ...builds, commitReview }));
 
     await expect(reviewSnapshot(deps, octocat, 'changed', 'approve')).rejects.toMatchObject({
       code: 'conflict',

@@ -6,7 +6,9 @@ import { createBuildRequest, newProject, sha, storyResult } from '../../test/sup
 import { markUploaded } from '../../test/support/in-memory-images.ts';
 import {
   createInMemoryBuilds,
+  createInMemoryProjects,
   createTestDeps,
+  type InMemoryBuilds,
   type TestDeps,
 } from '../../test/support/in-memory.ts';
 import { createBuild } from './build.service.ts';
@@ -19,8 +21,16 @@ const request: SubmitResultsRequest = {
   results: [storyResult('fresh'), storyResult('other')],
 };
 
-async function setup(overrides: { builds?: ApiBuildRepository; github?: GitHubClient } = {}) {
-  const deps = createTestDeps(overrides);
+/** `wrap` may replace methods of the builds double. */
+async function setup(
+  wrap: (builds: InMemoryBuilds) => ApiBuildRepository = (builds) => builds,
+  github?: GitHubClient,
+) {
+  const projects = createInMemoryProjects();
+  const builds = wrap(createInMemoryBuilds(projects));
+  const deps = createTestDeps(
+    github === undefined ? { projects, builds } : { projects, builds, github },
+  );
   const project = await deps.projects.create(newProject('retry', { installationId: 7 }));
   const { build } = await createBuild(deps, project, createBuildRequest(sha('a')));
   await markUploaded(deps.images, project.id, request.results);
@@ -60,12 +70,13 @@ describe('submitResults twice', () => {
 
 describe('submitResults after a failure', () => {
   it('leaves no snapshots on an open build when the write fails, so the retry succeeds', async () => {
-    const builds = createInMemoryBuilds();
-    const completeWithResults = vi
-      .fn<ApiBuildRepository['completeWithResults']>()
-      .mockRejectedValueOnce(new Error('D1 is unavailable'))
-      .mockImplementation((...args) => builds.completeWithResults(...args));
-    const { deps, project, buildId } = await setup({ builds: { ...builds, completeWithResults } });
+    const { deps, project, buildId } = await setup((builds) => {
+      const completeWithResults = vi
+        .fn<ApiBuildRepository['completeWithResults']>()
+        .mockRejectedValueOnce(new Error('D1 is unavailable'))
+        .mockImplementation((...args) => builds.completeWithResults(...args));
+      return { ...builds, completeWithResults };
+    });
 
     await expect(submitResults(deps, project, buildId, request)).rejects.toThrow('D1');
     expect(deps.builds.snapshots.get(buildId)).toBeUndefined();
@@ -83,12 +94,11 @@ describe('submitResults after a failure', () => {
       isOrgMember: vi.fn(),
       installationAccountId: vi.fn(),
     };
-    const builds = createInMemoryBuilds();
     const setCheckRunId = vi.fn().mockRejectedValue(new Error('D1 is unavailable'));
-    const { deps, project, buildId } = await setup({
+    const { deps, project, buildId } = await setup(
+      (builds) => ({ ...builds, setCheckRunId }),
       github,
-      builds: { ...builds, setCheckRunId },
-    });
+    );
 
     const response = await submitResults(deps, project, buildId, request);
 
