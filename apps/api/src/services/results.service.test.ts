@@ -39,15 +39,19 @@ async function openBuild(
   return (await createBuild(deps, project, request)).build.id;
 }
 
-/** `submitResults` once the project has uploaded every image the results name. */
+/**
+ * `submitResults` once the project has uploaded every image the results name, diffed with the
+ * server's threshold (ADR 0028).
+ */
 async function submit(
   deps: TestDeps,
   project: Project,
   buildId: string,
-  request: SubmitResultsRequest,
+  request: Omit<SubmitResultsRequest, 'threshold'>,
 ) {
   await markUploaded(deps.images, project.id, request.results);
-  return submitResults(deps, project, buildId, request);
+  const threshold = deps.config.diffThreshold;
+  return submitResults(deps, project, buildId, { ...request, threshold });
 }
 
 describe('submitResults', () => {
@@ -224,7 +228,11 @@ describe('submitResults image ownership', () => {
       storyResult('diff', { imageHash: imageHash('1'), diffHash: imageHash('9'), diffRatio: 0.5 }),
     ]) {
       await expect(
-        submitResults(deps, project, buildId, { durationMs: 1, results: [result] }),
+        submitResults(deps, project, buildId, {
+          durationMs: 1,
+          threshold: 0.001,
+          results: [result],
+        }),
       ).rejects.toThrow(`image ${imageHash('9')} was not uploaded by this project`);
     }
     expect(deps.builds.snapshots.get(buildId)).toBeUndefined();
@@ -301,7 +309,10 @@ describe('submitResults without a check run', () => {
     const { deps, project } = await setup(github, 7);
     const buildId = await openBuild(deps, project, sha('a'));
 
-    const response = await submit(deps, project, buildId, { durationMs: 1, results: [] });
+    const response = await submit(deps, project, buildId, {
+      durationMs: 1,
+      results: [],
+    });
 
     expect(response).toMatchObject({
       checkRun: null,

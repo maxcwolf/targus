@@ -1,4 +1,5 @@
 import {
+  compareSnapshot,
   createFakeClock,
   createFakeIdGenerator,
   diffImages,
@@ -66,7 +67,6 @@ function input(
     api,
     clock: createFakeClock(),
     ids: createFakeIdGenerator('run'),
-    threshold: 0.001,
     compareImages: compareWithCore,
     hash: sha256Hex,
     isBlank: isBlankPng,
@@ -74,8 +74,8 @@ function input(
   };
 }
 
-async function resultsFor(api: FakeTargusApi, stories: CaptureResult[], threshold = 0.001) {
-  const output = await runBuild(input(api, stories, { threshold }));
+async function resultsFor(api: FakeTargusApi, stories: CaptureResult[]) {
+  const output = await runBuild(input(api, stories));
   return { output, byId: new Map(output.results.map((result) => [result.storyId, result])) };
 }
 
@@ -148,13 +148,34 @@ describe('runBuild against a baseline', () => {
     expect(api.images.get(diffHash)).toEqual(diffPng);
   });
 
-  it('marks a diff at or below the threshold unchanged and keeps no diff image', async () => {
-    const api = createFakeTargusApi({ baselines: { a: whitePng } });
+  it("diffs with the server's threshold and submits it back", async () => {
+    const api = createFakeTargusApi({ baselines: { a: whitePng }, threshold: 0.05 });
 
-    const { output, byId } = await resultsFor(api, [captured('a', onePixelOff)], 0.05);
+    const { output, byId } = await resultsFor(api, [captured('a', onePixelOff)]);
 
     expect(byId.get('a')).toMatchObject({ state: 'unchanged', diffRatio: 0.01, diffHash: null });
     expect(output.uploaded).toEqual([sha256Hex(onePixelOff)]);
+    expect(api.callsOf('submitResults')[0]?.request.threshold).toBe(0.05);
+  });
+
+  it('agrees with the server on a story at exactly the threshold', async () => {
+    const api = createFakeTargusApi({ baselines: { a: whitePng }, threshold: 0.01 });
+
+    const { byId } = await resultsFor(api, [captured('a', onePixelOff)]);
+
+    const result = byId.get('a');
+    const submitted = api.callsOf('submitResults')[0]?.request;
+    if (result === undefined || submitted === undefined) throw new Error('expected a result');
+    // What results.service.ts runs on the submitted result, with the submitted threshold.
+    const server = compareSnapshot({
+      current: { imageHash: sha256Hex(onePixelOff), unstable: false, error: null },
+      baseline: { imageHash: sha256Hex(whitePng) },
+      diffRatio: result.diffRatio,
+      threshold: submitted.threshold,
+      approvals: [],
+    });
+    expect(result).toMatchObject({ state: 'unchanged', diffRatio: 0.01, diffHash: null });
+    expect(server.state).toBe(result.state);
   });
 
   it('marks an unstable story unstable but still records its diff', async () => {

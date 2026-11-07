@@ -180,6 +180,22 @@ async function requireUploaded(
 }
 
 /**
+ * Results measured with another threshold than the server's would let a story be stored as
+ * changed with no diff image, so they are refused. Only a server whose threshold changed while
+ * the build was open, or a client that ignored `POST /api/builds`, gets here (ADR 0028).
+ */
+function requireSameThreshold(deps: ResultsDeps, request: SubmitResultsRequest): void {
+  const server = deps.config.diffThreshold;
+  if (request.threshold !== server) {
+    throw new TargusError(
+      'conflict',
+      `the results were diffed with threshold ${request.threshold}, but the server classifies ` +
+        `with ${server}: run \`targus run\` again`,
+    );
+  }
+}
+
+/**
  * `POST /api/builds/:id/results`: classify every story against the baseline and the project's
  * approvals, store the snapshots and the folded build status in one write, then create the
  * check run (once; when that fails the response says so and the next review creates it). The write applies only while the build is `in_progress`, so a retry or a racing
@@ -194,6 +210,7 @@ export async function submitResults(
   const build = await requireBuild(deps, project, buildId);
   const alreadyDone = () => new TargusError('conflict', `build ${buildId} already has results`);
   if (build.status !== 'in_progress') throw alreadyDone();
+  requireSameThreshold(deps, request);
   await requireUploaded(deps, project, request.results);
   const records = classify(
     deps,

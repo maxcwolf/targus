@@ -38,7 +38,6 @@ export interface RunCommandOptions extends CaptureFlags {
   readonly pr?: number;
   /** Commit the build is for, instead of `git rev-parse HEAD` (already validated as a GitSha). */
   readonly sha?: string;
-  readonly threshold: number;
 }
 
 export interface RunCommandDeps {
@@ -155,7 +154,6 @@ export async function runRun(
     api: deps.createApi(options.apiUrl, config.token, deps.log),
     clock: deps.clock,
     ids: deps.ids,
-    threshold: options.threshold,
     compareImages: compareWithCore,
     hash: sha256Hex,
     isBlank: isBlankPng,

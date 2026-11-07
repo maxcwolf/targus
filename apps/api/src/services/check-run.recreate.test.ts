@@ -19,7 +19,11 @@ async function submittedWhileGitHubFailed(installationId: number | null, failCre
   const { build } = await createBuild(deps, project, createBuildRequest(sha('a')));
   const results = [storyResult('one'), storyResult('two')];
   await markUploaded(deps.images, project.id, results);
-  const response = await submitResults(deps, project, build.id, { durationMs: 1, results });
+  const response = await submitResults(deps, project, build.id, {
+    durationMs: 1,
+    threshold: 0.001,
+    results,
+  });
   const reviewer = await signInReviewer(deps, 'octocat');
   const snapshotIds = (deps.builds.snapshots.get(build.id) ?? []).map((s) => s.id);
   return { deps, github, response, reviewer, buildId: build.id, snapshotIds };

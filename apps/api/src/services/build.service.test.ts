@@ -61,6 +61,7 @@ describe('createBuild', () => {
       baselineBuildId: null,
       baselines: [],
       missingImageHashes: [imageHash('2')],
+      threshold: 0.001,
     });
     expect(deps.builds.builds[0]).toMatchObject({ status: 'in_progress', completedAt: null });
     expect(deps.images.records.get(imageHash('1'))?.lastReferencedAt).toEqual(deps.clock.now());

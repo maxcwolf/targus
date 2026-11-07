@@ -56,7 +56,6 @@ describe('targus run options', () => {
       fromCapture: 'cap',
       apiUrl: 'https://targus.example',
       baseBranch: 'main',
-      threshold: 0.001,
       port: 7007,
       settle: 300,
       stabilityGap: 150,
@@ -90,8 +89,6 @@ describe('targus run flags', () => {
       '12',
       '--sha',
       'f'.repeat(40),
-      '--threshold',
-      '0.01',
       '--limit',
       '4',
     ]);
@@ -106,7 +103,6 @@ describe('targus run flags', () => {
       branch: 'feature/x',
       pr: 12,
       sha: 'f'.repeat(40),
-      threshold: 0.01,
       limit: 4,
     });
   });
@@ -117,6 +113,27 @@ describe('targus run validation', () => {
     const { error } = await parse(['run', '--token', 'secret']);
 
     expect(error?.code).toBe('commander.unknownOption');
+  });
+
+  it('refuses --threshold, which the server owns, before running anything', async () => {
+    const { error, output, runs } = await parse([
+      'run',
+      '--from-capture',
+      'c',
+      '--threshold',
+      '0.01',
+    ]);
+
+    expect(error?.exitCode).toBe(1);
+    expect(output).toContain('the server owns the diff threshold');
+    expect(output).toContain('targus compare');
+    expect(runs).toEqual([]);
+  });
+
+  it('keeps --threshold out of its help', async () => {
+    const { output } = await parse(['run', '--help']);
+
+    expect(output).not.toContain('--threshold');
   });
 
   it('rejects a zero PR number', async () => {

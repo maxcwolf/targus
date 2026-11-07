@@ -40,7 +40,9 @@ targus compare --current visual/current --baseline visual/baseline --out visual/
 ```
 
 `--threshold <ratio>` (default `0.001`, i.e. 0.1% of pixels) is the changed-pixel ratio above
-which a story counts as changed.
+which a story counts as changed. Only `compare` takes it: `targus run` diffs with the threshold
+the server returns when it opens the build, so every story the server stores as changed has a
+diff image, and `run --threshold` is an error.
 
 ### `targus run`
 
@@ -69,7 +71,9 @@ It accepts every `capture` flag above (with `--udid`, `--app` and `--out` option
 | `--branch <name>`        | CI env, then `git`   | branch of the build                                     |
 | `--pr <n>`               | CI env               | pull request number                                     |
 | `--sha <sha>`            | `git rev-parse HEAD` | commit of the build: a full 40-character lowercase sha  |
-| `--threshold <ratio>`    | `0.001`              | changed-pixel ratio above which a story changed         |
+
+There is no `--threshold`: the server owns the diff threshold (its `DIFF_THRESHOLD`), sends it
+when the build opens, and refuses results diffed with any other one (ADR 0028).
 
 The project token is read only from `TARGUS_TOKEN`; there is deliberately no flag, so it never
 lands in shell history or CI logs.

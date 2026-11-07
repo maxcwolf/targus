@@ -316,8 +316,9 @@ Native rendering has more noise than react-native-web. Mitigations, cheapest fir
 - Double-capture stability check (built, section 5.1): turns flaky stories into an explicit
   `unstable` state instead of noisy diffs.
 - Diff threshold (partly built): anti-aliasing tolerant pixelmatch, changed above 0.1% of
-  pixels. The server's `DIFF_THRESHOLD` decides the stored state. The CLI's `--threshold` decides
-  only its own summary and whether it uploads a diff image, so keep the two equal (ADR 0016). **Not built:** tuning per project and per story.
+  pixels. The server's `DIFF_THRESHOLD` decides the stored state, and `POST /api/builds` sends
+  it to the CLI, which diffs with it; `targus run` has no threshold of its own (ADR 0028).
+  **Not built:** tuning per project and per story.
 
 ## 8. the pilot app integration (CircleCI)
 

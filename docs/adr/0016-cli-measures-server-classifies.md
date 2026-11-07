@@ -2,7 +2,15 @@
 
 ## Status
 
-accepted
+accepted, amended by [0028](0028-server-owns-the-diff-threshold.md)
+
+## Amended by
+
+The split still holds. The two thresholds are gone: the server owns the one threshold, sends it
+in the `POST /api/builds` response, and the CLI diffs with it and sends it back with the
+results, which the server refuses if it differs. `targus run` has no `--threshold` flag. The
+CLI-threshold sentence in the Decision, the "two thresholds" consequence and the last
+alternative below are overtaken. See [ADR 0028](0028-server-owns-the-diff-threshold.md).
 
 ## Date
 

@@ -58,7 +58,6 @@ function options(overrides: Partial<RunCommandOptions> = {}): RunCommandOptions 
   return {
     apiUrl: 'http://localhost:8787',
     baseBranch: 'main',
-    threshold: 0.001,
     port: 7007,
     settle: 300,
     stabilityGap: 150,

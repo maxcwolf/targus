@@ -148,7 +148,9 @@ describe('TargusApiClient retries by request', () => {
     const stub = scripted(new Response('', { status: 502 }), conflict);
     const { api } = client(stub.fetch);
 
-    expect(await failure(api.submitResults('b1', { results: [], durationMs: 1 }))).toEqual({
+    expect(
+      await failure(api.submitResults('b1', { results: [], durationMs: 1, threshold: 0.001 })),
+    ).toEqual({
       code: 'conflict',
       message:
         'POST /api/builds/b1/results failed with 409: build b1 already has results; an earlier ' +
@@ -160,7 +162,9 @@ describe('TargusApiClient retries by request', () => {
     const stub = scripted(Response.json(submitResponse));
     const { api, waits } = client(stub.fetch);
 
-    expect((await api.submitResults('b1', { results: [], durationMs: 1 })).build.id).toBe('b1');
+    expect(
+      (await api.submitResults('b1', { results: [], durationMs: 1, threshold: 0.001 })).build.id,
+    ).toBe('b1');
     expect(waits).toEqual([]);
   });
 });
@@ -184,7 +188,7 @@ describe('TargusApiClient opening a build under an idempotency key', () => {
         return Promise.reject(timeout);
       }
       const build = { build: { id, number: 1 }, baselineBuildId: null, baselines: [] };
-      return Promise.resolve(Response.json({ ...build, missingImageHashes: [] }));
+      return Promise.resolve(Response.json({ ...build, missingImageHashes: [], threshold: 0.001 }));
     };
     const timeoutSignal = () => {
       const controller = new AbortController();

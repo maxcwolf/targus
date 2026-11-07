@@ -30,7 +30,7 @@ the same change.
 | [0013](0013-guarded-single-batch-build-writes.md) | Guarded single-batch writes for build results and reviews | accepted, amended by [0026](0026-review-approvals-and-check-runs-follow-the-review-version.md) |
 | [0014](0014-upload-record-grants-image-access.md) | An upload record, not a hash, grants a project access to an image | accepted, amended by PR #10 and PR #24 |
 | [0015](0015-same-origin-session-writes-and-hashed-session-ids.md) | Same-origin checks on session writes, and hashed session ids | accepted |
-| [0016](0016-cli-measures-server-classifies.md) | The CLI measures the diff, the server classifies the story | accepted |
+| [0016](0016-cli-measures-server-classifies.md) | The CLI measures the diff, the server classifies the story | accepted, amended by [0028](0028-server-owns-the-diff-threshold.md) |
 | [0017](0017-relative-imports-name-the-typescript-file.md) | Relative imports name the TypeScript file | accepted |
 | [0018](0018-squash-merges-only.md) | Squash merges only, so every commit on main is a Conventional Commit | accepted |
 | [0019](0019-web-features-meet-through-their-index.md) | Web features meet only through their index.ts | accepted |
@@ -42,3 +42,4 @@ the same change.
 | [0025](0025-browser-entry-for-core.md) | A browser entry for core, so the web dev server loads no Node-only code | accepted |
 | [0026](0026-review-approvals-and-check-runs-follow-the-review-version.md) | Approvals commit with the review, and check runs follow the review version | accepted |
 | [0027](0027-idempotency-key-for-opening-a-build.md) | An idempotency key makes opening a build safe to retry | accepted |
+| [0028](0028-server-owns-the-diff-threshold.md) | The server owns the diff threshold | accepted |

@@ -12,8 +12,10 @@ The decision to diff on the CI runner still holds. Two parts of the text below w
 - **Who classifies.** The CLI does not submit statuses that the server stores. It submits diff
   ratios, diff hashes and capture flags, and the server classifies every story with
   `compareSnapshot`, using its own baseline, its `DIFF_THRESHOLD` and the project's approvals.
-  The server also adds `removed` stories. The CLI's `--threshold` affects only its own summary
-  and which diff images it uploads. See [ADR 0016](0016-cli-measures-server-classifies.md).
+  The server also adds `removed` stories. See
+  [ADR 0016](0016-cli-measures-server-classifies.md). The CLI diffs with the server's
+  threshold, which `POST /api/builds` returns; it has no threshold of its own (see
+  [ADR 0028](0028-server-owns-the-diff-threshold.md)).
 - **Which hashes are "missing".** `POST /api/builds` answers the hashes this project has not
   uploaded, not the hashes the server lacks. A project may name a hash in its results only
   after uploading it, and the baseline hash is never taken from the request. See

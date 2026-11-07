@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest';
 
 import { buildStatus } from '../build-status.ts';
 import { TargusError } from '../errors.ts';
-import { compareSnapshot, type CompareSnapshotInput } from './compare-snapshot.ts';
+import {
+  compareSnapshot,
+  defaultThreshold,
+  type CompareSnapshotInput,
+} from './compare-snapshot.ts';
 
 const before = 'a'.repeat(64);
 const after = 'b'.repeat(64);
@@ -62,6 +66,13 @@ describe('compareSnapshot against a baseline', () => {
     expect(compareSnapshot(input({ diffRatio: 0.001 })).state).toBe('unchanged');
     expect(compareSnapshot(input({ diffRatio: 0 })).state).toBe('unchanged');
     expect(compareSnapshot(input({ diffRatio: 0.0011 })).state).toBe('changed');
+  });
+
+  it('treats a ratio of exactly the default threshold as unchanged', () => {
+    const atDefault = { diffRatio: defaultThreshold, threshold: defaultThreshold };
+
+    expect(defaultThreshold).toBe(0.001);
+    expect(compareSnapshot(input(atDefault)).state).toBe('unchanged');
   });
 
   it('is changed when the hashes differ and no diff ratio was computed', () => {

@@ -28,6 +28,7 @@ export async function projectWithBuild(
   await markUploaded(createImageRepository(env.DB), project.id, results);
   const submitted = await postJson(`/api/builds/${build.id}/results`, token, {
     durationMs: 1,
+    threshold: 0.001,
     results,
   });
   expect(submitted.status).toBe(200);

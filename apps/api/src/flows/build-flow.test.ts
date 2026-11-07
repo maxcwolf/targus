@@ -33,7 +33,7 @@ async function openBuild(token: string, request: CreateBuildRequest): Promise<Cr
 }
 
 async function submit(token: string, buildId: string, results: StoryResult[]) {
-  const body = { durationMs: 1000, results };
+  const body = { durationMs: 1000, threshold: 0.001, results };
   const response = await postJson(`/api/builds/${buildId}/results`, token, body);
   expect(response.status).toBe(200);
   return SubmitResultsResponse.parse(await response.json());

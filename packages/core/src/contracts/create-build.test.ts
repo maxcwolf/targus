@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CreateBuildRequest } from './index.ts';
+import { CreateBuildRequest, CreateBuildResponse } from './index.ts';
 
 describe('CreateBuildRequest idempotencyKey', () => {
   it('takes an optional idempotency key of printable ASCII', () => {
@@ -26,5 +26,24 @@ describe('CreateBuildRequest idempotencyKey', () => {
       false,
       false,
     ]);
+  });
+});
+
+describe('CreateBuildResponse', () => {
+  it('accepts a build with no baseline and requires a threshold between 0 and 1', () => {
+    const hash = 'b'.repeat(64);
+    const response = {
+      build: { id: 'build-1', number: 1 },
+      baselineBuildId: null,
+      baselines: [],
+      missingImageHashes: [hash],
+    };
+
+    expect(CreateBuildResponse.parse({ ...response, threshold: 0.001 })).toMatchObject({
+      missingImageHashes: [hash],
+      threshold: 0.001,
+    });
+    expect(CreateBuildResponse.safeParse(response).success).toBe(false);
+    expect(CreateBuildResponse.safeParse({ ...response, threshold: 1.5 }).success).toBe(false);
   });
 });

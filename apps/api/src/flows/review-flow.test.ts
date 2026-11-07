@@ -63,6 +63,7 @@ async function publishBuild(app: Hono<AppEnv>, token: string, pngs: readonly Png
       headers: { ...bearer(token), 'content-type': 'application/json' },
       body: JSON.stringify({
         durationMs: 1,
+        threshold: 0.001,
         results: stories.map((story, index) =>
           storyResult(story, { imageHash: pngs[index]?.hash ?? null, title: 'Kit', name: story }),
         ),

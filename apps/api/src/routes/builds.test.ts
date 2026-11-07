@@ -35,6 +35,7 @@ describe('/api/builds', () => {
 
     const submitted = await postJson(`/api/builds/${build.id}/results`, token, {
       durationMs: 5,
+      threshold: 0.001,
       results: [storyResult('button', { imageHash: png.hash })],
     });
     expect(submitted.status).toBe(200);
@@ -64,6 +65,7 @@ describe('/api/builds authorization', () => {
     }
     const results = await postJson(`/api/builds/${build.id}/results`, stranger.token, {
       durationMs: 1,
+      threshold: 0.001,
       results: [],
     });
     expect(results.status).toBe(404);
@@ -76,6 +78,7 @@ describe('/api/builds authorization', () => {
     expect((await postJson('/api/builds', token, { sha: 'short' })).status).toBe(400);
     const errorWithImage = await postJson('/api/builds/any/results', token, {
       durationMs: 1,
+      threshold: 0.001,
       results: [storyResult('x', { state: 'error', error: 'boom' })],
     });
     expect(errorWithImage.status).toBe(400);

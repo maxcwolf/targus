@@ -90,6 +90,7 @@ describe('images of another project', () => {
     expect(missingImageHashes).toEqual([png.hash]);
     const adopted = await postJson(`/api/builds/${build.id}/results`, stranger.token, {
       durationMs: 1,
+      threshold: 0.001,
       results: [storyResult('button', { imageHash: png.hash })],
     });
     expect(adopted.status).toBe(400);
@@ -165,10 +166,8 @@ describe('GET /api/images/:hash for reviewers of a changed story', () => {
       diffHash: diff.hash,
       diffRatio: 0.5,
     });
-    const submitted = await postJson(`/api/builds/${build.id}/results`, main.token, {
-      durationMs: 1,
-      results: [changed],
-    });
+    const body = { durationMs: 1, threshold: 0.001, results: [changed] };
+    const submitted = await postJson(`/api/builds/${build.id}/results`, main.token, body);
     expect(submitted.status).toBe(200);
     const listed = await call(`/api/builds/${build.id}/snapshots`, { headers: bearer(main.token) });
     const { snapshots } = ListSnapshotsResponse.parse(await listed.json());

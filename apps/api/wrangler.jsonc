@@ -34,7 +34,8 @@
   // Plain configuration, validated by src/config.ts. PUBLIC_URL is the origin of the review UI
   // (check-run "details" links and `reviewUrl`). The localhost value serves `yarn dev` and the e2e
   // suite; `yarn deploy` overrides it with the workers.dev origin (see package.json).
-  // DIFF_THRESHOLD is the changed-pixel ratio at or under which a snapshot is unchanged.
+  // DIFF_THRESHOLD is the changed-pixel ratio at or under which a snapshot is unchanged. The CLI
+  // diffs with it too: POST /api/builds returns it (ADR 0028).
   //
   // Secrets are not listed here. Set them with `wrangler secret put <NAME>` in production and in
   // apps/api/.dev.vars locally (gitignored; see apps/api/README.md):

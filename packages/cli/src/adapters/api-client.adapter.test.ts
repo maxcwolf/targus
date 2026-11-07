@@ -46,6 +46,7 @@ const buildResponse = {
   baselineBuildId: null,
   baselines: [],
   missingImageHashes: [hash],
+  threshold: 0.001,
 };
 
 const submitResponse = {
@@ -168,7 +169,11 @@ describe('TargusApiClient.submitResults', () => {
   it('POSTs to the build results route and parses the summary', async () => {
     const stub = stubFetch(() => Response.json(submitResponse));
 
-    const response = await client(stub.fetch).submitResults('b 1', { results: [], durationMs: 5 });
+    const response = await client(stub.fetch).submitResults('b 1', {
+      results: [],
+      durationMs: 5,
+      threshold: 0.001,
+    });
     expect(response.checkRun).toEqual({ id: 7 });
     expect(stub.calls[0]?.url).toBe('https://targus.test/api/builds/b%201/results');
   });
@@ -178,7 +183,7 @@ describe('TargusApiClient.submitResults', () => {
     const asMessage = stubFetch(() => Response.json({ message: 'clash' }, { status: 409 }));
     const empty = stubFetch(() => new Response('', { status: 500, statusText: 'Server Error' }));
     const lastTry = /500: Server Error \(gave up after 4 attempts\)$/;
-    const request = { results: [], durationMs: 0 };
+    const request = { results: [], durationMs: 0, threshold: 0.001 };
 
     expect((await rejection(client(asString.fetch).submitResults('b', request))).code).toBe(
       'forbidden',

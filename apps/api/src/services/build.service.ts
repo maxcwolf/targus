@@ -93,14 +93,14 @@ async function openBuild(
 
 /**
  * `POST /api/builds`: open a build. Resolves the baseline (plan.md section 6, rule 1), returns
- * its accepted images and the hashes the CLI still has to upload, and stores the build as
- * `in_progress` until results arrive. "Still has to upload" is per project: an image only
- * another tenant sent is asked for again, so the answer never says what other tenants hold.
- * A replay under the same idempotency key answers for the build it opened, with that build's
+ * its accepted images, the hashes the CLI still has to upload and the diff threshold the CLI
+ * must diff with (ADR 0028), and stores the build as `in_progress` until results arrive.
+ * "Still has to upload" is per project: an image only another tenant sent is asked for again,
+ * so the answer never says what other tenants hold. A replay under the same idempotency key answers for the build it opened, with that build's
  * baseline and the hashes still missing now (ADR 0027).
  */
 export async function createBuild(
-  deps: Pick<ServiceDeps, 'builds' | 'clock' | 'ids' | 'images'>,
+  deps: Pick<ServiceDeps, 'builds' | 'clock' | 'config' | 'ids' | 'images'>,
   project: Project,
   request: CreateBuildRequest,
 ): Promise<CreateBuildResponse> {
@@ -120,6 +120,7 @@ export async function createBuild(
     baselineBuildId: build.baselineBuildId,
     baselines,
     missingImageHashes: missing,
+    threshold: deps.config.diffThreshold,
   };
 }
 

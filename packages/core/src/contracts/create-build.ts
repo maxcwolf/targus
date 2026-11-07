@@ -52,9 +52,14 @@ export const BaselineEntry = z.object({
 });
 export type BaselineEntry = z.infer<typeof BaselineEntry>;
 
+/** A changed-pixel ratio threshold: a story whose diff ratio is at or under it is unchanged. */
+export const DiffThreshold = z.number().min(0).max(1);
+
 /**
  * `POST /api/builds` response: the new build, its baseline build and per-story baseline hashes,
- * and the image hashes the server does not have yet (the CLI uploads only those).
+ * the image hashes the server does not have yet (the CLI uploads only those), and the diff
+ * threshold the server will classify with. The CLI diffs with that threshold, so it uploads a
+ * diff image for every story the server will store as changed (ADR 0028).
  */
 export const CreateBuildResponse = z.object({
   build: z.object({
@@ -64,5 +69,6 @@ export const CreateBuildResponse = z.object({
   baselineBuildId: z.string().min(1).nullable(),
   baselines: z.array(BaselineEntry),
   missingImageHashes: z.array(ImageHash),
+  threshold: DiffThreshold,
 });
 export type CreateBuildResponse = z.infer<typeof CreateBuildResponse>;

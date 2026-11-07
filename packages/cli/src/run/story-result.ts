@@ -12,7 +12,10 @@ export interface StoryJudge {
   readonly compareImages: CompareImages;
   readonly hash: (bytes: Uint8Array) => string;
   readonly isBlank: (png: Uint8Array) => boolean;
-  /** Changed-pixel ratio above which a stable story is `changed`. */
+  /**
+   * Changed-pixel ratio above which a stable story is `changed`: the server's, from
+   * `POST /api/builds`, so a story the server stores as changed has a diff image (ADR 0028).
+   */
   readonly threshold: number;
 }
 

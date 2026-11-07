@@ -1,4 +1,5 @@
 import {
+  defaultThreshold,
   TargusError,
   type CreateBuildRequest,
   type CreateBuildResponse,
@@ -33,6 +34,8 @@ export interface FakeTargusApiOptions {
   /** Extra images the server already has. */
   readonly stored?: readonly Uint8Array[];
   readonly checkRunId?: number | null;
+  /** The diff threshold the fake server returns with a new build. Default: core's default. */
+  readonly threshold?: number;
 }
 
 function submitResponse(
@@ -86,6 +89,7 @@ export function createFakeTargusApi(options: FakeTargusApiOptions = {}): FakeTar
         baselineBuildId: baselines.length > 0 ? 'build-0' : null,
         baselines,
         missingImageHashes: [...hashes].filter((hash) => !images.has(hash)),
+        threshold: options.threshold ?? defaultThreshold,
       });
     },
     uploadImage: (hash, png) => {

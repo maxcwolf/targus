@@ -1,3 +1,4 @@
+import { defaultThreshold } from '@targus/core';
 import { z } from 'zod';
 
 // Configuration arrives as plain string variables (Worker bindings on Cloudflare) and is
@@ -23,7 +24,7 @@ const VarsSchema = z
     PUBLIC_URL: z.url().transform((url) => url.replace(/\/+$/, '')),
     DIFF_THRESHOLD: z.preprocess(
       (value) => (value === '' ? undefined : value),
-      z.coerce.number().min(0).max(1).default(0.001),
+      z.coerce.number().min(0).max(1).default(defaultThreshold),
     ),
     ADMIN_TOKEN: optionalSecret,
     GITHUB_APP_ID: optionalSecret,
@@ -49,6 +50,11 @@ export interface ApiConfig {
   readonly version: string;
   /** Origin of the review UI, without a trailing slash. */
   readonly publicUrl: string;
+  /**
+   * The changed-pixel ratio at or under which a snapshot is unchanged. `POST /api/builds` sends
+   * it to the CLI, which diffs with it, and results measured with another one are rejected
+   * (ADR 0028).
+   */
   readonly diffThreshold: number;
   /** Null disables the admin routes. */
   readonly adminToken: string | null;

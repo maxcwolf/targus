@@ -3,6 +3,14 @@ import type { ImageHash, ReviewState, SnapshotState } from '../contracts/snapsho
 import { TargusError } from '../errors.ts';
 import type { SnapshotOutcome } from '../build-status.ts';
 
+/**
+ * The changed-pixel ratio at or under which a story is `unchanged`: 0.1% of pixels (plan.md
+ * section 7). The server owns the threshold and sends the one it uses with every new build, so
+ * the CLI diffs with the server's value, never its own (ADR 0028). This is the server's default
+ * until a per-project setting replaces it.
+ */
+export const defaultThreshold = 0.001;
+
 /** The approval fields `compareSnapshot` matches on, already scoped to the story and variant. */
 export type ApprovalPair = Pick<Approval, 'fromHash' | 'toHash'>;
 

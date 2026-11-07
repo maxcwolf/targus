@@ -151,18 +151,18 @@ token per installation per hour instead of one per GitHub call. A new isolate st
 
 Vars live in `wrangler.jsonc` and are validated by `src/config.ts`:
 
-| Name                     | Kind   | Default                  | Meaning                                                             |
-| ------------------------ | ------ | ------------------------ | ------------------------------------------------------------------- |
-| `PUBLIC_URL`             | var    | `http://localhost:8787`  | Review UI origin: links, and the CSRF check on session writes       |
-| `DIFF_THRESHOLD`         | var    | `0.001`                  | Changed-pixel ratio at or under which a snapshot is unchanged       |
-| `ADMIN_TOKEN`            | secret | unset                    | Bearer token for `/api/admin/*`; admin routes answer 401 without it |
-| `GITHUB_APP_ID`          | secret | unset                    | GitHub App id                                                       |
-| `GITHUB_APP_PRIVATE_KEY` | secret | unset                    | GitHub App private key, PKCS#8 PEM                                  |
-| `SESSION_SECRET`         | secret | unset                    | Signs the session cookies; session routes answer 401 without it     |
-| `GITHUB_CLIENT_ID`       | secret | unset                    | The GitHub App's OAuth client id                                    |
-| `GITHUB_CLIENT_SECRET`   | secret | unset                    | The GitHub App's OAuth client secret                                |
-| `GITHUB_OAUTH_ORIGIN`    | var    | `https://github.com`     | Where login happens (`/login/oauth/*`)                              |
-| `GITHUB_API_ORIGIN`      | var    | `https://api.github.com` | GitHub REST API, for the user lookup and every App call             |
+| Name                     | Kind   | Default                  | Meaning                                                                                         |
+| ------------------------ | ------ | ------------------------ | ----------------------------------------------------------------------------------------------- |
+| `PUBLIC_URL`             | var    | `http://localhost:8787`  | Review UI origin: links, and the CSRF check on session writes                                   |
+| `DIFF_THRESHOLD`         | var    | `0.001`                  | Changed-pixel ratio at or under which a snapshot is unchanged; the CLI diffs with it (ADR 0028) |
+| `ADMIN_TOKEN`            | secret | unset                    | Bearer token for `/api/admin/*`; admin routes answer 401 without it                             |
+| `GITHUB_APP_ID`          | secret | unset                    | GitHub App id                                                                                   |
+| `GITHUB_APP_PRIVATE_KEY` | secret | unset                    | GitHub App private key, PKCS#8 PEM                                                              |
+| `SESSION_SECRET`         | secret | unset                    | Signs the session cookies; session routes answer 401 without it                                 |
+| `GITHUB_CLIENT_ID`       | secret | unset                    | The GitHub App's OAuth client id                                                                |
+| `GITHUB_CLIENT_SECRET`   | secret | unset                    | The GitHub App's OAuth client secret                                                            |
+| `GITHUB_OAUTH_ORIGIN`    | var    | `https://github.com`     | Where login happens (`/login/oauth/*`)                                                          |
+| `GITHUB_API_ORIGIN`      | var    | `https://api.github.com` | GitHub REST API, for the user lookup and every App call                                         |
 
 `GITHUB_OAUTH_ORIGIN` and `GITHUB_API_ORIGIN` exist so the e2e suite and local dev can point
 login, membership checks and check runs at a stub GitHub instead of the real one.

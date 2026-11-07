@@ -9,7 +9,6 @@ import {
   CreateBuildRequest,
   CreateProjectRequest,
   CreateProjectResponse,
-  CreateBuildResponse,
   HealthResponse,
   ReviewRequest,
   Snapshot,
@@ -50,19 +49,6 @@ describe('CreateBuildRequest', () => {
     });
 
     expect(result.success).toBe(false);
-  });
-});
-
-describe('CreateBuildResponse', () => {
-  it('accepts a build with no baseline', () => {
-    const response = CreateBuildResponse.parse({
-      build: { id: 'build-1', number: 1 },
-      baselineBuildId: null,
-      baselines: [],
-      missingImageHashes: [hash],
-    });
-
-    expect(response.missingImageHashes).toEqual([hash]);
   });
 });
 
@@ -194,23 +180,31 @@ describe('SubmitResultsRequest', () => {
         },
       ],
       durationMs: 42_000,
+      threshold: 0.001,
     });
 
     expect(request.results.map((r) => r.variant)).toEqual(['default', 'default']);
   });
 
-  it('rejects a diff ratio above 1 and a negative duration', () => {
+  it('rejects a diff ratio above 1, a negative duration and a missing threshold', () => {
+    const request = { results: [], durationMs: 1, threshold: 0.001 };
+
     expect(
-      SubmitResultsRequest.safeParse({ results: [{ ...result, diffRatio: 1.5 }], durationMs: 1 })
+      SubmitResultsRequest.safeParse({ ...request, results: [{ ...result, diffRatio: 1.5 }] })
         .success,
     ).toBe(false);
-    expect(SubmitResultsRequest.safeParse({ results: [], durationMs: -1 }).success).toBe(false);
+    expect(SubmitResultsRequest.safeParse({ ...request, durationMs: -1 }).success).toBe(false);
+    expect(SubmitResultsRequest.safeParse({ results: [], durationMs: 1 }).success).toBe(false);
   });
 });
 
 describe('StoryResult error invariants', () => {
   function issues(story: Record<string, unknown>) {
-    const parsed = SubmitResultsRequest.safeParse({ results: [story], durationMs: 1 });
+    const parsed = SubmitResultsRequest.safeParse({
+      results: [story],
+      durationMs: 1,
+      threshold: 0.001,
+    });
     return parsed.success ? [] : parsed.error.issues.map((issue) => issue.message);
   }
 

@@ -28,6 +28,7 @@ export * from './ports/index.ts';
 export { acceptedImageHash } from './snapshots/accepted-image-hash.ts';
 export {
   compareSnapshot,
+  defaultThreshold,
   type ApprovalPair,
   type CompareSnapshotInput,
 } from './snapshots/compare-snapshot.ts';

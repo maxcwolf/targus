@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { DiffThreshold } from './create-build.ts';
 import { ImageHash, SnapshotState } from './snapshot.ts';
 
 /**
@@ -50,9 +51,14 @@ export const StoryResult = z
   });
 export type StoryResult = z.infer<typeof StoryResult>;
 
-/** `POST /api/builds/:id/results` request body: every story's result plus the run duration. */
+/**
+ * `POST /api/builds/:id/results` request body: every story's result, the run duration, and the
+ * threshold the CLI diffed with, which is the one `POST /api/builds` returned. The server
+ * rejects results measured with any other threshold (ADR 0028).
+ */
 export const SubmitResultsRequest = z.object({
   results: z.array(StoryResult),
   durationMs: z.number().int().nonnegative(),
+  threshold: DiffThreshold,
 });
 export type SubmitResultsRequest = z.infer<typeof SubmitResultsRequest>;

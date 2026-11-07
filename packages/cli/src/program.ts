@@ -1,5 +1,5 @@
-import { GitSha } from '@targus/core';
-import { Command, InvalidArgumentError } from 'commander';
+import { defaultThreshold, GitSha, TargusError } from '@targus/core';
+import { Command, InvalidArgumentError, Option } from 'commander';
 
 import { runCapture, type CaptureCommandOptions } from './commands/capture.ts';
 import { runCompare, type CompareCommandOptions } from './commands/compare.ts';
@@ -36,8 +36,14 @@ export interface ProgramOptions {
   readonly runners?: Partial<CommandRunners>;
 }
 
-/** `run` options as Commander parses them: `--api-url` is checked by `loadConfig` at run time. */
-type RunFlags = Omit<RunCommandOptions, 'apiUrl'> & { readonly apiUrl?: string };
+/**
+ * `run` options as Commander parses them: `--api-url` is checked by `loadConfig` at run time,
+ * and `--threshold` is parsed only to be refused.
+ */
+type RunFlags = Omit<RunCommandOptions, 'apiUrl'> & {
+  readonly apiUrl?: string;
+  readonly threshold?: string;
+};
 
 /** Report anything a command throws as a few plain lines on stderr and the mapped exit code. */
 function reportErrors<T>(
@@ -113,7 +119,15 @@ function runWithConfig(
   load: (overrides: ConfigOverrides) => CliConfig,
   run: CommandRunners['run'],
 ) {
-  return (options: RunFlags): Promise<unknown> => {
+  return (flags: RunFlags): Promise<unknown> => {
+    const { threshold, ...options } = flags;
+    if (threshold !== undefined) {
+      throw new TargusError(
+        'bad_request',
+        '`targus run` takes no --threshold: the server owns the diff threshold and sends it ' +
+          'with the build. Use --threshold with `targus compare`, which runs offline.',
+      );
+    }
     const config = load({ apiUrl: options.apiUrl });
     return run({ ...options, apiUrl: config.apiUrl }, config);
   };
@@ -140,7 +154,8 @@ function addRunCommand(
     .option('--branch <name>', 'branch (default: from CI env, then git)')
     .option('--pr <n>', 'pull request number (default: from CI env)', positiveInteger)
     .option('--sha <sha>', 'commit of the build (default: git rev-parse HEAD)', gitSha)
-    .option('--threshold <ratio>', 'changed-pixel ratio above which a story changed', ratio, 0.001);
+    // Refused with a plain message rather than "unknown option": the server owns it (ADR 0028).
+    .addOption(new Option('--threshold <ratio>').hideHelp());
   addCaptureFlags(command).action(report(run));
 }
 
@@ -163,7 +178,12 @@ function addCompareCommand(program: Command, report: Report, run: CommandRunners
     .requiredOption('--current <dir>', 'capture directory to check')
     .requiredOption('--baseline <dir>', 'capture directory to compare against')
     .requiredOption('--out <dir>', 'report directory')
-    .option('--threshold <ratio>', 'changed-pixel ratio above which a story changed', ratio, 0.001)
+    .option(
+      '--threshold <ratio>',
+      'changed-pixel ratio above which a story changed',
+      ratio,
+      defaultThreshold,
+    )
     .action(report(run));
 }
 

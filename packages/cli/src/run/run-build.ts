@@ -33,7 +33,8 @@ export interface RunGitInfo {
   readonly ancestors: readonly string[];
 }
 
-export interface RunBuildInput extends Omit<StoryJudge, 'api'> {
+/** The threshold is not an input: the server sends it with the new build (ADR 0028). */
+export interface RunBuildInput extends Omit<StoryJudge, 'api' | 'threshold'> {
   readonly report: CaptureReport;
   readonly git: RunGitInfo;
   readonly ci: CiContext;
@@ -112,10 +113,9 @@ interface Judged {
   readonly diffs: DiffImage[];
 }
 
-async function judgeAll(
-  input: RunBuildInput,
-  baselines: readonly BaselineEntry[],
-): Promise<Judged> {
+async function judgeAll(input: RunBuildInput, created: CreateBuildResponse): Promise<Judged> {
+  const { baselines, threshold } = created;
+  const judge: StoryJudge = { ...input, threshold };
   const byKey = new Map(
     baselines.map((entry) => [baselineKey(entry.storyId, entry.variant), entry]),
   );
@@ -126,7 +126,7 @@ async function judgeAll(
       continue;
     }
     const baseline = byKey.get(baselineKey(story.id, defaultVariant));
-    const { result, diff } = await judgeStory(story, baseline, input);
+    const { result, diff } = await judgeStory(story, baseline, judge);
     judged.results.push(result);
     if (diff !== null) judged.diffs.push(diff);
   }
@@ -167,18 +167,23 @@ function removedCount(input: RunBuildInput, baselines: readonly BaselineEntry[])
 
 /**
  * The server half of `targus run` (plan.md section 4): open a build, judge every story against
- * its baseline locally (ADR 0003), upload missing captures and diff images, then submit the
- * results. Every effect goes through `api`, so this is tested against an in-memory fake.
+ * its baseline locally (ADR 0003) with the threshold the server returned (ADR 0028), upload
+ * missing captures and diff images, then submit the results with that threshold. Every effect
+ * goes through `api`, so this is tested against an in-memory fake.
  */
 export async function runBuild(input: RunBuildInput): Promise<RunBuildOutput> {
   const started = input.clock.now();
   const created = await input.api.createBuild(createBuildRequest(input));
-  const { results, diffs } = await judgeAll(input, created.baselines);
+  const { results, diffs } = await judgeAll(input, created);
   const captured = input.report.stories.filter(isCaptured);
   const uploaded = await uploadImages(input.api, captured, created.missingImageHashes, diffs);
   const elapsedMs = input.clock.now().getTime() - started.getTime();
   const durationMs = Math.max(0, Math.round(input.report.durationMs + elapsedMs));
-  const response = await input.api.submitResults(created.build.id, { results, durationMs });
+  const response = await input.api.submitResults(created.build.id, {
+    results,
+    durationMs,
+    threshold: created.threshold,
+  });
   return {
     build: created.build,
     response,

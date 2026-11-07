@@ -18,6 +18,7 @@ import { submitResults } from './results.service.ts';
 // with nothing stored (retry succeeds) or complete with its results (retry is a conflict).
 const request: SubmitResultsRequest = {
   durationMs: 1,
+  threshold: 0.001,
   results: [storyResult('fresh'), storyResult('other')],
 };
 
@@ -46,7 +47,11 @@ describe('submitResults twice', () => {
     await submitResults(deps, project, buildId, request);
 
     await expect(
-      submitResults(deps, project, buildId, { durationMs: 1, results: [storyResult('late')] }),
+      submitResults(deps, project, buildId, {
+        durationMs: 1,
+        threshold: 0.001,
+        results: [storyResult('late')],
+      }),
     ).rejects.toMatchObject({ code: 'conflict' });
     expect(storedStories(deps, buildId)).toEqual(['fresh', 'other']);
   });
