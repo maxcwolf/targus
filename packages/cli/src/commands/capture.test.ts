@@ -33,6 +33,7 @@ const index = [
 const preparedDevice = [
   { method: 'boot' },
   { method: 'silenceSystemNotices' },
+  { method: 'setAppearance', appearance: 'light' },
   { method: 'setStatusBar', overrides: { time: '9:41', batteryLevel: 100, cellularBars: 4 } },
   { method: 'install', appPath: '/apps/Example.app' },
   { method: 'launch', bundleId: 'co.example.app', env: {} },
@@ -69,6 +70,7 @@ function options(overrides: Partial<CaptureCommandOptions> = {}): CaptureCommand
     udid: 'SIM',
     app: '/apps/Example.app',
     out: path.join(dir, 'out'),
+    appearance: 'light',
     port: 7007,
     settle: 300,
     stabilityGap: 150,
@@ -112,6 +114,7 @@ describe('runCapture', () => {
     ]);
     expect(driver.calls.slice(0, preparedDevice.length)).toEqual(preparedDevice);
     expect(manifest.summary).toMatchObject({
+      device: { udid: 'SIM', appearance: 'light' },
       app: { bundleId: 'co.example.app', path: '/apps/Example.app' },
       storyCount: 3,
       captured: 2,
@@ -247,5 +250,19 @@ describe('defaultCaptureDeps', () => {
 
     expect(real.constructor.name).toBe('SimctlDriver');
     expect(defaultCaptureDeps.clock.now().getTime()).toBeGreaterThanOrEqual(before);
+  });
+});
+
+describe('runCapture --appearance', () => {
+  it('pins the --appearance before the app launches and records it', async () => {
+    driver.queueScreenshots(white);
+
+    const manifest = await runCapture(options({ appearance: 'dark', limit: 1 }), deps());
+
+    const methods = driver.calls.map((call) => call.method);
+    expect(driver.calls).toContainEqual({ method: 'setAppearance', appearance: 'dark' });
+    expect(methods.indexOf('setAppearance')).toBeLessThan(methods.indexOf('launch'));
+    expect(manifest.summary.device.appearance).toBe('dark');
+    expect(lines[0]).toMatch(/ in dark mode$/);
   });
 });

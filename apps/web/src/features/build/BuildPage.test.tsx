@@ -28,7 +28,9 @@ describe('BuildPage header', () => {
     expect(screen.getByRole('status', { name: 'Build status' })).toHaveTextContent(
       /^Pending review$/,
     );
-    expect(screen.getByText(/^Started .*2026.* · iPhone 16 \/ iOS 18\.2$/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/^Started .*2026.* · iPhone 16 \/ iOS 18\.2 · light$/),
+    ).toBeInTheDocument();
     expect(screen.getByText('2 changes awaiting review')).toBeInTheDocument();
     const stats = document.querySelector('.stats');
     expect(stats).toHaveTextContent('3Changes4Stories');

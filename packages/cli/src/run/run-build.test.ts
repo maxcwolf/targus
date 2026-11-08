@@ -64,6 +64,7 @@ function input(
     git: { sha, mergeBaseSha: base, ancestors: [base] },
     ci: { branch: 'feature/x', prNumber: 3, trigger: 'pr' },
     device: 'iPhone 16',
+    appearance: 'light',
     api,
     clock: createFakeClock(),
     ids: createFakeIdGenerator('run'),
@@ -93,6 +94,7 @@ describe('runBuild', () => {
       ancestors: [base],
       trigger: 'pr',
       device: 'iPhone 16',
+      appearance: 'light',
       snapshots: [
         { storyId: 'a', variant: 'default', imageHash: sha256Hex(whitePng), width: 10, height: 10 },
       ],

@@ -29,6 +29,31 @@ describe('CreateBuildRequest idempotencyKey', () => {
   });
 });
 
+describe('CreateBuildRequest appearance', () => {
+  const request = {
+    sha: 'a'.repeat(40),
+    branch: 'main',
+    prNumber: null,
+    mergeBaseSha: null,
+    ancestors: [],
+    trigger: 'main',
+    device: 'iPhone 16',
+    snapshots: [],
+  };
+
+  it('reads a request from a CLI that predates it as null', () => {
+    expect(CreateBuildRequest.parse(request).appearance).toBeNull();
+  });
+
+  it('takes light or dark and nothing else', () => {
+    const appearance = (value: unknown) =>
+      CreateBuildRequest.safeParse({ ...request, appearance: value }).success;
+
+    expect([appearance('light'), appearance('dark'), appearance(null)]).toEqual([true, true, true]);
+    expect(appearance('auto')).toBe(false);
+  });
+});
+
 describe('CreateBuildResponse', () => {
   it('accepts a build with no baseline and requires a threshold between 0 and 1', () => {
     const hash = 'b'.repeat(64);

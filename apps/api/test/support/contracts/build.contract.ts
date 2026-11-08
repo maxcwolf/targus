@@ -21,12 +21,16 @@ async function numbersPerProject({ repository, seedProject }: BuildHarness): Pro
   const projectB = await seedProject('bc-num-b');
 
   const first = await repository.create(newBuild('bc-a1', projectA));
-  const second = await repository.create(newBuild('bc-a2', projectA, { prNumber: 12 }), tally);
-  const other = await repository.create(newBuild('bc-b1', projectB));
+  const second = await repository.create(
+    newBuild('bc-a2', projectA, { prNumber: 12, appearance: 'dark' }),
+    tally,
+  );
+  const other = await repository.create(newBuild('bc-b1', projectB, { appearance: null }));
 
   expect([first.number, second.number, other.number]).toEqual([1, 2, 1]);
   expect(first).toEqual({ ...newBuild('bc-a1', projectA), number: 1, tally: emptyTally });
   expect(second.tally).toEqual(tally);
+  expect([first.appearance, second.appearance, other.appearance]).toEqual(['light', 'dark', null]);
   expect(await repository.findById(projectA, 'bc-a2')).toEqual(second);
   expect(await repository.findById(projectB, 'bc-a2')).toBeNull();
   expect(await repository.findAnyById('bc-a2')).toEqual(second);

@@ -1,6 +1,7 @@
 import {
   CreateBuildRequest,
   SnapshotState,
+  type Appearance,
   TargusError,
   type BaselineEntry,
   type Clock,
@@ -39,6 +40,8 @@ export interface RunBuildInput extends Omit<StoryJudge, 'api' | 'threshold'> {
   readonly git: RunGitInfo;
   readonly ci: CiContext;
   readonly device: string;
+  /** What the capture's manifest records; null for a capture that predates it (ADR 0034). */
+  readonly appearance: Appearance | null;
   readonly api: TargusApi;
   readonly clock: Clock;
   /** Gives the run its idempotency key, so a retried `POST /api/builds` opens one build. */
@@ -82,6 +85,7 @@ export function createBuildRequest(input: RunBuildInput): CreateBuildRequest {
     ancestors: input.git.ancestors.slice(0, maxAncestors),
     trigger,
     device: input.device,
+    appearance: input.appearance,
     snapshots: input.report.stories.filter(isCaptured).map((story) => ({
       storyId: story.id,
       variant: defaultVariant,

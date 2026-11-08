@@ -45,7 +45,7 @@ function deps(overrides: Partial<RunCommandDeps> = {}): RunCommandDeps {
     log: (line) => lines.push(line),
     capture: async (options) => {
       captures.push(options);
-      await writeFixtureCapture(options.out);
+      await writeFixtureCapture(options.out, 'base', options.appearance);
     },
     makeTempDir: () => Promise.resolve(path.join(dir, 'tmp-capture')),
     createApi: () => api,
@@ -60,6 +60,7 @@ function options(overrides: Partial<RunCommandOptions> = {}): RunCommandOptions 
   return {
     apiUrl: 'http://localhost:8787',
     baseBranch: 'main',
+    appearance: 'light',
     port: 7007,
     settle: 300,
     stabilityGap: 150,
@@ -116,6 +117,7 @@ describe('runRun --from-capture', () => {
       ancestors: [ancestor],
       trigger: 'pr',
       device: 'iPhone 16 Pro',
+      appearance: 'light',
       idempotencyKey: 'run-1',
     });
     expect(api.callsOf('uploadImage')).toHaveLength(3);
@@ -183,6 +185,22 @@ describe('runRun capturing', () => {
       }),
     ]);
     expect(api.callsOf('createBuild')[0]?.request.device).toBe('iPhone 16');
+  });
+
+  it('pins the --appearance and opens the build with it', async () => {
+    await runRun(options({ udid: 'SIM', app: 'A.app', appearance: 'dark' }), config, deps());
+
+    expect(captures[0]?.appearance).toBe('dark');
+    expect(api.callsOf('createBuild')[0]?.request.appearance).toBe('dark');
+  });
+
+  it('opens a --from-capture build with the appearance its manifest records', async () => {
+    const capture = path.join(dir, 'capture');
+    await writeFixtureCapture(capture, 'base', 'dark');
+
+    await runRun(options({ fromCapture: capture, deviceName: 'X' }), config, deps());
+
+    expect(api.callsOf('createBuild')[0]?.request.appearance).toBe('dark');
   });
 
   it('uses --out and bundle and filter flags', async () => {
@@ -264,6 +282,7 @@ describe('runRun with an empty capture', () => {
     };
     const run = {
       udid: 'SIM',
+      appearance: 'light' as const,
       bundleId: 'co.example',
       appPath: null,
       settleMs: 0,

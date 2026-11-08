@@ -1,3 +1,5 @@
+import type { Appearance } from '../contracts/build.ts';
+
 /** Status bar values pinned before capture so the clock and signal never cause a diff. */
 export interface StatusBarOverrides {
   readonly time: string;
@@ -27,6 +29,12 @@ export interface DeviceDriver {
    * notice can arrive at any point in a run; a device that has none of them is not an error.
    */
   silenceSystemNotices(): Promise<void>;
+  /**
+   * Put the device in light or dark mode, so an app whose theme follows the system renders the
+   * same on every machine (ADR 0034). Called after `boot` and before the app is launched: a
+   * launched app starts in the new mode, while a running one cross-fades into it.
+   */
+  setAppearance(appearance: Appearance): Promise<void>;
   /** Override the status bar so captures are deterministic. */
   setStatusBar(overrides: StatusBarOverrides): Promise<void>;
   /** Capture the full screen as PNG bytes at device resolution. */

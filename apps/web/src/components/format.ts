@@ -5,6 +5,17 @@ export function formatDateTime(iso: string): string {
   return dateFormat.format(new Date(iso));
 }
 
+/**
+ * Where a build ran, e.g. `iPhone 16 · dark`. A build from a CLI that did not pin the appearance
+ * shows the device alone (ADR 0034).
+ */
+export function deviceLabel(build: {
+  readonly device: string;
+  readonly appearance: string | null;
+}): string {
+  return build.appearance === null ? build.device : `${build.device} · ${build.appearance}`;
+}
+
 /** The 7-character abbreviation of a commit sha. */
 export function shortSha(sha: string): string {
   return sha.slice(0, 7);

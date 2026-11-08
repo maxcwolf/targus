@@ -50,6 +50,8 @@ Options:
   --udid <id>             simulator UDID (xcrun simctl list devices)
   --app <path>            path to the built simulator .app
   --out <dir>             output directory
+  --appearance <mode>     simulator light or dark mode, set before launch
+                          (choices: "light", "dark", default: "light")
   --bundle-id <id>        bundle id (default: read from the app Info.plist)
   --port <n>              Storybook channel port the app connects to (default:
                           7007)
@@ -69,10 +71,20 @@ Options:
 <!-- /cli-help -->
 
 Before the first story, the CLI boots the simulator (an already booted one is fine), switches off
-the simulator services that post system notices such as "Ready for Apple Intelligence", and sets
-the status bar to 9:41 with full battery and signal. A simulator that has never booted is booted
-twice, about 15 to 30 seconds extra once, because its first boot queues that notice before the
-CLI can stop it. Leave the simulator shut down before targus runs, so it can tell a first boot.
+the simulator services that post system notices such as "Ready for Apple Intelligence", puts the
+simulator in light or dark mode (`--appearance`, default `light`), and sets the status bar to 9:41
+with full battery and signal. A simulator that has never booted is booted twice, about 15 to 30
+seconds extra once, because its first boot queues that notice before the CLI can stop it. Leave
+the simulator shut down before targus runs, so it can tell a first boot.
+
+The appearance is set before the app is installed and launched, so the app starts in that mode
+and needs no extra wait. It is pinned on every run because the simulator remembers whatever it
+was last set to, from Xcode, a person or an earlier run, and an app whose theme follows the system
+would otherwise be captured in that. `manifest.json` records it as `summary.device.appearance`.
+To review dark mode as well, publish it to a second targus project with its own token, from a
+second CI job that passes `--appearance dark`. Baselines are picked per project and commit, not
+per device or appearance, so light and dark builds in one project would be diffed against each
+other.
 
 For each story the CLI selects it over the Storybook channel, waits for `storyRendered`, waits
 `--settle` milliseconds, then takes two screenshots `--stability-gap` apart. When they differ it
@@ -145,6 +157,8 @@ Options:
   --branch <name>         branch (default: from CI env, then git)
   --pr <n>                pull request number (default: from CI env)
   --sha <sha>             commit of the build (default: git rev-parse HEAD)
+  --appearance <mode>     simulator light or dark mode, set before launch
+                          (choices: "light", "dark", default: "light")
   --bundle-id <id>        bundle id (default: read from the app Info.plist)
   --port <n>              Storybook channel port the app connects to (default:
                           7007)
@@ -162,6 +176,10 @@ Options:
   -h, --help              display help for command
 ```
 <!-- /cli-help -->
+
+The build records the appearance its stories were captured in, shown next to the device in the
+review UI. With `--from-capture` it is the one in the capture's `manifest.json`, and
+`--appearance` is not used.
 
 There is no `--threshold`: the server owns the diff threshold, sends it when the build opens, and
 refuses results diffed with any other one.

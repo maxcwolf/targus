@@ -3,8 +3,15 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ConfirmButton } from './ConfirmButton.tsx';
 import { CrashPanel } from './CrashPanel.tsx';
-import { formatPercent, plural } from './format.ts';
+import { deviceLabel, formatPercent, plural } from './format.ts';
 import { SnapshotImage } from './SnapshotImage.tsx';
+
+describe('deviceLabel', () => {
+  it('adds the appearance the build was captured in, when it is known', () => {
+    expect(deviceLabel({ device: 'iPhone 16', appearance: 'dark' })).toBe('iPhone 16 · dark');
+    expect(deviceLabel({ device: 'iPhone 16', appearance: null })).toBe('iPhone 16');
+  });
+});
 
 describe('ConfirmButton', () => {
   it('needs a second click and can be cancelled', () => {

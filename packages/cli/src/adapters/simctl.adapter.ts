@@ -1,4 +1,9 @@
-import { TargusError, type DeviceDriver, type StatusBarOverrides } from '@targus/core';
+import {
+  TargusError,
+  type Appearance,
+  type DeviceDriver,
+  type StatusBarOverrides,
+} from '@targus/core';
 
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -45,6 +50,7 @@ export const simctlTimeoutsMs = {
   terminate: 30 * seconds,
   launch: 1 * minutes,
   status_bar: 30 * seconds,
+  ui: 30 * seconds,
   spawn: 30 * seconds,
   io: 30 * seconds,
   list: 30 * seconds,
@@ -178,6 +184,14 @@ export class SimctlDriver implements DeviceDriver {
     );
     await Promise.all(targets.map((target) => this.launchctl('disable', target)));
     await Promise.all(targets.map((target) => this.bootOut(target)));
+  }
+
+  /**
+   * `simctl ui appearance` (ADR 0034). It needs a booted simulator and persists across reboots,
+   * so it is set on every run rather than trusted from the last one.
+   */
+  async setAppearance(appearance: Appearance): Promise<void> {
+    await this.simctl(['ui', this.udid, 'appearance', appearance]);
   }
 
   async setStatusBar({ time, batteryLevel, cellularBars }: StatusBarOverrides): Promise<void> {
