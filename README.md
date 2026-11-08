@@ -80,3 +80,7 @@ they are out of date.
   org team when the repo moves, before enabling "require review from code owners".
 - `spike/` is the throwaway capture spike of 2026-11-04
   ([docs/capture-spike.md](docs/capture-spike.md)). It is not a workspace and no guard checks it.
+
+## License
+
+[MIT](LICENSE), copyright Max Wolf.
