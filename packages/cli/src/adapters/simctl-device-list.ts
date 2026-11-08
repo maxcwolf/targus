@@ -5,9 +5,20 @@ import { z } from 'zod';
 export interface ListedDevice {
   readonly udid: string;
   readonly name: string;
+  /** When the simulator last booted; absent (or null) for one that never has. */
+  readonly lastBootedAt?: string | undefined;
 }
 
-const Device = z.object({ udid: z.string(), name: z.string() });
+const Device = z.object({
+  udid: z.string(),
+  name: z.string(),
+  // simctl leaves the key out for a simulator that never booted; null is read the same way, so
+  // that a change in simctl's output cannot fail the whole list.
+  lastBootedAt: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? undefined),
+});
 const DeviceList = z.object({ devices: z.record(z.string(), z.array(z.unknown())) });
 
 const listCommand = 'xcrun simctl list devices --json';

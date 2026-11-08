@@ -1,14 +1,35 @@
-import type { DeviceDriver, StatusBarOverrides } from '@targus/core';
+import { TargusError, type DeviceDriver, type StatusBarOverrides } from '@targus/core';
 
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { ExecError, execFileBuffer, type Exec } from './exec.adapter.ts';
-import { parseDeviceList } from './simctl-device-list.ts';
+import { parseDeviceList, type ListedDevice } from './simctl-device-list.ts';
 
 const alreadyBooted = 'Unable to boot device in current state: Booted';
 const alreadyShutDown = 'Unable to shutdown device in current state: Shutdown';
+
+/**
+ * Simulator services whose notifications land on top of the app mid-capture (ADR 0033).
+ * `generativeexperiencesd` posts "Ready for Apple Intelligence" whenever Apple Intelligence
+ * availability changes, which follows the host Mac and can happen at any point in a run.
+ * `followupd` turns that post into a notification and reminds about it every day.
+ */
+export const noticeServices = ['com.apple.generativeexperiencesd', 'com.apple.followupd'] as const;
+
+/**
+ * Runtimes disagree on where the services live: iOS 18 keeps a `system/` disable only until the
+ * next boot, and iOS 26 ignores a `user/foreground/` bootout. Both are sent; neither hurts.
+ */
+const launchdDomains = ['user/foreground', 'system'] as const;
+
+/**
+ * The `launchctl bootout` failures that mean nothing was running: 3 (ESRCH, which iOS 18.3 and
+ * 26.2 print for a service not loaded in that domain and for a label they do not have) and 113
+ * (launchctl's "could not find service"). Any other failure is reported, not ignored.
+ */
+const nothingToBootOut = /Boot-out failed: (3|113):/;
 
 const seconds = 1000;
 const minutes = 60 * seconds;
@@ -24,6 +45,7 @@ export const simctlTimeoutsMs = {
   terminate: 30 * seconds,
   launch: 1 * minutes,
   status_bar: 30 * seconds,
+  spawn: 30 * seconds,
   io: 30 * seconds,
   list: 30 * seconds,
   shutdown: 1 * minutes,
@@ -38,6 +60,8 @@ export interface SimctlDriverOptions {
   readonly tempRoot?: string;
   /** Whether a host process is alive; defaults to `isProcessAlive`. */
   readonly isAlive?: (pid: number) => boolean;
+  /** Where a non-fatal problem is reported; defaults to stderr. */
+  readonly warn?: (line: string) => void;
 }
 
 /** `simctl launch` prints `<bundle id>: <pid>`. */
@@ -78,6 +102,7 @@ export class SimctlDriver implements DeviceDriver {
   private readonly exec: Exec;
   private readonly tempRoot: string;
   private readonly isAlive: (pid: number) => boolean;
+  private readonly warn: (line: string) => void;
   /** The pid each bundle id was last launched with. */
   private readonly pids = new Map<string, number>();
 
@@ -86,16 +111,37 @@ export class SimctlDriver implements DeviceDriver {
     exec = execFileBuffer,
     tempRoot = tmpdir(),
     isAlive = isProcessAlive,
+    warn = (line) => process.stderr.write(`${line}\n`),
   }: SimctlDriverOptions) {
     this.udid = udid;
     this.exec = exec;
     this.tempRoot = tempRoot;
     this.isAlive = isAlive;
+    this.warn = warn;
   }
 
+  /**
+   * Boot and wait for bootstatus. A simulator's first boot posts the Apple Intelligence notice
+   * before bootstatus returns, and SpringBoard shows it once the home screen is up. So a first
+   * boot silences the notice services and boots again, which drops the queued banner (ADR 0033).
+   * The caller silences again after `boot`, since iOS 18 forgets the `system/` disable on reboot.
+   * A booted simulator no longer lists as new, so this cannot be retried: if it fails partway the
+   * simulator is shut down, and the next run's boot drops the delivered banner like a reboot.
+   */
   async boot(): Promise<void> {
-    await this.tolerate(alreadyBooted, this.simctl(['boot', this.udid]));
-    await this.simctl(['bootstatus', this.udid, '-b']);
+    const firstBoot = await this.neverBooted();
+    await this.bootOnce();
+    if (!firstBoot) return;
+    try {
+      await this.silenceSystemNotices();
+      await this.shutdown();
+    } catch (error) {
+      await this.shutdown().catch(() => undefined);
+      const retry = `shut it down with \`xcrun simctl shutdown ${this.udid}\` if it is still booted`;
+      const what = `the first boot of simulator ${this.udid} did not finish; ${retry}, then run again`;
+      throw new TargusError('internal', what, { cause: error });
+    }
+    await this.bootOnce();
   }
 
   async install(appPath: string): Promise<void> {
@@ -119,6 +165,19 @@ export class SimctlDriver implements DeviceDriver {
   isAppRunning(bundleId: string): Promise<boolean> {
     const pid = this.pids.get(bundleId);
     return Promise.resolve(pid === undefined || this.isAlive(pid));
+  }
+
+  /**
+   * Disable the notice services in the simulator's launchd, then stop the copies already running.
+   * A bootout that finds nothing running is expected; another refusal is a warning, since the
+   * capture can still be clean; a failed disable or a timeout propagates.
+   */
+  async silenceSystemNotices(): Promise<void> {
+    const targets = noticeServices.flatMap((service) =>
+      launchdDomains.map((domain) => `${domain}/${service}`),
+    );
+    await Promise.all(targets.map((target) => this.launchctl('disable', target)));
+    await Promise.all(targets.map((target) => this.bootOut(target)));
   }
 
   async setStatusBar({ time, batteryLevel, cellularBars }: StatusBarOverrides): Promise<void> {
@@ -163,11 +222,7 @@ export class SimctlDriver implements DeviceDriver {
    * that cannot be read is a plain TargusError from `parseDeviceList`, not a parser dump.
    */
   async deviceName(): Promise<string | null> {
-    const { stdout } = await this.simctl(['list', 'devices', '--json']);
-    const device = parseDeviceList(stdout.toString('utf8')).find(
-      (entry) => entry.udid === this.udid,
-    );
-    return device?.name ?? null;
+    return (await this.listed())?.name ?? null;
   }
 
   async shutdown(): Promise<void> {
@@ -184,6 +239,40 @@ export class SimctlDriver implements DeviceDriver {
       ['simctl', command, ...args],
       env ? { env, timeoutMs } : { timeoutMs },
     );
+  }
+
+  private async bootOnce(): Promise<void> {
+    await this.tolerate(alreadyBooted, this.simctl(['boot', this.udid]));
+    await this.simctl(['bootstatus', this.udid, '-b']);
+  }
+
+  /**
+   * Whether simctl lists this simulator with no `lastBootedAt`. A list that fails or does not
+   * name the UDID answers `false`: the boot that follows reports the real problem.
+   */
+  private async neverBooted(): Promise<boolean> {
+    const device = await this.listed().catch(() => undefined);
+    return device !== undefined && device.lastBootedAt === undefined;
+  }
+
+  private async listed(): Promise<ListedDevice | undefined> {
+    const { stdout } = await this.simctl(['list', 'devices', '--json']);
+    return parseDeviceList(stdout.toString('utf8')).find((entry) => entry.udid === this.udid);
+  }
+
+  private launchctl(subcommand: 'disable' | 'bootout', target: string) {
+    return this.simctl(['spawn', this.udid, 'launchctl', subcommand, target]);
+  }
+
+  private async bootOut(target: string): Promise<void> {
+    try {
+      await this.launchctl('bootout', target);
+    } catch (error) {
+      if (!(error instanceof ExecError)) throw error;
+      if (nothingToBootOut.test(error.stderr)) return;
+      const detail = error.stderr.trim() || error.message;
+      this.warn(`warning: could not stop ${target}; its notices may reach screenshots: ${detail}`);
+    }
   }
 
   private async tolerate(message: string, call: Promise<unknown>): Promise<void> {

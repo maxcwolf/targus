@@ -32,6 +32,7 @@ const index = [
 
 const preparedDevice = [
   { method: 'boot' },
+  { method: 'silenceSystemNotices' },
   { method: 'setStatusBar', overrides: { time: '9:41', batteryLevel: 100, cellularBars: 4 } },
   { method: 'install', appPath: '/apps/Example.app' },
   { method: 'launch', bundleId: 'co.example.app', env: {} },
@@ -109,7 +110,7 @@ describe('runCapture', () => {
         '/apps/Example.app/Info.plist',
       ],
     ]);
-    expect(driver.calls.slice(0, 4)).toEqual(preparedDevice);
+    expect(driver.calls.slice(0, preparedDevice.length)).toEqual(preparedDevice);
     expect(manifest.summary).toMatchObject({
       app: { bundleId: 'co.example.app', path: '/apps/Example.app' },
       storyCount: 3,

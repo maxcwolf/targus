@@ -46,3 +46,4 @@ the same change.
 | [0030](0030-an-unstable-capture-never-becomes-the-baseline.md) | An unstable capture never becomes the baseline | accepted |
 | [0031](0031-replayable-results-submission.md) | A digest of the request makes submitting results safe to replay | accepted, amended 2026-11-07 |
 | [0032](0032-results-name-the-baseline-they-were-diffed-against.md) | Results name the baseline they were diffed against | accepted |
+| [0033](0033-the-cli-silences-system-notices-before-capture.md) | The CLI silences system notices before capture | accepted |

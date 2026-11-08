@@ -21,6 +21,12 @@ export interface DeviceDriver {
    * to poll every second. `true` when the driver cannot tell, so an unknown never fails a run.
    */
   isAppRunning(bundleId: string): Promise<boolean>;
+  /**
+   * Stop the operating system from drawing its own notices over the app, such as the "Ready for
+   * Apple Intelligence" banner on iOS simulators (ADR 0033). Called after every `boot`, since a
+   * notice can arrive at any point in a run; a device that has none of them is not an error.
+   */
+  silenceSystemNotices(): Promise<void>;
   /** Override the status bar so captures are deterministic. */
   setStatusBar(overrides: StatusBarOverrides): Promise<void>;
   /** Capture the full screen as PNG bytes at device resolution. */

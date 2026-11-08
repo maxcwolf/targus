@@ -2,7 +2,7 @@ import type { DeviceDriver, StatusBarOverrides } from './device-driver.ts';
 
 /** One call a `FakeDeviceDriver` received, in the order it was made. */
 export type DeviceDriverCall =
-  | { readonly method: 'boot' | 'screenshot' | 'shutdown' }
+  | { readonly method: 'boot' | 'silenceSystemNotices' | 'screenshot' | 'shutdown' }
   | { readonly method: 'install'; readonly appPath: string }
   | {
       readonly method: 'launch';
@@ -48,6 +48,7 @@ export function createFakeDeviceDriver(): FakeDeviceDriver {
       return record({ method: 'launch', bundleId, env: { ...env } });
     },
     isAppRunning: () => Promise.resolve(running),
+    silenceSystemNotices: () => record({ method: 'silenceSystemNotices' }),
     setStatusBar: (overrides) => record({ method: 'setStatusBar', overrides: { ...overrides } }),
     shutdown: () => record({ method: 'shutdown' }),
     screenshot: () => {

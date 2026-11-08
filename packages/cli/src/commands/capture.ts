@@ -91,6 +91,7 @@ async function prepareDevice(
   bundleId: string,
 ): Promise<void> {
   await driver.boot();
+  await driver.silenceSystemNotices();
   await driver.setStatusBar({ time: '9:41', batteryLevel: 100, cellularBars: 4 });
   await driver.install(appPath);
   // The app's bundle already enables the channel (EXPO_PUBLIC_TARGUS at bundle time).

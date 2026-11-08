@@ -39,6 +39,7 @@ describe('SimctlDriver timeouts', () => {
     await driver.shutdown();
 
     expect(fake.calls.map((call) => [call.args[1], call.options?.timeoutMs])).toEqual([
+      ['list', 30_000],
       ['boot', 60_000],
       ['bootstatus', 300_000],
       ['install', 180_000],
@@ -64,6 +65,7 @@ describe('SimctlDriver', () => {
     await new SimctlDriver({ udid, exec: fake.exec }).boot();
 
     expect(fake.argv()).toEqual([
+      ['xcrun', 'simctl', 'list', 'devices', '--json'],
       ['xcrun', 'simctl', 'boot', udid],
       ['xcrun', 'simctl', 'bootstatus', udid, '-b'],
     ]);
@@ -74,7 +76,7 @@ describe('SimctlDriver', () => {
 
     await new SimctlDriver({ udid, exec: fake.exec }).boot();
 
-    expect(fake.calls).toHaveLength(2);
+    expect(fake.calls).toHaveLength(3);
   });
 
   it('propagates any other boot failure', async () => {
