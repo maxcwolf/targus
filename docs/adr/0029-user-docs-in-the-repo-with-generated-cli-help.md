@@ -2,7 +2,7 @@
 
 ## Status
 
-accepted
+accepted, amended 2026-11-07
 
 ## Date
 
@@ -49,7 +49,8 @@ fails `yarn check` when they differ from the CLI's output (ADR 0009). The packag
 - Prose around the generated blocks (the environment, exit codes, the troubleshooting messages)
   is still written by hand and can drift.
 - The npm README links into the repository, which readers without access to it cannot follow
-  until the docs site is published.
+  until the docs site is published. (Amended 2026-11-07: the repository is public, so anyone can
+  follow these links; the cost is gone.)
 
 ## Alternatives considered
 

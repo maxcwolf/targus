@@ -26,7 +26,7 @@ The `@targus/*` packages are not published yet. Until they are, check out the ta
 **next to** your app and build the two packages:
 
 ```sh
-git clone git@github.com:maxcwolf/targus.git ../targus
+git clone https://github.com/maxcwolf/targus.git ../targus
 (cd ../targus && yarn install && yarn workspace @targus/cli build && yarn workspace @targus/react-native build)
 ```
 
@@ -55,7 +55,7 @@ Then, in your app:
   };
   ```
 
-In CI, check out the targus repo beside yours with a read-only deploy key; the
+In CI, check out the targus repo beside yours (it is public, so no key is needed); the
 [GitHub Actions guide](ci-github-actions.md#until-the-packages-are-on-npm) shows the steps.
 
 </details>
