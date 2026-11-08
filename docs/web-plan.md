@@ -1,8 +1,10 @@
 # targus for web: plan
 
-Status: proposed, 2026-11-08. Nothing here is built yet. The decision records that go with it
-are [ADR 0036](adr/0036-builds-belong-to-a-platform.md) (proposed) and the web capture ADR
-the spike will produce (section 6, step W0).
+Status: in progress since 2026-11-08. The decision records that go with it are
+[ADR 0036](adr/0036-builds-belong-to-a-platform.md) (platform on builds),
+[ADR 0037](adr/0037-web-capture-with-playwright-on-the-runner.md) (web capture) and
+[ADR 0038](adr/0038-a-config-file-chooses-the-platforms.md) (native, web or both). The spike's
+results are in [web-capture-spike.md](web-capture-spike.md).
 
 ## 1. Goal
 
@@ -84,7 +86,7 @@ This ships on its own before any web capture, and it changes nothing for iOS.
 ### 5.1 Shape
 
 ```
-targus run --platform web --storybook-dir storybook-static [--viewport 1200x900]
+targus run --platform web --storybook storybook-static [--viewport 1200x900]
   ├─ serve storybook-static on 127.0.0.1:<free port> (node:http, no dependency)
   ├─ launch Chromium (playwright-core)
   ├─ read /index.json ─► stories (type "story" only)
@@ -94,11 +96,30 @@ targus run --platform web --storybook-dir storybook-static [--viewport 1200x900]
   └─ same as iOS from here: POST /api/builds, diff locally, upload, POST results
 ```
 
-`--storybook-url` points at an already running or deployed Storybook instead of a directory.
+`--storybook` also takes a URL, for an already running or deployed Storybook.
 `targus capture --platform web` writes a capture directory the same way, for local use and
 `--from-capture`.
 
-### 5.2 Ports and packages
+### 5.2 Native, web or both (ADR 0038)
+
+A project says which platforms it captures in an optional `targus.config.json`:
+
+```json
+{
+  "platforms": {
+    "ios": { "app": "build/ExampleApp.app", "deviceName": "iPhone 16" },
+    "web": { "storybook": "storybook-static" }
+  }
+}
+```
+
+`targus run` captures every platform in the file, each as its own build and check run;
+`--platform web` or `--platform ios,web` picks some. Flags override the file, and without a file
+the platform is `ios`, as today. The usual CI setup is one job per platform (a macOS job for iOS,
+a Linux job in the Playwright image for web), each running `targus run --platform <p>` with the
+same file.
+
+### 5.3 Ports and packages
 
 - The capture loop needs only `getIndex`, `selectStory` and `screenshot`. Narrow its input to
   those (a `StorybookChannel` plus a `screenshot()`), and keep device setup (boot, install,
@@ -116,7 +137,7 @@ targus run --platform web --storybook-dir storybook-static [--viewport 1200x900]
   `playFunctionThrewException`, `storyMissing`) and each story's parameters through the preview's
   story store. The spike confirms both on Storybook 10 (step W0).
 
-### 5.3 Story parameters
+### 5.4 Story parameters
 
 `parameters.targus` (`skip`, `delay`) works as on iOS. When a story has no `parameters.targus`,
 the web capture reads `parameters.chromatic` as a fallback: `disable` and `disableSnapshot` mean
@@ -124,7 +145,7 @@ skip, `delay` means delay, and `modes` means modes (step W5). The pilot app's st
 without edits. The native decorator keeps reading only `parameters.targus` until the pilot asks
 otherwise.
 
-### 5.4 Determinism
+### 5.5 Determinism
 
 Browsers are far less noisy than simulators, but they are only deterministic within one browser
 build, one set of fonts and one OS:
@@ -139,7 +160,7 @@ build, one set of fonts and one OS:
   (ADR 0030).
 - Locking the date stays the consumer's job, as the pilot app's preview already does.
 
-### 5.5 What a capture is
+### 5.6 What a capture is
 
 The bounding box of `#storybook-root`, as Chromatic and wolf-ui's own suite do, at a default
 viewport of 1200x900 (to be checked against Chromatic's default) and pixel ratio 1. A story whose
@@ -147,7 +168,7 @@ root has no size, or whose `layout` is `fullscreen`, is captured as the viewport
 story and sequential capture to start with; parallel pages later if run time needs it (at an
 estimated 0.3 to 0.5 s a story, the pilot app's web Storybook takes a few minutes).
 
-### 5.6 Diffing images of different sizes
+### 5.7 Diffing images of different sizes
 
 `diffImages` reports any size change as 100% changed with no diff image. That is acceptable for
 full-screen phone captures, but a cropped component changes size whenever its content does
@@ -163,8 +184,9 @@ Each step is one PR or a few, with `yarn check` green, and leaves iOS working.
 | --- | --- | --- |
 | W0 | **Spike**, throwaway script outside `packages/`: Playwright against wolf-ui's and the pilot app's `storybook-static`. Confirm the render and error events, reading parameters from the preview, the root crop on react-native-web, timing per story, and two runs in the Docker image being byte-identical. | `docs/web-capture-spike.md` with numbers and a go or no-go; the web capture ADR written |
 | W1 | **Platform on builds** (section 4): core, migration, baseline filters, check-run name, library and UI, pixel ratio. | iOS demo runs unchanged; a hand-made `web` build gets its own baseline and `targus/web` check |
-| W2 | **Padded diff** (section 5.6) in core, with property tests. | A wider capture diffs with an overlay |
+| W2 | **Padded diff** (section 5.7) in core, with property tests. | A wider capture diffs with an overlay |
 | W3 | **Web capture** (section 5): port narrowing, Playwright adapter, static server, `--platform web` on `capture` and `run`, parameters with the Chromatic fallback, determinism defaults. Tested against a scripted fixture page in the style of `ws-channel.scripted-app.ts`, plus one e2e on a tiny built Storybook. | `targus run --platform web` opens a build against the local Worker in e2e |
+| W3b | **Platforms from a config file** (section 5.2): `targus.config.json`, `--platform <list>`, one build per platform. | `targus run` with both platforms in the file opens an iOS and a web build |
 | W4 | **Dogfood on wolf-ui**: a GitHub Actions job in the Playwright image; a PR with a deliberate change reviewed live. | `targus/web` goes pending, then green on approval; captures match wolf-ui's own screenshots |
 | W5 | **Modes**: `parameters.targus.modes` (and `chromatic.modes`), named sets of globals and an optional viewport. Each mode is a snapshot `variant` named after the mode (a story without modes has `default`). Globals go through the iframe URL. | wolf-ui's light and dark, and the pilot app's font-scale and viewport modes, each capture as their own variant |
 | W6 | **Pilot web rollout**: a job beside the existing Chromatic job, informational for a week, then `targus/web` becomes the required check and the Chromatic job is removed. | The pilot team reviews web changes in targus only |
@@ -172,7 +194,9 @@ Each step is one PR or a few, with `yarn check` green, and leaves iOS working.
 Prerequisites shared with the iOS pilot rollout (plan.md section 11): `@targus/cli` published so
 the pilot app can install it, and the GitHub App installed on the pilot team's org.
 
-## 7. Decisions to confirm
+## 7. Decisions
+
+Accepted on 2026-11-08 when implementation started:
 
 - **One project, builds per platform** (ADR 0036), rather than one project per platform. One
   project gives a single library with a platform switch, and later a side-by-side view of the
