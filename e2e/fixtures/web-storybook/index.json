@@ -1,0 +1,25 @@
+{
+  "v": 5,
+  "entries": {
+    "swatch--docs": { "id": "swatch--docs", "title": "Swatch", "name": "Docs", "type": "docs" },
+    "swatch--red": { "id": "swatch--red", "title": "Swatch", "name": "Red", "type": "story" },
+    "swatch--themed": {
+      "id": "swatch--themed",
+      "title": "Swatch",
+      "name": "Themed",
+      "type": "story"
+    },
+    "swatch--hidden": {
+      "id": "swatch--hidden",
+      "title": "Swatch",
+      "name": "Hidden",
+      "type": "story"
+    },
+    "swatch--broken": {
+      "id": "swatch--broken",
+      "title": "Swatch",
+      "name": "Broken",
+      "type": "story"
+    }
+  }
+}

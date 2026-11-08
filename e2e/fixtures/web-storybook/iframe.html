@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>web capture fixture</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #ffffff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="storybook-root"></div>
+    <script>
+      // A stand-in for a built Storybook's preview, with only the parts a web capture reads
+      // (ADR 0037): the addons channel and its render events, the story store's parameters,
+      // `globals=` in the URL, and `#storybook-root`. It keeps the e2e suite free of a
+      // Storybook build; the capture spike checked the same contract against real Storybooks.
+      (() => {
+        const query = new URLSearchParams(window.location.search);
+        const globals = Object.fromEntries(
+          (query.get('globals') ?? '')
+            .split(';')
+            .filter((pair) => pair !== '')
+            .map((pair) => pair.split(':')),
+        );
+        const block = (color, height) => (root) => {
+          const element = document.createElement('div');
+          element.style.cssText = `height:${height}px;background:${color}`;
+          root.append(element);
+        };
+        const stories = {
+          'swatch--red': { parameters: {}, render: block('#e00000', 80) },
+          'swatch--themed': {
+            parameters: {
+              targus: {
+                modes: {
+                  light: { theme: 'light' },
+                  dark: { theme: 'dark' },
+                  narrow: { theme: 'light', viewport: 320 },
+                },
+              },
+            },
+            render: block(globals.theme === 'dark' ? '#111111' : '#f0f0f0', 60),
+          },
+          'swatch--hidden': {
+            parameters: { chromatic: { disableSnapshot: true } },
+            render: block('#00e000', 50),
+          },
+          'swatch--broken': { parameters: {}, error: 'the swatch threw' },
+        };
+        const listeners = {};
+        const emit = (event, payload) => {
+          for (const listener of listeners[event] ?? []) listener(payload);
+        };
+        window.__STORYBOOK_ADDONS_CHANNEL__ = {
+          on: (event, listener) => {
+            (listeners[event] ??= []).push(listener);
+          },
+        };
+        window.__STORYBOOK_PREVIEW__ = {
+          storyStoreValue: {
+            loadStory: ({ storyId }) =>
+              Promise.resolve({ parameters: stories[storyId]?.parameters ?? {} }),
+          },
+        };
+        const id = query.get('id');
+        const story = stories[id];
+        setTimeout(() => {
+          if (story === undefined) emit('storyMissing', id);
+          else if (story.error !== undefined) {
+            emit('storyThrewException', { message: story.error });
+          } else {
+            story.render(document.getElementById('storybook-root'));
+            emit('storyRendered', id);
+          }
+        }, 10);
+      })();
+    </script>
+  </body>
+</html>
