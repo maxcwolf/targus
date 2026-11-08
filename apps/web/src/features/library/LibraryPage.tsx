@@ -4,7 +4,13 @@ import type { Build, GetLibraryResponse, ProjectSummary } from '@targus/core/bro
 import { type ReactElement, useState } from 'react';
 
 import { getLibrary, queryKeys } from '../../api-client/index.ts';
-import { commitUrl, formatDateTime, shortSha, storyLabel } from '../../components/format.ts';
+import {
+  commitUrl,
+  deviceLabel,
+  formatDateTime,
+  shortSha,
+  storyLabel,
+} from '../../components/format.ts';
 import { Skeleton } from '../../components/Skeleton.tsx';
 import { ErrorView, NotFound, RefetchNotice } from '../errors/index.ts';
 import { useProjects } from '../projects/index.ts';
@@ -43,7 +49,7 @@ function LibraryHeader(props: {
         <span className="dot-sep">·</span>
         <span>{formatDateTime(build.createdAt)}</span>
         <span className="dot-sep">·</span>
-        <span>{build.device}</span>
+        <span>{deviceLabel(build)}</span>
       </p>
     </header>
   );

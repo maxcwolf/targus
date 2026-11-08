@@ -49,3 +49,4 @@ the same change.
 | [0032](0032-results-name-the-baseline-they-were-diffed-against.md) | Results name the baseline they were diffed against | accepted |
 | [0033](0033-the-cli-silences-system-notices-before-capture.md) | The CLI silences system notices before capture | accepted |
 | [0034](0034-published-declarations-name-the-js-file.md) | Published declaration files name the `.js` file | accepted |
+| [0035](0035-the-cli-pins-the-simulator-appearance.md) | The CLI pins the simulator appearance | accepted |

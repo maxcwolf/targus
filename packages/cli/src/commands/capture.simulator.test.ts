@@ -23,6 +23,7 @@ describe.skipIf(target === null)('targus capture on a real simulator', () => {
           udid: target.udid,
           app: target.app,
           out,
+          appearance: 'light',
           port: 7007,
           settle: 300,
           stabilityGap: 150,

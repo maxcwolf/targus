@@ -1,7 +1,13 @@
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { isBlankPng, type Clock, type DeviceDriver, type StorybookChannel } from '@targus/core';
+import {
+  isBlankPng,
+  type Appearance,
+  type Clock,
+  type DeviceDriver,
+  type StorybookChannel,
+} from '@targus/core';
 
 import { execFileBuffer, type Exec } from '../adapters/exec.adapter.ts';
 import { SimctlDriver } from '../adapters/simctl.adapter.ts';
@@ -22,6 +28,8 @@ export interface CaptureCommandOptions {
   readonly udid: string;
   readonly app: string;
   readonly out: string;
+  /** Light or dark mode, pinned on the simulator before the app launches (ADR 0035). */
+  readonly appearance: Appearance;
   readonly bundleId?: string;
   readonly port: number;
   readonly settle: number;
@@ -85,13 +93,23 @@ export function formatCaptureSummary(manifest: CaptureManifest): string[] {
   return lines;
 }
 
+interface DeviceSetup {
+  readonly appPath: string;
+  readonly bundleId: string;
+  readonly appearance: Appearance;
+}
+
+/**
+ * Boot, then pin everything the system draws or decides for the app: notices, appearance and
+ * status bar. The appearance is set before launch, so the app starts in it with no cross-fade.
+ */
 async function prepareDevice(
   driver: DeviceDriver,
-  appPath: string,
-  bundleId: string,
+  { appPath, bundleId, appearance }: DeviceSetup,
 ): Promise<void> {
   await driver.boot();
   await driver.silenceSystemNotices();
+  await driver.setAppearance(appearance);
   await driver.setStatusBar({ time: '9:41', batteryLevel: 100, cellularBars: 4 });
   await driver.install(appPath);
   // The app's bundle already enables the channel (EXPO_PUBLIC_TARGUS at bundle time).
@@ -154,11 +172,14 @@ export async function runCapture(
   // Listen before launching so the app finds the server on its first connection attempt.
   const channel = await deps.openChannel(options.port, options.connectTimeout);
   try {
-    deps.log(`installing ${appPath} (${bundleId}) on ${options.udid}`);
-    await prepareDevice(driver, appPath, bundleId);
+    deps.log(
+      `installing ${appPath} (${bundleId}) on ${options.udid} in ${options.appearance} mode`,
+    );
+    await prepareDevice(driver, { appPath, bundleId, appearance: options.appearance });
     const report = await captureWhileAppRuns({ options, deps, driver, channel, bundleId });
     const manifest = await writeCaptureOutput(outDir, report, {
       udid: options.udid,
+      appearance: options.appearance,
       bundleId,
       appPath,
       settleMs: options.settle,

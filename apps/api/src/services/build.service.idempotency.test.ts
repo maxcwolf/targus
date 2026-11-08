@@ -75,3 +75,17 @@ describe('createBuild with an idempotency key', () => {
     expect(deps.builds.builds).toHaveLength(4);
   });
 });
+
+describe('createBuild with an idempotency key and an appearance', () => {
+  it('answers conflict when the key comes back captured in another appearance', async () => {
+    const { deps, project } = await setup();
+    const request = createBuildRequest(sha('a'), { idempotencyKey: 'run-1' });
+    await createBuild(deps, project, request);
+
+    const replay = createBuild(deps, project, { ...request, appearance: 'dark' });
+
+    await expect(replay).rejects.toMatchObject({ code: 'conflict' });
+    await expect(replay).rejects.toThrow('with another appearance:');
+    expect(deps.builds.builds).toHaveLength(1);
+  });
+});

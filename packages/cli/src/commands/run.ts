@@ -119,6 +119,7 @@ async function captureDir(
 
 function captureFlags(options: CaptureFlags): CaptureFlags {
   return {
+    appearance: options.appearance,
     port: options.port,
     settle: options.settle,
     stabilityGap: options.stabilityGap,
@@ -175,11 +176,13 @@ export async function runRun(
   const ci = await resolveContext(options, config, git);
   const dir = await captureDir(source, bundleId, options, deps);
   deps.log(`loading capture from ${dir}`);
+  const { report, appearance } = await loadCapture(dir);
   const output = await runBuild({
-    report: await loadCapture(dir),
+    report,
     git: gitInfo,
     ci,
     device,
+    appearance,
     api,
     clock: deps.clock,
     ids: deps.ids,

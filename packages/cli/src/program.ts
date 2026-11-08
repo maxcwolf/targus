@@ -1,4 +1,4 @@
-import { defaultThreshold, GitSha, TargusError } from '@targus/core';
+import { Appearance, defaultThreshold, GitSha, TargusError } from '@targus/core';
 import { Command, InvalidArgumentError, Option } from 'commander';
 
 import { runCapture, type CaptureCommandOptions } from './commands/capture.ts';
@@ -89,9 +89,17 @@ function ratio(value: string): number {
   return parsed;
 }
 
+/** `--appearance`, a new Option for each command, since Commander keeps state on each one. */
+function appearanceOption(): Option {
+  return new Option('--appearance <mode>', 'simulator light or dark mode, set before launch')
+    .choices(Appearance.options)
+    .default('light');
+}
+
 /** The capture tuning flags `capture` and `run` share. */
 function addCaptureFlags(command: Command): Command {
   return command
+    .addOption(appearanceOption())
     .option('--bundle-id <id>', 'bundle id (default: read from the app Info.plist)')
     .option('--port <n>', 'Storybook channel port the app connects to', integer, 7007)
     .option('--settle <ms>', 'wait after storyRendered before the first screenshot', integer, 300)

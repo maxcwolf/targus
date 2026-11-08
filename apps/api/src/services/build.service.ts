@@ -46,7 +46,15 @@ export async function requireBuild(
 }
 
 /** The fields of a stored build that a replay under its idempotency key must repeat. */
-const replayedFields = ['sha', 'branch', 'prNumber', 'mergeBaseSha', 'trigger', 'device'] as const;
+const replayedFields = [
+  'sha',
+  'branch',
+  'prNumber',
+  'mergeBaseSha',
+  'trigger',
+  'device',
+  'appearance',
+] as const;
 
 /**
  * The build `request` opens: a new `in_progress` one, or the build the project already opened
@@ -72,6 +80,7 @@ async function openBuild(
       baselineBuildId: baseline?.id ?? null,
       trigger: request.trigger,
       device: request.device,
+      appearance: request.appearance,
       status: 'in_progress',
       createdAt: now.toISOString(),
       completedAt: null,
@@ -154,6 +163,7 @@ function toWireBuild(record: BuildRecord): Build {
     baselineBuildId: record.baselineBuildId,
     trigger: record.trigger,
     device: record.device,
+    appearance: record.appearance,
     status: record.status,
     createdAt: record.createdAt,
     completedAt: record.completedAt,

@@ -53,6 +53,9 @@ describe('fixture capture', () => {
     ]);
     expect(manifest.summary).toMatchObject({ storyCount: 3, captured: 3, failed: 0 });
     expect(manifest.summary.blank).toEqual(['fixture-solid--red', 'fixture-solid--blue']);
-    expect(await loadCapture(dir)).toEqual(fixtureCaptureReport());
+    expect(await loadCapture(dir)).toEqual({
+      report: fixtureCaptureReport(),
+      appearance: 'light',
+    });
   });
 });

@@ -73,6 +73,7 @@ export function toBuildRecord(row: BuildRow): BuildRecord {
     baselineBuildId: row.baselineBuildId,
     trigger: row.trigger,
     device: row.device,
+    appearance: row.appearance,
     status: row.status,
     createdAt: row.createdAt.toISOString(),
     completedAt: row.completedAt === null ? null : row.completedAt.toISOString(),

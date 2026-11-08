@@ -3,7 +3,7 @@ import type { BuildWithSummary, Snapshot } from '@targus/core/browser';
 import type { ReactElement, ReactNode } from 'react';
 
 import { ReviewBadge, StateBadge } from '../../components/Badges.tsx';
-import { formatDateTime } from '../../components/format.ts';
+import { deviceLabel, formatDateTime } from '../../components/format.ts';
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons.tsx';
 import { StatusCircle } from '../../components/StatusCircle.tsx';
 import { Tabs } from '../../components/Tabs.tsx';
@@ -77,7 +77,8 @@ function TitleBlock({ item, snapshot, filter }: SnapshotBarProps): ReactElement 
         </h1>
         <p className="subline">
           <StatusCircle status={summary.status} size={8} />
-          Build {build.number} on <span className="mono">{build.branch}</span> · {build.device}
+          Build {build.number} on <span className="mono">{build.branch}</span> ·{' '}
+          {deviceLabel(build)}
         </p>
         <p className="meta">
           <StateBadge state={snapshot.state} />

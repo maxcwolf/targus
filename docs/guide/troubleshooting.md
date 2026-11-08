@@ -67,7 +67,7 @@ and the `--filter` you passed. If every story is skipped, remove `skip` from at 
 | The Storybook sidebar or addons panel                      | The bundle was built without `EXPO_PUBLIC_TARGUS=true`, so `onDeviceUI` is on.                                                               |
 | `blank (3): ...` in the summary, single-colour images      | The screenshot was taken before the story drew. Give those stories a [`delay`](../reference/story-parameters.md), or raise `--settle`.       |
 | A system notification over the app                         | targus silences the "Ready for Apple Intelligence" notice when it boots the simulator. If it still shows, the simulator was booted before targus ran: shut it down and run again. Any other notice is not handled yet. |
-| Every story changed, by a little                           | The capture environment moved: another Xcode, iOS runtime or device. Pin them; see [Review](review.md#when-everything-changed-at-once).      |
+| Every story changed, by a little                           | The capture environment moved: another Xcode, iOS runtime or device. Pin them; see [Review](review.md#when-everything-changed-at-once). Compare the device and appearance on the two builds: a baseline captured in the other light or dark mode changes every story whose theme follows the system. |
 | A story differs on every run                               | The story is not deterministic: the current date, random data, a remote image, an animation. See [Make stories deterministic](prepare-your-app.md#4-make-stories-deterministic). |
 
 ## A story is `unstable`, `error` or `skipped`

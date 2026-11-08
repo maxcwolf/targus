@@ -145,6 +145,22 @@ describe('SimctlDriver launch and status bar', () => {
   });
 });
 
+describe('SimctlDriver setAppearance', () => {
+  it('sets the appearance with simctl ui', async () => {
+    const fake = fakeExec();
+    const driver = new SimctlDriver({ udid, exec: fake.exec });
+
+    await driver.setAppearance('dark');
+    await driver.setAppearance('light');
+
+    expect(fake.argv()).toEqual([
+      ['xcrun', 'simctl', 'ui', udid, 'appearance', 'dark'],
+      ['xcrun', 'simctl', 'ui', udid, 'appearance', 'light'],
+    ]);
+    expect(fake.calls[0]?.options?.timeoutMs).toBe(30_000);
+  });
+});
+
 describe('SimctlDriver isAppRunning', () => {
   it('checks the pid simctl launch printed', async () => {
     const fake = fakeExec({}, Buffer.from('co.example: 4242\n'));

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { TargusError } from '@targus/core';
+import { TargusError, type Appearance } from '@targus/core';
 
 import type { CaptureReport, CaptureResult } from '../capture/capture-stories.ts';
 import { readCaptureManifest, type StoryRecord } from '../capture/manifest.ts';
@@ -21,18 +21,26 @@ async function loadStory(dir: string, record: StoryRecord): Promise<CaptureResul
   return { ...rest, png, hash };
 }
 
+/** A capture directory read back: the report, and the appearance its manifest records. */
+export interface LoadedCapture {
+  readonly report: CaptureReport;
+  /** Null for a capture written before the CLI pinned the appearance (ADR 0035). */
+  readonly appearance: Appearance | null;
+}
+
 /**
  * Turn a `targus capture` output directory back into the `CaptureReport` the capture loop
  * returned, PNG bytes included, so `targus run --from-capture` skips the simulator.
  */
-export async function loadCapture(dir: string): Promise<CaptureReport> {
+export async function loadCapture(dir: string): Promise<LoadedCapture> {
   const manifest = await readCaptureManifest(dir);
   const stories: CaptureResult[] = [];
   for (const record of manifest.stories) stories.push(await loadStory(dir, record));
-  return {
+  const report: CaptureReport = {
     stories,
     skipped: manifest.summary.skipped,
     startedAt: manifest.summary.startedAt,
     durationMs: manifest.summary.durationMs,
   };
+  return { report, appearance: manifest.summary.device.appearance };
 }

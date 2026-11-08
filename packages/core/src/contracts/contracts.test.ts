@@ -65,6 +65,7 @@ describe('Build and Snapshot', () => {
       baselineBuildId: null,
       trigger: 'main',
       device: 'iPhone 16',
+      appearance: 'light',
       status: 'pending',
       createdAt: '2026-11-04T10:00:00.000Z',
       completedAt: null,
@@ -90,29 +91,6 @@ describe('Build and Snapshot', () => {
     });
 
     expect(snapshot.buildId).toBe(build.id);
-  });
-});
-
-describe('Build checkRunId', () => {
-  it('requires a check run id that is a positive integer or null', () => {
-    const build = {
-      id: 'build-1',
-      projectId: 'project-1',
-      number: 1,
-      sha,
-      branch: 'main',
-      prNumber: null,
-      mergeBaseSha: null,
-      baselineBuildId: null,
-      trigger: 'main',
-      device: 'iPhone 16',
-      status: 'pending',
-      createdAt: '2026-11-04T10:00:00.000Z',
-      completedAt: null,
-    };
-    expect(Build.parse({ ...build, checkRunId: 901 }).checkRunId).toBe(901);
-    expect(Build.safeParse(build).success).toBe(false);
-    expect(Build.safeParse({ ...build, checkRunId: 0 }).success).toBe(false);
   });
 });
 

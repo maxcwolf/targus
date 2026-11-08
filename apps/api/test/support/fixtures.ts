@@ -45,6 +45,7 @@ export function newBuild(
     baselineBuildId: null,
     trigger: 'main',
     device: 'iPhone 17',
+    appearance: 'light',
     status: 'in_progress',
     createdAt: fakeClockEpoch,
     completedAt: null,
@@ -117,6 +118,7 @@ export function createBuildRequest(
     ancestors: [],
     trigger: 'main',
     device: 'iPhone 17',
+    appearance: 'light',
     snapshots: [],
     ...overrides,
   };

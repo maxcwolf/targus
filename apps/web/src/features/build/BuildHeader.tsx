@@ -2,6 +2,7 @@ import type { BuildWithSummary, ProjectSummary } from '@targus/core/browser';
 import type { ReactElement, ReactNode } from 'react';
 
 import {
+  deviceLabel,
   changeCount,
   commitUrl,
   formatDateTime,
@@ -43,7 +44,7 @@ function InfoCard({ item, project }: BuildHeaderProps): ReactElement {
     <div className="card info-card">
       <InfoCell label="Stories">{storyCount(counts)}</InfoCell>
       <InfoCell label="Changes">{changeCount(counts)}</InfoCell>
-      <InfoCell label="Device">{build.device}</InfoCell>
+      <InfoCell label="Device">{deviceLabel(build)}</InfoCell>
       <InfoCell label="PR">
         {repo && build.prNumber !== null ? (
           <a href={pullRequestUrl(repo, build.prNumber)}>PR #{build.prNumber}</a>
@@ -78,7 +79,7 @@ export function BuildHeader({ item, project }: BuildHeaderProps): ReactElement {
             Build {build.number} <StatusChip status={summary.status} />
           </h1>
           <p className="subline">
-            Started {formatDateTime(build.createdAt)} · {build.device}
+            Started {formatDateTime(build.createdAt)} · {deviceLabel(build)}
           </p>
           <p className="summary-line">{summaryLine(summary)}</p>
         </div>

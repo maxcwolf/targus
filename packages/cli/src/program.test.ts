@@ -71,6 +71,7 @@ describe('targus program', () => {
         udid: 'SIM',
         app: 'build/ExampleApp.app',
         out: 'out',
+        appearance: 'light',
         port: 7007,
         settle: 300,
         stabilityGap: 150,
@@ -96,15 +97,25 @@ describe('targus capture options', () => {
       '5',
       '--filter',
       'button',
+      '--appearance',
+      'dark',
     ]);
 
     expect(captured[0]).toMatchObject({
+      appearance: 'dark',
       bundleId: 'co.example',
       port: 7100,
       settle: 500,
       limit: 5,
       filter: 'button',
     });
+  });
+
+  it('accepts only light or dark for --appearance', async () => {
+    const { error, output } = await run([...captureArgs, '--appearance', 'auto']);
+
+    expect(error?.code).toBe('commander.invalidArgument');
+    expect(output).toContain('Allowed choices are light, dark');
   });
 
   it('rejects a non-integer number option', async () => {

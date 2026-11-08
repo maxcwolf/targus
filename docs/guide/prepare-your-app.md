@@ -150,9 +150,16 @@ if (process.env.EXPO_PUBLIC_TARGUS === 'true') {
 Format dates in a fixed time zone (or UTC) in those components, so the result does not depend on
 the time zone of the Mac running the capture.
 
-targus already takes care of the rest: it overrides the simulator's status bar, and it
-screenshots each story twice to make sure it holds still, retrying with a longer wait before it
-calls a story `unstable`.
+targus already takes care of the rest: it overrides the simulator's status bar, puts the simulator
+in light mode before the app launches, and screenshots each story twice to make sure it holds
+still, retrying with a longer wait before it calls a story `unstable`.
+
+A theme that follows the system (`useColorScheme()`, or a Storybook decorator that falls back to
+`system`) therefore renders light under targus on every machine, whatever the simulator was last
+set to. To review dark mode too, run a second `targus run --appearance dark` that publishes to a
+targus project of its own, so its baselines are dark ones; see
+[`targus capture`](../reference/cli.md#targus-capture). A story that pins its own theme is not
+affected by either setting.
 
 ## 5. Build the simulator app
 
