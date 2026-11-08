@@ -43,6 +43,7 @@ the same change.
 | [0026](0026-review-approvals-and-check-runs-follow-the-review-version.md) | Approvals commit with the review, and check runs follow the review version | accepted |
 | [0027](0027-idempotency-key-for-opening-a-build.md) | An idempotency key makes opening a build safe to retry | accepted |
 | [0028](0028-server-owns-the-diff-threshold.md) | The server owns the diff threshold | accepted |
+| [0029](0029-user-docs-in-the-repo-with-generated-cli-help.md) | User documentation lives in the repo, and the CLI help in it is generated | accepted |
 | [0030](0030-an-unstable-capture-never-becomes-the-baseline.md) | An unstable capture never becomes the baseline | accepted |
 | [0031](0031-replayable-results-submission.md) | A digest of the request makes submitting results safe to replay | accepted, amended 2026-11-07 |
 | [0032](0032-results-name-the-baseline-they-were-diffed-against.md) | Results name the baseline they were diffed against | accepted |

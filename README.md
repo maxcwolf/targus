@@ -4,11 +4,22 @@ Visual review for the native, on-device Storybook of a React Native app: CI rend
 in an iOS simulator, compares it with the accepted baseline, and publishes a GitHub check that
 stays pending until each change is approved in a Chromatic-like review UI.
 
+## Use targus
+
+- [What targus is](docs/guide/overview.md) and how it works.
+- [Quickstart](docs/guide/quickstart.md): your first capture in about 15 minutes.
+- [Set up with an AI agent](docs/prompts/README.md): copy-paste prompts for Claude Code or Codex.
+- [Run it in GitHub Actions](docs/guide/ci-github-actions.md), [review changes](docs/guide/review.md),
+  and [troubleshooting](docs/guide/troubleshooting.md).
+- Everything else: [the documentation](docs/README.md).
+
+## Work on targus
+
 The design is in [docs/plan.md](docs/plan.md); the rules and their guards are in
 [docs/engineering-standards.md](docs/engineering-standards.md); decisions are in
 [docs/adr/](docs/adr/). Contributors (and agents) start with [AGENTS.md](AGENTS.md).
 
-## Develop
+### Develop
 
 Requires Node 22 (`.nvmrc`) and Corepack (Yarn 4 is pinned in `package.json`).
 
@@ -21,7 +32,7 @@ yarn playwright install chromium   # once
 yarn e2e                           # builds the web app, serves it from a local Worker, runs Playwright
 ```
 
-## Run it locally
+### Run it locally
 
 ```sh
 yarn dev:local    # then open http://127.0.0.1:8900 and click "Sign in with GitHub"
@@ -55,33 +66,15 @@ Then open http://localhost:5173.
 Scaffolding: `yarn new:route <name>` and `yarn new:adapter <port> <name>` create files in the
 right layer with a test beside them.
 
-## Writing stories
+### Documentation
 
-Register the decorator from `@targus/react-native` in `.rnstorybook/preview.tsx`
-(`decorators: [withTargus]`). It reports render errors, and it reports two optional story
-parameters to the CLI ([ADR 0022](docs/adr/0022-story-parameters-reported-by-the-decorator.md)):
+User documentation lives in [docs/](docs/README.md) as plain Markdown: guides in `docs/guide/`,
+reference in `docs/reference/`, and the AI setup prompts in `docs/prompts/`. The `--help` blocks
+in [docs/reference/cli.md](docs/reference/cli.md) are generated: after changing a CLI flag or its
+description, run `yarn workspace @targus/cli build && yarn docs:cli`. `yarn check` fails while
+they are out of date.
 
-```tsx
-export const Loading: Story = {
-  // A spinner never holds still: leave it out of capture. It is not an error.
-  parameters: { targus: { skip: true } },
-};
-
-export const Entering: Story = {
-  // Wait 800 ms after the story renders before the first screenshot, instead of --settle.
-  parameters: { targus: { delay: 800 } },
-};
-```
-
-- `skip` (boolean, default false): the story is selected but never screenshotted or submitted.
-  It is listed as `skipped` in the capture and run summaries.
-- `delay` (milliseconds, 0 to 10000, default `--settle`, 300): replaces the settle wait for this
-  story; a stability retry doubles it.
-
-A value of the wrong type or out of range makes the story an error that names the field. Both
-parameters need the decorator; without it the CLI applies its defaults.
-
-## Notes
+### Notes
 
 - `.github/CODEOWNERS` names `@maxcwolf` while the repo lives under that account. Point it at an
   org team when the repo moves, before enabling "require review from code owners".

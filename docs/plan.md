@@ -137,7 +137,7 @@ are in [engineering-standards.md](engineering-standards.md).
 
 ### 5.1 CLI (`packages/cli`)
 
-Commands (built; `packages/cli/README.md` has every flag):
+Commands (built; `docs/reference/cli.md` has every flag):
 
 - `targus capture --udid <id> --app <path.app> --out <dir>` captures every story to a directory
   with a `manifest.json`. Works offline. Useful on its own.

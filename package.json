@@ -25,6 +25,7 @@
     "test:scripts": "node --test --test-reporter=spec \"scripts/**/*.test.mjs\"",
     "e2e": "yarn workspace @targus/e2e run e2e",
     "dev:local": "yarn workspace @targus/e2e run dev:local",
+    "docs:cli": "node scripts/docs-cli-help.mjs",
     "playwright": "yarn workspace @targus/e2e exec playwright",
     "new:adapter": "node scripts/new-adapter.mjs",
     "new:route": "node scripts/new-route.mjs",

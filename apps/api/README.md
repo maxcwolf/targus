@@ -219,7 +219,7 @@ One GitHub App provides login, org membership and check runs (ADR 0007). The pro
 
 ## Running locally
 
-The quickest way is `yarn dev:local` from the repo root (see the root README): it runs this
+The quickest way is `yarn dev:local` from the repo root (see the root README, "Run it locally"): it runs this
 Worker with `wrangler dev --var` test secrets, both GitHub origins pointed at the e2e GitHub stub,
 a fresh local D1 and R2 under `e2e/.wrangler/local-<port>/` (the UI is built there too, so runs on different ports never share files), and a seeded project, and signs you in
 as the stub's `octocat`. The pieces are shared with the e2e suite (`e2e/support/local-worker.ts`,

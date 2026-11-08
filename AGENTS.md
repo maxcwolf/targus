@@ -37,6 +37,9 @@ app imports `@targus/core/browser` (`src/browser.ts`), which leaves out the Node
   `app/` imports a feature only through its `index.ts`, and the feature graph has no cycle
   (ADR 0019).
 - Config: read env or bindings only in a file named `config.ts`, validated with zod.
+- User documentation: plain Markdown in `docs/guide/`, `docs/reference/` or `docs/prompts/`,
+  linked from `docs/README.md` (ADR 0029). After changing a CLI flag or its description, run
+  `yarn workspace @targus/cli build && yarn docs:cli` to regenerate the `--help` blocks.
 - Packages build to `dist/` with `tsc -b`; tests and dev servers resolve their `src/` through the
   `development` export condition (ADR 0010). Import another package only through its exports.
 
@@ -72,9 +75,10 @@ come from `Clock` and `IdGenerator`; `new Date()`, `Date.now()`, `Math.random()`
 
 ## Commands
 
-| Command       | What it does                                                        |
-| ------------- | ------------------------------------------------------------------- |
-| `yarn check`  | typecheck, lint, prettier, depcruise, knip, all tests with coverage |
-| `yarn test`   | every workspace's tests with coverage, plus the generator tests     |
-| `yarn e2e`    | builds the web app, starts `wrangler dev`, runs Playwright          |
-| `yarn format` | Prettier write                                                      |
+| Command         | What it does                                                                    |
+| --------------- | ------------------------------------------------------------------------------- |
+| `yarn check`    | typecheck, lint, prettier, depcruise, knip, all tests with coverage             |
+| `yarn test`     | every workspace's tests with coverage, plus the generator tests                 |
+| `yarn e2e`      | builds the web app, starts `wrangler dev`, runs Playwright                      |
+| `yarn format`   | Prettier write                                                                  |
+| `yarn docs:cli` | regenerate the `--help` blocks in `docs/reference/cli.md` (build the CLI first) |
