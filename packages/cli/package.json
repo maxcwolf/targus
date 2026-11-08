@@ -28,9 +28,9 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node ../../scripts/fix-declarations.mjs .",
     "test": "vitest run --coverage",
-    "fixture:capture": "tsc -b tsconfig.lib.json && node dist/bin.js fixture-capture"
+    "fixture:capture": "tsc -b tsconfig.lib.json && node ../../scripts/fix-declarations.mjs . && node dist/bin.js fixture-capture"
   },
   "dependencies": {
     "@targus/core": "workspace:*",

@@ -31,7 +31,7 @@ the same change.
 | [0014](0014-upload-record-grants-image-access.md) | An upload record, not a hash, grants a project access to an image | accepted, amended by PR #10 and PR #24 |
 | [0015](0015-same-origin-session-writes-and-hashed-session-ids.md) | Same-origin checks on session writes, and hashed session ids | accepted |
 | [0016](0016-cli-measures-server-classifies.md) | The CLI measures the diff, the server classifies the story | accepted, amended by [0028](0028-server-owns-the-diff-threshold.md) and [0032](0032-results-name-the-baseline-they-were-diffed-against.md) |
-| [0017](0017-relative-imports-name-the-typescript-file.md) | Relative imports name the TypeScript file | accepted |
+| [0017](0017-relative-imports-name-the-typescript-file.md) | Relative imports name the TypeScript file | accepted, amended by [0034](0034-published-declarations-name-the-js-file.md) |
 | [0018](0018-squash-merges-only.md) | Squash merges only, so every commit on main is a Conventional Commit | accepted |
 | [0019](0019-web-features-meet-through-their-index.md) | Web features meet only through their index.ts | accepted |
 | [0020](0020-one-structured-log-line-per-request.md) | One structured log line per request, with a request id and no secrets | accepted |
@@ -48,3 +48,4 @@ the same change.
 | [0031](0031-replayable-results-submission.md) | A digest of the request makes submitting results safe to replay | accepted, amended 2026-11-07 |
 | [0032](0032-results-name-the-baseline-they-were-diffed-against.md) | Results name the baseline they were diffed against | accepted |
 | [0033](0033-the-cli-silences-system-notices-before-capture.md) | The CLI silences system notices before capture | accepted |
+| [0034](0034-published-declarations-name-the-js-file.md) | Published declaration files name the `.js` file | accepted |

@@ -9,6 +9,8 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
+import { fixPackageDeclarations, publishedPackages } from './declaration-specifiers.mjs';
+
 const repoRoot = path.resolve(import.meta.dirname, '..', '..');
 // mkdir is atomic: whoever creates the directory holds the lock. Gitignored (.tsbuild/).
 const lockDir = path.join(repoRoot, '.tsbuild', 'build-packages.lock');
@@ -43,7 +45,8 @@ export async function withBuildLock(task) {
 }
 
 /**
- * Build `projects` (paths relative to the repo root) with `tsc -b`.
+ * Build `projects` (paths relative to the repo root) with `tsc -b`, then fix the declaration
+ * files the way every package build does (scripts/fix-declarations.mjs, ADR 0034).
  * @param {string[]} projects
  * @returns {Promise<{ status: number | null, output: string }>}
  */
@@ -54,6 +57,9 @@ export function buildPackages(projects) {
       cwd: repoRoot,
       encoding: 'utf8',
     });
+    if (build.status === 0) {
+      fixPackageDeclarations(publishedPackages.map((dir) => path.join(repoRoot, dir)));
+    }
     return Promise.resolve({ status: build.status, output: build.stdout + build.stderr });
   });
 }
