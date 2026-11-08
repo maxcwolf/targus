@@ -13,11 +13,15 @@ Replace `https://<targus host>` with your targus service's address before you pa
 Add a GitHub Actions workflow that runs targus visual capture on every pull request and every push
 to the default branch. targus is already set up in this repository: scripts/build-ios-sim.sh
 builds build/<Name>.app (a Release iOS simulator app with Storybook in capture mode) and
-scripts/bundle-js.sh re-bundles the JavaScript into it. If either is missing, stop and tell me.
+scripts/bundle-js.sh re-bundles the JavaScript into it. These paths are relative to the app
+folder: the React Native app's own folder (with its app.json or ios/ and its package.json), which
+is the repository root unless this is a monorepo. If either script is missing, stop and tell me.
 
-First, tell me: the default branch name, the package manager and its install command, the Node
-version the repo uses, whether it is an Expo app, and any existing workflow that already sets up
-Node or caches dependencies (reuse its setup steps).
+First, tell me: the app folder, the default branch name, the package manager and its install
+command, the Node version the repo uses, whether it is an Expo app, any existing workflow that
+already sets up Node or caches dependencies (reuse its setup steps), and how the app gets the
+@targus packages (from the registry, or a "portal:"/"file:" path to a targus checkout beside the
+repository because they are not published yet).
 
 Then write .github/workflows/targus.yml with exactly these parts:
 - on: push to the default branch, and pull_request.
@@ -47,8 +51,24 @@ Then write .github/workflows/targus.yml with exactly these parts:
 Add a one-line comment on fetch-depth, --sha, the unbooted simulator and the pinned runner saying
 why.
 
+Adapt it to the repository:
+- If the app folder is not the repository root: set defaults.run.working-directory to it, run the
+  dependency install from the root, and prefix the paths that actions resolve from the root (the
+  cache paths and the artifact path) with the app folder. Run the CLI through the app's own
+  script runner (for Yarn: yarn workspace <app package name> targus run ...).
+- If the app uses a targus checkout: check out maxcwolf/targus (public) beside the repository
+  with actions/checkout path: targus and ref: set to the commit the developer has tested (ask
+  me for it), check this repository out into its own path so the relative path still resolves,
+  and build the two packages in the checkout before the install:
+  yarn workspaces focus @targus/cli @targus/react-native, then
+  yarn workspace @targus/cli build and yarn workspace @targus/react-native build.
+- Pull requests from forks get no secrets: add
+  if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+  to the job.
+
 Rules: never put a token or secret value in any file; do not change other workflows; do not push.
-Validate the YAML (actionlint if it is installed, otherwise a YAML parse).
+Validate the YAML (actionlint if it is installed, otherwise a YAML parse), then run the
+repository's own check command if it has one, since its linters may cover workflow files.
 
 Finish with the file, and tell me to:
 1. add the repository secret TARGUS_TOKEN (Settings > Secrets and variables > Actions);
