@@ -2,6 +2,14 @@ import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
 
 import { decodePng } from './decode-png.ts';
+import {
+  canvasOf,
+  outsideOverlapMask,
+  overlapOf,
+  padTo,
+  paintPadding,
+  type Rgb,
+} from './padded-canvas.ts';
 
 /** Tuning for `diffImages`. Both fields default to pixelmatch's own defaults. */
 export interface DiffImagesOptions {
@@ -34,53 +42,9 @@ export interface DiffImagesResult {
   readonly sizeMismatch: boolean;
 }
 
-interface Size {
-  readonly width: number;
-  readonly height: number;
-}
-
 const defaultThreshold = 0.1;
 /** pixelmatch's default colour for a differing pixel, also used to paint the padding. */
-const diffColor: [number, number, number] = [255, 0, 0];
-
-/** Copy `image` onto a transparent black canvas of `canvas` size, anchored top left. */
-function padTo(image: PNG, canvas: Size): Uint8Array {
-  if (image.width === canvas.width && image.height === canvas.height) return image.data;
-  const padded = new Uint8Array(canvas.width * canvas.height * 4);
-  const rowBytes = image.width * 4;
-  for (let y = 0; y < image.height; y += 1) {
-    padded.set(image.data.subarray(y * rowBytes, (y + 1) * rowBytes), y * canvas.width * 4);
-  }
-  return padded;
-}
-
-/** One byte per canvas pixel: 1 outside the area both images cover, which pixelmatch skips. */
-function outsideOverlap(canvas: Size, overlap: Size): Uint8Array {
-  const mask = new Uint8Array(canvas.width * canvas.height).fill(1);
-  for (let y = 0; y < overlap.height; y += 1) {
-    mask.fill(0, y * canvas.width, y * canvas.width + overlap.width);
-  }
-  return mask;
-}
-
-const covers = (image: Size, x: number, y: number): boolean => x < image.width && y < image.height;
-
-/**
- * Paint every canvas pixel that only one image covers as changed, and count them. Padding never
- * goes through pixelmatch, so it counts as changed whatever colour the real pixel has.
- */
-function paintPadding(diff: Uint8Array, canvas: Size, a: Size, b: Size): number {
-  let painted = 0;
-  for (let y = 0; y < canvas.height; y += 1) {
-    for (let x = 0; x < canvas.width; x += 1) {
-      if (covers(a, x, y) !== covers(b, x, y)) {
-        diff.set([...diffColor, 255], (y * canvas.width + x) * 4);
-        painted += 1;
-      }
-    }
-  }
-  return painted;
-}
+const diffColor: Rgb = [255, 0, 0];
 
 /**
  * Compare two PNGs with pixelmatch (ADR 0003: diffing runs in the CLI on the CI runner, never in
@@ -97,14 +61,7 @@ export function diffImages(
 ): DiffImagesResult {
   const before = decodePng(baseline);
   const after = decodePng(current);
-  const canvas = {
-    width: Math.max(before.width, after.width),
-    height: Math.max(before.height, after.height),
-  };
-  const overlap = {
-    width: Math.min(before.width, after.width),
-    height: Math.min(before.height, after.height),
-  };
+  const canvas = canvasOf(before, after);
   const sizeMismatch = before.width !== after.width || before.height !== after.height;
 
   const { width, height } = canvas;
@@ -118,11 +75,11 @@ export function diffImages(
     {
       threshold: options.threshold ?? defaultThreshold,
       includeAA: options.includeAntiAliasing ?? false,
-      diffColor,
-      ignoreMask: sizeMismatch ? outsideOverlap(canvas, overlap) : undefined,
+      diffColor: [...diffColor],
+      ignoreMask: sizeMismatch ? outsideOverlapMask(canvas, overlapOf(before, after)) : undefined,
     },
   );
-  const padding = sizeMismatch ? paintPadding(diff.data, canvas, before, after) : 0;
+  const padding = sizeMismatch ? paintPadding(diff.data, canvas, before, after, diffColor) : 0;
   const differingPixels = matched + padding;
   const totalPixels = width * height;
   return {
