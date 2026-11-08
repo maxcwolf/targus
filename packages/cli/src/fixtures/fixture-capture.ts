@@ -1,4 +1,4 @@
-import { isBlankPng } from '@targus/core';
+import { isBlankPng, type Appearance } from '@targus/core';
 
 import type { CaptureReport, CaptureResult } from '../capture/capture-stories.ts';
 import { writeCaptureOutput, type CaptureManifest } from '../capture/manifest.ts';
@@ -65,9 +65,11 @@ export function fixtureCaptureReport(variant: FixtureCaptureVariant = 'base'): C
 export async function writeFixtureCapture(
   dir: string,
   variant: FixtureCaptureVariant = 'base',
+  appearance: Appearance = 'light',
 ): Promise<CaptureManifest> {
   return writeCaptureOutput(dir, fixtureCaptureReport(variant), {
     udid: 'FIXTURE',
+    appearance,
     bundleId: 'dev.targus.fixture',
     appPath: null,
     settleMs: 300,

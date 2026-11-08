@@ -26,6 +26,7 @@ const buildRequest: CreateBuildRequest = {
   ancestors: [],
   trigger: 'main',
   device: 'iPhone 16',
+  appearance: 'light',
   snapshots: [],
 };
 

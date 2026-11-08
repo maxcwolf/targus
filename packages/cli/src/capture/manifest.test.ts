@@ -15,6 +15,7 @@ import {
 
 const run: CaptureRunInfo = {
   udid: 'SIM',
+  appearance: 'dark',
   bundleId: 'co.example',
   appPath: '/apps/Example.app',
   settleMs: 300,
@@ -67,7 +68,7 @@ describe('buildManifest', () => {
     const manifest = buildManifest(report, run);
 
     expect(manifest.summary).toEqual({
-      device: { udid: 'SIM' },
+      device: { udid: 'SIM', appearance: 'dark' },
       app: { bundleId: 'co.example', path: '/apps/Example.app' },
       settleMs: 300,
       stabilityGapMs: 150,
@@ -114,6 +115,15 @@ describe('writeCaptureOutput', () => {
 
     expect(skipped).toEqual(['e']);
     expect((await readCaptureManifest(path.join(dir, 'out'))).summary.skipped).toEqual([]);
+  });
+
+  it('reads a manifest written before appearance existed as an unknown appearance', async () => {
+    const written = await writeCaptureOutput(path.join(dir, 'out'), report, run);
+    const older = { ...written, summary: { ...written.summary, device: { udid: 'SIM' } } };
+    await writeFile(path.join(dir, 'out', 'manifest.json'), JSON.stringify(older));
+
+    const read = await readCaptureManifest(path.join(dir, 'out'));
+    expect(read.summary.device).toEqual({ udid: 'SIM', appearance: null });
   });
 
   it('rejects a manifest that does not match the schema', async () => {

@@ -56,6 +56,7 @@ describe('targus run options', () => {
       fromCapture: 'cap',
       apiUrl: 'https://targus.example',
       baseBranch: 'main',
+      appearance: 'light',
       port: 7007,
       settle: 300,
       stabilityGap: 150,
@@ -91,6 +92,8 @@ describe('targus run flags', () => {
       'f'.repeat(40),
       '--limit',
       '4',
+      '--appearance',
+      'dark',
     ]);
 
     expect(runs[0]?.options).toMatchObject({
@@ -104,6 +107,7 @@ describe('targus run flags', () => {
       pr: 12,
       sha: 'f'.repeat(40),
       limit: 4,
+      appearance: 'dark',
     });
   });
 });

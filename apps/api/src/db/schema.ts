@@ -71,6 +71,9 @@ export const builds = sqliteTable(
     baselineBuildId: text('baseline_build_id'),
     trigger: text('trigger', { enum: ['pr', 'main'] }).notNull(),
     device: text('device').notNull(),
+    // The light or dark mode the CLI pinned before capturing (ADR 0035). Null for builds opened
+    // by a CLI that predates it.
+    appearance: text('appearance', { enum: ['light', 'dark'] }),
     status: text('status', { enum: buildStatuses }).notNull(),
     checkRunId: integer('check_run_id'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),

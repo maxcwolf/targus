@@ -32,6 +32,7 @@ const buildBase = {
   mergeBaseSha: null,
   baselineBuildId: null,
   device: 'iPhone 16 / iOS 18.2',
+  appearance: 'light',
   completedAt: '2026-11-01T10:05:00Z',
   checkRunId: null,
 } as const;

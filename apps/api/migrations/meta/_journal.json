@@ -71,6 +71,13 @@
       "when": 1794076702780,
       "tag": "0009_build_results_digest",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1794116619930,
+      "tag": "0010_build_appearance",
+      "breakpoints": true
     }
   ]
 }

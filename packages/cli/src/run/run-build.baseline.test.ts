@@ -39,6 +39,7 @@ function input(api: FakeTargusApi, stories: CaptureResult[]): RunBuildInput {
     git: { sha: 'a'.repeat(40), mergeBaseSha: null, ancestors: [] },
     ci: { branch: 'main', prNumber: null, trigger: 'main' },
     device: 'iPhone 16',
+    appearance: 'light',
     api,
     clock: createFakeClock(),
     ids: createFakeIdGenerator('run'),

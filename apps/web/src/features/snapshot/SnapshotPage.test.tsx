@@ -25,7 +25,7 @@ describe('SnapshotPage header', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Button : Primary');
     expect(screen.getByRole('heading', { level: 1 })).toHaveAttribute('title', 'Button : Primary');
     expect(document.querySelector('.snapshot-bar .subline')).toHaveTextContent(
-      'Build 12 on feature/buttons · iPhone 16 / iOS 18.2',
+      'Build 12 on feature/buttons · iPhone 16 / iOS 18.2 · light',
     );
     expect(screen.getByRole('status', { name: 'Review' })).toHaveTextContent('Unreviewed');
     expect(screen.getByRole('link', { name: 'Back to build 12' })).toHaveAttribute(

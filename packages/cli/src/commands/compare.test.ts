@@ -36,7 +36,7 @@ async function writeCapture(name: string, pngs: Record<string, Uint8Array>): Pro
     });
   }
   const summary = {
-    device: { udid: 'SIM' },
+    device: { udid: 'SIM', appearance: 'light' },
     app: { bundleId: 'co.example', path: null },
     settleMs: 300,
     stabilityGapMs: 150,

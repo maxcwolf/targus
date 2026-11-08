@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { TargusError } from '@targus/core';
+import { Appearance, TargusError } from '@targus/core';
 import { z } from 'zod';
 
 import { summarizeIssues } from '../errors/zod-summary.ts';
@@ -31,7 +31,8 @@ const PerStoryMs = z.object({ mean: Ms, median: Ms, p90: Ms, max: Ms });
 export type PerStoryMs = z.infer<typeof PerStoryMs>;
 
 const Summary = z.object({
-  device: z.object({ udid: z.string() }),
+  /** `appearance` is the light or dark mode it was pinned to; null in older manifests. */
+  device: z.object({ udid: z.string(), appearance: Appearance.nullable().default(null) }),
   app: z.object({ bundleId: z.string(), path: z.string().nullable() }),
   settleMs: Ms,
   stabilityGapMs: Ms,
@@ -62,6 +63,7 @@ export const manifestFileName = 'manifest.json';
 /** Facts about the run that the capture loop itself does not know. */
 export interface CaptureRunInfo {
   readonly udid: string;
+  readonly appearance: Appearance;
   readonly bundleId: string;
   readonly appPath: string | null;
   readonly settleMs: number;
@@ -106,7 +108,7 @@ export function buildManifest(report: CaptureReport, run: CaptureRunInfo): Captu
   return {
     version: 1,
     summary: {
-      device: { udid: run.udid },
+      device: { udid: run.udid, appearance: run.appearance },
       app: { bundleId: run.bundleId, path: run.appPath },
       settleMs: run.settleMs,
       stabilityGapMs: run.stabilityGapMs,

@@ -27,6 +27,13 @@ export const baselineBuildStatuses = [
   'accepted',
 ] as const satisfies readonly BuildStatus[];
 
+/**
+ * The light or dark mode the device was in when the build was captured (ADR 0035). The CLI pins
+ * it before the first story, `light` unless `--appearance` says otherwise.
+ */
+export const Appearance = z.enum(['light', 'dark']);
+export type Appearance = z.infer<typeof Appearance>;
+
 /** A full 40-character git commit sha, lowercase hex. */
 export const GitSha = z.string().regex(/^[0-9a-f]{40}$/, 'expected a full 40-character git sha');
 
@@ -42,6 +49,8 @@ export const Build = z.object({
   baselineBuildId: z.string().min(1).nullable(),
   trigger: BuildTrigger,
   device: z.string().min(1),
+  /** Null for a build opened by a CLI that did not pin the appearance. */
+  appearance: Appearance.nullable(),
   status: BuildStatus,
   createdAt: z.iso.datetime(),
   completedAt: z.iso.datetime().nullable(),

@@ -84,7 +84,9 @@ the file, the reason and a proposed fix:
   preview.tsx when isTargus is true, for example with the mockdate package;
 - random values, generated ids, faker data: propose fixed values;
 - remote images or network data: propose local fixtures;
-- a theme that follows the device's light or dark setting: propose a fixed theme under targus;
+- a theme that follows the device's light or dark setting needs no fix, since targus captures
+  in light mode; if the app has a dark theme, say that `targus run --appearance dark` to a
+  second targus project reviews it;
 - animations that loop forever (spinners, shimmers): propose
   parameters: { targus: { skip: true } } on the story; if the repository already marks such
   stories (for example a tag such as 'skip-visual'), say so and propose the same stories;

@@ -1,5 +1,12 @@
 export { Approval } from './approval.ts';
-export { baselineBuildStatuses, Build, BuildStatus, BuildTrigger, GitSha } from './build.ts';
+export {
+  Appearance,
+  baselineBuildStatuses,
+  Build,
+  BuildStatus,
+  BuildTrigger,
+  GitSha,
+} from './build.ts';
 export {
   BuildStatusSummary,
   BuildWithSummary,
