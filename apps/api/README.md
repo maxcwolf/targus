@@ -259,7 +259,7 @@ B=http://localhost:8787
 # 1. Create a project. Keep the token: it is shown once, and only its hash is stored.
 curl -s $B/api/admin/projects \
   -H 'Authorization: Bearer dev-admin-token' -H 'Content-Type: application/json' \
-  -d '{"githubOrg":"example-org","installationId":null,"repo":"example-org/example-app","name":"the pilot app"}'
+  -d '{"githubOrg":"example-org","installationId":null,"repo":"example-org/example-app","name":"example-app"}'
 TOKEN=...   # the "token" field of the response
 
 # 2. Open a build. The response lists the image hashes the server still needs.

@@ -15,7 +15,7 @@ every pull request and every push to `main`, CI renders each story in an iOS sim
 screenshots it, compares it with the accepted baseline and publishes the result as a GitHub
 check. Engineers need to review each changed story side by side with its baseline and approve
 or deny it, and the check must stay pending until every change is approved so the repo can
-require it before merge. The first consumer is `example-org/example-app`.
+require it before merge. The first consumer is one team's Expo app (the pilot app).
 
 Review needs state that outlives a CI job: baselines, approvals that carry across pushes, who
 reviewed what, and image storage. It also needs a place for people to look at images and click

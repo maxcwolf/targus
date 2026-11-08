@@ -242,7 +242,7 @@ describe('targus run with a token or URL the API rejects', () => {
 
     await targus(run(await appBundle()), runDeps);
 
-    expect(lines[0]).toBe('project: the pilot app (example-org/example-app)');
+    expect(lines[0]).toBe('project: example-app (example-org/example-app)');
     expect(api.calls).toEqual([{ method: 'currentProject' }]);
     expect(gitCalls).toBeGreaterThan(0);
   });

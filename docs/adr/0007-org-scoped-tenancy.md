@@ -39,15 +39,15 @@ minutes before it expires.
 
 ## Context
 
-The first consumer is `example-org/example-app`. targus should serve any repo in the example-org org
-now and other GitHub orgs later without a rewrite. Adding tenancy to a single-tenant schema
+The first consumer is one team's app (the pilot app). targus should serve any repo in that
+team's org now and other GitHub orgs later without a rewrite. Adding tenancy to a single-tenant schema
 after the fact means touching every table and query.
 
 ## Decision
 
 We will scope the data model by org from day one. The `orgs` table holds `github_org` and
 `installation_id`; every other table hangs off `org_id` through `projects`, and every query is
-scoped by it. Only example-org is installed in v1, seeded manually; the `installation.created`
+scoped by it. Only the pilot team's org is installed in v1, seeded manually; the `installation.created`
 webhook that creates an org row is a v1.1 candidate.
 
 One GitHub App ("targus") handles both identity and reporting. Login uses the App's OAuth
@@ -75,6 +75,6 @@ Marked as an assumption in plan.md: project tokens are created by a maintainer w
 
 ## Alternatives considered
 
-- **Single-tenant schema for example-org only.** Simpler now, but a second org would require a
+- **Single-tenant schema for the pilot team only.** Simpler now, but a second org would require a
   rewrite, which the goal rules out.
 - **Separate OAuth app for login.** Not chosen; the GitHub App already provides OAuth.

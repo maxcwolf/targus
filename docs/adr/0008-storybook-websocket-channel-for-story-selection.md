@@ -43,7 +43,7 @@ server and the app bundle share a protocol version. In the pilot app, `.rnstoryb
 `enableWebsockets` (the spike also passed `onDeviceUI: false` and `shouldPersistSelection:
 false`) when `EXPO_PUBLIC_TARGUS` is set.
 
-Confirmed by the capture spike (docs/capture-spike.md): 354 the pilot app stories captured with no channel
+Confirmed by the capture spike (docs/capture-spike.md): 354 pilot app stories captured with no channel
 failures, `storyRendered` arriving within milliseconds of `setCurrentStory`. The deep-link
 fallback (`simctl openurl` with `?STORYBOOK_STORY_ID=`) is not planned. Two limits found:
 `storyRendered` marks React commit, not paint, so a settle delay remains necessary; and

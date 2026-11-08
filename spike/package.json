@@ -2,7 +2,7 @@
   "name": "targus-spike",
   "private": true,
   "type": "module",
-  "description": "Capture spike (2026-11-04): drive the pilot app's on-device Storybook in an iOS simulator and capture every story.",
+  "description": "Capture spike (2026-11-04): drive a React Native app's on-device Storybook in an iOS simulator and capture every story.",
   "scripts": {
     "capture": "node capture.mjs"
   },

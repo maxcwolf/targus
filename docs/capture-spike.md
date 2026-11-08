@@ -1,18 +1,18 @@
-# Capture spike: the pilot app's native Storybook in an iOS simulator
+# Capture spike: a real app's native Storybook in an iOS simulator
 
 Started 2026-11-04. Goal from [plan.md](plan.md#11-milestones): prove the capture loop locally
-against `../the pilot app`, measure seconds per story, count unstable stories, and decide whether the
+against a real Expo app (the pilot app), measure seconds per story, count unstable stories, and decide whether the
 Storybook websocket channel is the right driving mechanism.
 
 ## Setup used
 
 - Machine: macOS, Xcode 26.2, iPhone 16 simulator (the pilot app's CI pins Xcode 26.6).
-- the pilot app at `<commit>` plus two local changes:
+- The pilot app (an Expo app with an on-device Storybook) plus two local changes:
   - `.rnstorybook/index.tsx` passes `enableWebsockets`, `onDeviceUI: false`, and
     `shouldPersistSelection: false` when `EXPO_PUBLIC_TARGUS=true`.
   - `yarn.lock` bumps `expo-modules-jsi` 57.1.1 → 57.1.3 (see findings).
 - Release simulator app built with
-  `APP_VARIANT=staging EXPO_PUBLIC_STORYBOOK_ENABLED=true EXPO_PUBLIC_TARGUS=true npx expo run:ios --configuration Release --no-bundler`.
+  `APP_VARIANT=<variant> EXPO_PUBLIC_STORYBOOK_ENABLED=true EXPO_PUBLIC_TARGUS=true npx expo run:ios --configuration Release --no-bundler`.
 - Capture script: [spike/capture.mjs](../spike/capture.mjs). Bundle swap: [spike/rebundle.sh](../spike/rebundle.sh).
 
 ## Findings so far
@@ -34,9 +34,9 @@ app bundle share a protocol version.
 
 The first build failed in `ExpoModulesJSI` on `SWIFT_RETURNS_RETAINED` constructor annotations.
 expo-modules-jsi 57.1.2 fixes exactly this for Xcode 26 (changelog entry for
-[expo/expo#51040](https://github.com/expo/expo/pull/51040)). the pilot app's lockfile pinned 57.1.1;
-`yarn up -R expo-modules-jsi` moves it to 57.1.3 with no `package.json` change. This is a
-the pilot app PR candidate independent of targus: anyone on Xcode 26.2 hits it on `yarn ios`.
+[expo/expo#51040](https://github.com/expo/expo/pull/51040)). The pilot app's lockfile pinned 57.1.1;
+`yarn up -R expo-modules-jsi` moves it to 57.1.3 with no `package.json` change. This is a fix
+for the app independent of targus: anyone on Xcode 26.2 hits it on `yarn ios`.
 
 ### expo-observe does not compile in Swift 6 mode under Xcode 26.2
 
@@ -45,20 +45,19 @@ Second build failure: `expo-observe/ios/ObserveModule.swift` passes a payload de
 race. No published expo-observe or expo-modules-core version changes that line (checked
 57.0.26 and 58.0.18), so this is a compiler-version difference against CI's Xcode 26.6. For
 the spike the fix is a hand edit in `node_modules` (copy the integrations into a local and mark
-the payload `nonisolated(unsafe)`). If the pilot app wants local builds on Xcode 26.2 it needs a
+the payload `nonisolated(unsafe)`). If the app wants local builds on Xcode 26.2 it needs a
 `patch-package` patch for expo-observe; otherwise developers must match CI's Xcode.
 
-### the pilot app's Xcode bundle phase requires a Datadog API key
+### The app's Xcode bundle phase can need CI secrets
 
-Even with `DISABLE_DATADOG_DSYM_UPLOAD=1`, the "Bundle React Native code and images" phase wraps
-bundling in `datadog-ci react-native xcode`, which fails without `DATADOG_API_KEY` after the
-bundle is built (`--dry-run` does not help; its metrics logger still needs the key). The spike
-bypasses it with `ios/.xcode.env.local` pointing `DATADOG_CI_EXEC` at a shim that runs
-`react-native-xcode.sh` directly.
+The pilot app's "Bundle React Native code and images" phase wraps bundling in a
+crash-reporting upload tool that fails without its API key, even when uploads are turned off.
+The spike bypassed it with `ios/.xcode.env.local` pointing at a shim that runs
+`react-native-xcode.sh` directly. Apps that wrap the phase this way are common.
 
 Consequence for targus: the planned CI path never runs the Xcode bundle phase for PR builds. It
 calls `expo export:embed` directly ([spike/rebundle.sh](../spike/rebundle.sh)), which does not
-involve datadog-ci at all. Only the fingerprint-miss native build touches the phase, and that
+involve that tool at all. Only the fingerprint-miss native build touches the phase, and that
 runs through `eas build --local` with CI's secrets as today.
 
 ### Where the built app lands
@@ -70,14 +69,14 @@ guessing, and the CI job should normalise to a known location after whichever bu
 ### Metro regenerates `storybook.requires.ts` unformatted
 
 Any bundle with Storybook enabled rewrites `.rnstorybook/storybook.requires.ts` with double
-quotes; the committed file is Prettier-formatted. the pilot app's CI drift check presumably formats
+quotes; the committed file is Prettier-formatted. The pilot app's CI drift check presumably formats
 before diffing. The targus CI job should run `prettier --write` on that file or ignore it in
 `git status` checks so a capture run never leaves the tree dirty.
 
 ## Results
 
 Full run manifest: `spike/out-full/manifest.json` (gitignored). Numbers from the run on
-2026-11-04 against the pilot app `<commit>`, iPhone 16, iOS 18.3 runtime.
+2026-11-04 against the pilot app, iPhone 16, iOS 18.3 runtime.
 
 | Measure | Value |
 | --- | --- |
@@ -103,7 +102,7 @@ plan keeps `hermesc` because it matches what production builds load and makes by
 bugs visible.
 
 The rebundled bytecode is 2.7 MB larger than Xcode's, most likely because
-[spike/rebundle.sh](../spike/rebundle.sh) did not set `APP_VARIANT=staging` so `app.config.ts`
+[spike/rebundle.sh](../spike/rebundle.sh) did not set the native build's `APP_VARIANT`, so `app.config.ts`
 resolved differently. The CI job must bundle with exactly the env the native build used, and
 the CLI should record the bundling env in the build metadata.
 
@@ -117,7 +116,7 @@ Storybook RN. Go.
 1. **Story errors are invisible on the channel.** Thirteen stories rendered Storybook's
    "Something went wrong rendering your story" box, yet the app emitted `storyRendered` and
    `storyFinished status=success`. Storybook RN's error boundary only `console.log`s. The device
-   log showed the real cause (`No QueryClient set`, a missing provider in the pilot app's native
+   log showed the real cause (`No QueryClient set`, a missing provider in the app's native
    `preview.tsx`). The `@targus/react-native` decorator will therefore wrap each story in its
    own error boundary and emit a `targus/storyError` channel event with the message and
    component stack. The CLI records it as an error, never as a snapshot. Reading device logs
@@ -143,25 +142,10 @@ Storybook RN. Go.
 7. **Per-story cost is dominated by the two `simctl` screenshots plus settle**, not by
    rendering. Running two simulators in parallel on one macOS runner is the obvious v1.1 speedup.
 
-### the pilot app follow-ups surfaced by the spike (not targus work)
-
-- Native `.rnstorybook/preview.tsx` lacks `QueryClientProvider`, `SafeAreaProvider` and the
-  MockDate decorator that the web preview has; 13 stories error on device as a result.
-- Web-only stories (`webnavlayout`, breadcrumbs, web screen header) are in the native index and
-  render "Web only." placeholders.
-- `chatmessage--my-message` renders blank on device; cause not investigated.
-- `weighthistory--with-data` renders its chart's filled area differently between app launches
-  (2.2% of pixels; stable within a run). Found when the first CLI run was compared with the spike
-  run. Needs a look before the check becomes required.
-- `expo-modules-jsi` lockfile bump and an `expo-observe` patch are needed for local builds on
-  Xcode 26.2 (see findings above).
-
 ## Spike state and cleanup
 
-- the pilot app working tree: `.rnstorybook/index.tsx` (targus flags) and `yarn.lock`
-  (expo-modules-jsi 57.1.3) are intentional uncommitted changes for you to keep or discard.
-  `storybook.requires.ts` was restored. `node_modules/expo-observe` carries a hand edit and
-  `ios/.xcode.env.local` points at a Datadog-skipping shim; both are local only and vanish on
-  reinstall or prebuild.
+- The pilot app's working tree was left with the targus flags in `.rnstorybook/index.tsx` and
+  the `yarn.lock` bump, both uncommitted; the `node_modules` and `.xcode.env.local` edits are
+  local only and vanish on reinstall or prebuild.
 - Captures and manifests live under `spike/out-*` (gitignored). App copies and logs are in the
   session scratchpad.

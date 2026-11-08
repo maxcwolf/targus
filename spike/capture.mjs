@@ -3,7 +3,7 @@
 // screenshot every story.
 //
 // Run from the consumer project's root (the Storybook index builder reads process.cwd()):
-//   cd ../the pilot app && node ../targus/spike/capture.mjs --udid <UDID> --app <path.app> --out <dir>
+//   cd ../my-app && node ../targus/spike/capture.mjs --udid <UDID> --app <path.app> --out <dir>
 //
 // What it proves: the Storybook RN websocket channel can select stories from the host, the
 // app reports when each story has rendered, and `simctl io screenshot` captures it. It also

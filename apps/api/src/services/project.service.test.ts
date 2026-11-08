@@ -12,7 +12,7 @@ const request = {
   githubOrg: 'example-org',
   installationId: 42,
   repo: 'example-org/example-app',
-  name: 'the pilot app',
+  name: 'example-app',
   defaultBranch: 'main',
 };
 
@@ -27,7 +27,7 @@ describe('createProject', () => {
       id: 'id-1',
       orgId: 'id-2',
       repo: 'example-org/example-app',
-      name: 'the pilot app',
+      name: 'example-app',
       defaultBranch: 'main',
     });
     expect(response.token).toHaveLength(48);

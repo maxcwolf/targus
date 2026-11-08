@@ -250,11 +250,11 @@ describe('CreateProjectRequest', () => {
       githubOrg: 'example-org',
       installationId: null,
       repo: 'example-org/example-app',
-      name: 'the pilot app',
+      name: 'example-app',
     });
 
     expect(request.defaultBranch).toBe('main');
-    expect(CreateProjectRequest.safeParse({ ...request, repo: 'the pilot app' }).success).toBe(false);
+    expect(CreateProjectRequest.safeParse({ ...request, repo: 'example-app' }).success).toBe(false);
   });
 
   it('requires the returned token to be at least 32 characters', () => {
@@ -262,7 +262,7 @@ describe('CreateProjectRequest', () => {
       id: 'p1',
       orgId: 'o1',
       repo: 'example-org/example-app',
-      name: 'the pilot app',
+      name: 'example-app',
       defaultBranch: 'main',
     };
 

@@ -135,7 +135,7 @@ describe('TargusApiClient.currentProject', () => {
       orgId: 'o1',
       githubOrg: 'example-org',
       repo: 'example-org/example-app',
-      name: 'the pilot app',
+      name: 'example-app',
       defaultBranch: 'main',
     },
   };

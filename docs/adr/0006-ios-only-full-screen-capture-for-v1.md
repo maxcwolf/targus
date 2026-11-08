@@ -19,7 +19,7 @@ of its own:
 
 ## Context
 
-the pilot app's CI already builds and boots iOS simulators on CircleCI macOS. Native rendering has more
+The pilot app's CI already builds and boots iOS simulators on CircleCI macOS. Native rendering has more
 noise than react-native-web, so v1 should capture in as few configurations as possible and make
 each capture deterministic. Android, dark mode, font-scale modes and iPad are wanted later.
 

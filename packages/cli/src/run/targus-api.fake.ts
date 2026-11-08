@@ -48,7 +48,7 @@ export const fakeProject: CurrentProjectResponse['project'] = {
   orgId: 'org-1',
   githubOrg: 'example-org',
   repo: 'example-org/example-app',
-  name: 'the pilot app',
+  name: 'example-app',
   defaultBranch: 'main',
 };
 

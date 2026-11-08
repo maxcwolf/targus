@@ -399,7 +399,7 @@ app.
   and nightly.
 - A cli smoke test against `examples/basic` that captures three stories and checks image
   dimensions. Today `capture.simulator.test.ts` exists but runs only by hand.
-- `e2e/pilot-canary`, a manual workflow that runs the CLI against the pilot app's cached app and
+- `e2e/pilot-canary`, a manual workflow that runs the CLI against the pilot app's cached build and
   posts the summary. A feedback loop, not a gate.
 
 These were planned on the assumption that the repository is public, so that macOS runner

@@ -12,7 +12,7 @@ describe('checkProject', () => {
 
     await checkProject(createFakeTargusApi(), url, (line) => lines.push(line));
 
-    expect(lines).toEqual(['project: the pilot app (example-org/example-app)']);
+    expect(lines).toEqual(['project: example-app (example-org/example-app)']);
   });
 
   it('rewords a rejected token without a request id when the error has none', async () => {

@@ -3,11 +3,10 @@
 targus runs today on Cloudflare: the API is a Worker, the database is D1 (SQLite), the images
 are in R2 and the web app is served next to the Worker. This page says what it would take to run
 the same code on a different stack, and which changes keep that switch cheap. The reference
-target is the stack of the first consumer's organisation, read from its repositories in
-November 2026: a Kubernetes cluster (EKS) running containers deployed with Helm, Postgres on RDS,
+target is a common company stack: a Kubernetes cluster (EKS) running containers deployed with Helm, Postgres on RDS,
 S3 for objects, secrets injected as environment variables, Terraform for infrastructure, Datadog
 for logs, and CircleCI for the mobile app's CI (macOS executors for iOS). Nothing on this page
-depends on that organisation; any host with a container runtime, Postgres and an S3-compatible
+depends on those exact products; any host with a container runtime, Postgres and an S3-compatible
 store fits the same way.
 
 ## What is already host-neutral

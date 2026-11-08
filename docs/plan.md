@@ -18,9 +18,9 @@ it with the accepted baseline, and publishes the result as a GitHub check. Engin
 with GitHub, review each changed story side by side with its baseline, and approve or deny. The
 check stays pending until every change is approved, so the repo can require it before merge.
 
-First consumer: `example-org/example-app`. Design for any repo in the example-org org now, and for other
-GitHub orgs later without a rewrite. The proof of concept before the pilot app runs on a repository
-owned by a personal account (ADR 0012).
+First consumer: one team's Expo app (the pilot app). Design for any repo in that team's GitHub
+org now, and for other GitHub orgs later without a rewrite. The proof of concept before the
+pilot runs on a repository owned by a personal account (ADR 0012).
 
 ## 2. Agreed decisions
 
@@ -33,10 +33,10 @@ owned by a personal account (ADR 0012).
 | App binary | Native simulator app cached by Expo fingerprint; JS rebundled per run (ADR 0005) |
 | Diffing | The CLI computes the diff on the CI runner; the server classifies each story from it (ADRs 0003, 0016) |
 | Gating | GitHub check run `targus/ios` pending until all changes are approved; passes when clean |
-| CI runner (the pilot app) | CircleCI macOS, where the pilot app already builds and boots simulators |
+| CI runner (pilot app) | CircleCI macOS, where the pilot app already builds and boots simulators |
 | Capture | Full simulator screen via `simctl io screenshot`, status bar overridden (ADR 0006) |
 | Triggers | PR builds and `main` builds; main auto-accepts PR approvals (ADR 0004) |
-| Free tier | Applies to hosted services; CI minutes are the pilot app's existing CircleCI plan |
+| Free tier | Applies to hosted services; CI minutes are the consumer's existing CI plan |
 
 ## 3. Non-goals for v1
 
@@ -52,7 +52,7 @@ owned by a personal account (ADR 0012).
 ## 4. How it works end to end
 
 ```
-Consumer's CI macOS job (the pilot app: not built yet)      targus service (Cloudflare)
+Consumer's CI macOS job (pilot app: not built yet)      targus service (Cloudflare)
 ───────────────────────────────                      ───────────────────────────
 1. fingerprint ─► restore cached .app
    (miss: eas build --local, save cache)
@@ -336,7 +336,7 @@ Native rendering has more noise than react-native-web. Mitigations, cheapest fir
 - Reduced motion (**not built**): the `withTargus` decorator is to wrap stories in Reanimated's
   `ReducedMotionConfig`, and Lottie stories are to render with `autoPlay` off under targus.
 - Date (**not built**): `MockDate` locked the same way the pilot app's web preview does.
-- Network: stories must not depend on live network. the pilot app stories already use mock factories.
+- Network: stories must not depend on live network. The pilot app's stories already use mock factories.
   This is the consumer's responsibility.
 - Double-capture stability check (built, section 5.1): turns flaky stories into an explicit
   `unstable` state instead of noisy diffs.
@@ -345,21 +345,21 @@ Native rendering has more noise than react-native-web. Mitigations, cheapest fir
   it to the CLI, which diffs with it; `targus run` has no threshold of its own (ADR 0028).
   **Not built:** tuning per project and per story.
 
-## 8. the pilot app integration (CircleCI)
+## 8. Pilot app integration (CircleCI)
 
-**Not built** (the the pilot app rollout, section 11). Planned job `visual_ios`, run on PRs and on `main`:
+**Not built** (the pilot rollout, section 11). Planned job `visual_ios`, run on PRs and on `main`:
 
 1. `checkout`, `js-dependencies`, `setup-env` (reuse existing commands).
 2. `npx expo-updates fingerprint:generate --platform ios` → cache key
-   `targus-ios-app-v1-{fingerprint}`. the pilot app already uses this fingerprint for OTA work.
+   `targus-ios-app-v1-{fingerprint}`. The pilot app already uses this fingerprint for OTA work.
 3. `restore_cache`. On miss: `eas build --local --platform ios --profile storybook:simulator`
-   (a new `eas.json` profile cloned from `staging:simulator`), extract the `.app`, `save_cache`.
+   (a new `eas.json` profile cloned from an existing simulator profile), extract the `.app`, `save_cache`.
 4. `EXPO_PUBLIC_STORYBOOK_ENABLED=true EXPO_PUBLIC_TARGUS=true npx expo export:embed --platform ios --dev false --bundle-output … --assets-dest …`,
    then copy `main.jsbundle` and `assets/` into the cached `.app`.
 5. Boot a simulator and run `npx targus run --udid … --app … --device-name "iPhone 16"`, with
    `TARGUS_TOKEN` and `TARGUS_API_URL` from a CircleCI context.
 
-the pilot app-side changes:
+Changes in the pilot app:
 
 - the `storybook:simulator` EAS profile;
 - `.rnstorybook/index.tsx` passes `enableWebsockets`, `host: 'localhost'` and `port: 7007` when
@@ -423,7 +423,7 @@ with and without `hermesc`, channel driving confirmed, error reporting needs the
 
 **Walking skeleton with guards. Done 2026-11-04, except the GitHub-side guards.** Done:
 `yarn check` and `yarn e2e` green, core domain rules with property tests, `targus capture` and
-`targus compare` ported from the capture spike (354 the pilot app stories in 345 s), the `withTargus`
+`targus compare` ported from the capture spike (354 stories in 345 s), the `withTargus`
 error-reporting decorator, and ADR 0010 on package builds. Not done: branch protection, a
 changeset check, the capture e2e workflow, nightly jobs and a release workflow
 (engineering-standards.md sections 6.2 to 6.8). The migration drift test landed with the service.
@@ -446,7 +446,7 @@ report. Already useful without a backend.
 results; an e2e runs the built CLI against the local Worker. It is deployed to
 <https://targus.targus-api.workers.dev> (D1 `targus`, R2 `targus-images`). The GitHub App
 `targus-review` is registered with its secrets set; it still has to be installed on the
-example-org org (the the pilot app rollout, below).
+pilot team's org (the pilot rollout, below).
 
 Since then: atomic results and review writes (ADR 0013), image access by upload record
 (ADR 0014), and refusing shallow clones in `targus run`.
@@ -465,15 +465,15 @@ migrations, Wrangler deploy. `targus run` end to end with the check run created.
 
 `e2e/review.spec.ts` drives the whole flow in Chromium against the local Worker, with a
 stubbed GitHub (`e2e/support/github-stub.ts`). GitHub login is configured against the
-`targus-review` App. Remaining: installing the App on example-org (the the pilot app rollout, below).
+`targus-review` App. Remaining: installing the App on the pilot team's org (the pilot rollout, below).
 
 Original scope: GitHub login, build list, snapshot viewer, approve/deny, approve-all, check-run
 updates.
 
-**the pilot app rollout. Not started.** CircleCI job, EAS profile, decorators and config
+**Pilot rollout. Not started.** CircleCI job, EAS profile, decorators and config
 (section 8). It needs published packages or another way for the pilot app to install the CLI, and the
-App installed on example-org. Run it informational for a week, then make the check required.
-Before the pilot app, the proof of concept on a personal-account repository (ADR 0012) exercises the
+App installed on the pilot team's org. Run it informational for a week, then make the check required.
+Before the pilot, the proof of concept on a personal-account repository (ADR 0012) exercises the
 same path.
 
 **v1.1 candidates.** GitHub Action wrapper and CircleCI orb, the `installation.created` webhook

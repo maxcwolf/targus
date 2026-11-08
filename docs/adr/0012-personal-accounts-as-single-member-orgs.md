@@ -19,7 +19,7 @@ whoever registers the freed login gets none. See
 ## Context
 
 ADR 0007 scopes everything by GitHub org and ADR 0011 authorizes a reviewer by org membership,
-asked through `GET /orgs/{org}/members/{username}`. The proof of concept before the pilot app runs on a
+asked through `GET /orgs/{org}/members/{username}`. The proof of concept before the pilot runs on a
 repository owned by a personal account (`maxcwolf`). A GitHub App installs on a personal account
 exactly as on an org, and check runs work unchanged, but there is no members endpoint for a
 user: the membership call answers 404, so the owner of the account could not review their own

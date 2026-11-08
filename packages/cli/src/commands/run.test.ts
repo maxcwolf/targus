@@ -139,7 +139,7 @@ describe('runRun --sha', () => {
     );
 
     expect(api.callsOf('createBuild')[0]?.request.sha).toBe(override);
-    expect(lines[0]).toBe('project: the pilot app (example-org/example-app)');
+    expect(lines[0]).toBe('project: example-app (example-org/example-app)');
     expect(lines[2]).toBe('build: build-1');
   });
 });
