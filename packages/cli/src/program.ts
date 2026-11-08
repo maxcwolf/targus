@@ -2,16 +2,26 @@ import { Appearance, defaultThreshold, GitSha, TargusError } from '@targus/core'
 import { Command, InvalidArgumentError, Option } from 'commander';
 
 import { runCapture, type CaptureCommandOptions } from './commands/capture.ts';
+import { runWebCapture, type WebCaptureOptions } from './commands/capture-web.ts';
 import { runCompare, type CompareCommandOptions } from './commands/compare.ts';
 import { runRun, type RunCommandOptions } from './commands/run.ts';
 import { debugEnabled, loadConfig, type CliConfig, type ConfigOverrides } from './config.ts';
 import { describeError } from './errors/describe-error.ts';
 import { writeFixtureCapture } from './fixtures/fixture-capture.ts';
+import {
+  loadProjectConfig,
+  parsePlatformList,
+  ViewportText,
+  type CapturePlatformName,
+  type ProjectConfig,
+} from './project-config.ts';
+import { resolveCaptureTarget, type TargetFlags } from './run/run-targets.ts';
 import { cliVersion } from './version.ts';
 
 /** What each command does once its options are parsed. Tests swap these out. */
 export interface CommandRunners {
   readonly capture: (options: CaptureCommandOptions) => Promise<unknown>;
+  readonly captureWeb: (options: WebCaptureOptions) => Promise<unknown>;
   readonly compare: (options: CompareCommandOptions) => Promise<unknown>;
   readonly run: (options: RunCommandOptions, config: CliConfig) => Promise<unknown>;
   readonly fixtureCapture: (dir: string) => Promise<unknown>;
@@ -19,6 +29,7 @@ export interface CommandRunners {
 
 const defaultRunners: CommandRunners = {
   capture: (options) => runCapture(options),
+  captureWeb: (options) => runWebCapture(options),
   compare: (options) => runCompare(options),
   run: (options, config) => runRun(options, config),
   fixtureCapture: (dir) => writeFixtureCapture(dir),
@@ -34,15 +45,19 @@ export interface ProgramOptions {
   /** Print stack traces with errors. Default: `TARGUS_DEBUG=1`. */
   readonly debug?: boolean;
   readonly runners?: Partial<CommandRunners>;
+  /** Reads `targus.config.json` or `--config` (ADR 0038). Default: `loadProjectConfig`. */
+  readonly loadProjectConfig?: (file: string | undefined) => Promise<ProjectConfig | null>;
 }
 
 /**
  * `run` options as Commander parses them: `--api-url` is checked by `loadConfig` at run time,
  * and `--threshold` is parsed only to be refused.
  */
-type RunFlags = Omit<RunCommandOptions, 'apiUrl'> & {
+type RunFlags = Omit<RunCommandOptions, 'apiUrl' | 'platforms'> & {
   readonly apiUrl?: string;
   readonly threshold?: string;
+  /** `--platform`, parsed; renamed to `platforms` for the run. */
+  readonly platform?: readonly CapturePlatformName[];
 };
 
 /** Report anything a command throws as a few plain lines on stderr and the mapped exit code. */
@@ -89,16 +104,56 @@ function ratio(value: string): number {
   return parsed;
 }
 
-/** `--appearance`, a new Option for each command, since Commander keeps state on each one. */
+function positiveNumber(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 4) {
+    throw new InvalidArgumentError('expected a number above 0, at most 4');
+  }
+  return parsed;
+}
+
+function viewport(value: string): { width: number; height: number } {
+  const parsed = ViewportText.safeParse(value);
+  if (!parsed.success) throw new InvalidArgumentError('expected WIDTHxHEIGHT, e.g. 1200x900');
+  return parsed.data;
+}
+
+function platformList(value: string): CapturePlatformName[] {
+  try {
+    return parsePlatformList(value);
+  } catch (error) {
+    throw new InvalidArgumentError(error instanceof Error ? error.message : String(error));
+  }
+}
+
+/**
+ * `--appearance`, a new Option for each command, since Commander keeps state on each one. Its
+ * default (light) is applied after `targus.config.json`, which may set another.
+ */
 function appearanceOption(): Option {
-  return new Option('--appearance <mode>', 'simulator light or dark mode, set before launch')
-    .choices(Appearance.options)
-    .default('light');
+  return new Option(
+    '--appearance <mode>',
+    'simulator light or dark mode, set before launch (default: light)',
+  ).choices(Appearance.options);
+}
+
+/** The flags that choose platforms and say where each one's app or Storybook is (ADR 0038). */
+function addTargetFlags(command: Command): Command {
+  return command
+    .option(
+      '--platform <list>',
+      'ios, web or both, e.g. ios,web (default: the config, else ios)',
+      platformList,
+    )
+    .option('--config <path>', 'project config file (default: targus.config.json, if present)')
+    .option('--storybook <dir|url>', 'web: built Storybook directory, or the URL of one')
+    .option('--viewport <WxH>', 'web: browser viewport in CSS pixels (default: 1200x900)', viewport)
+    .option('--pixel-ratio <n>', 'web: device pixels per CSS pixel (default: 1)', positiveNumber);
 }
 
 /** The capture tuning flags `capture` and `run` share. */
 function addCaptureFlags(command: Command): Command {
-  return command
+  return addTargetFlags(command)
     .addOption(appearanceOption())
     .option('--bundle-id <id>', 'bundle id (default: read from the app Info.plist)')
     .option('--port <n>', 'Storybook channel port the app connects to', integer, 7007)
@@ -113,12 +168,58 @@ function addCaptureFlags(command: Command): Command {
 
 type Report = <T>(action: (options: T) => Promise<unknown>) => (options: T) => Promise<void>;
 
-function addCaptureCommand(program: Command, report: Report, run: CommandRunners['capture']): void {
+/** `capture` options as Commander parses them, before the target is resolved (ADR 0038). */
+type CaptureFlagValues = Omit<CaptureCommandOptions, 'udid' | 'app' | 'appearance'> &
+  Omit<TargetFlags, 'platforms' | 'fromCapture' | 'deviceName'> & {
+    readonly platform?: readonly CapturePlatformName[];
+    readonly config?: string;
+  };
+
+type LoadProject = (file: string | undefined) => Promise<ProjectConfig | null>;
+
+/** Pick the one platform `capture` runs and hand its options to that platform's runner. */
+function captureAction(load: LoadProject, runners: CommandRunners) {
+  return async (flags: CaptureFlagValues): Promise<unknown> => {
+    const { platform, config, ...rest } = flags;
+    const target = resolveCaptureTarget(
+      { ...rest, ...(platform === undefined ? {} : { platforms: platform }) },
+      await load(config),
+    );
+    const tuning = {
+      out: flags.out,
+      settle: flags.settle,
+      stabilityGap: flags.stabilityGap,
+      renderTimeout: flags.renderTimeout,
+      attempts: flags.attempts,
+      ...(flags.filter === undefined ? {} : { filter: flags.filter }),
+      ...(flags.limit === undefined ? {} : { limit: flags.limit }),
+    };
+    if (target.kind === 'web') {
+      const { storybook, viewport: size, pixelRatio } = target;
+      return runners.captureWeb({ ...tuning, storybook, viewport: size, pixelRatio });
+    }
+    return runners.capture({
+      ...tuning,
+      udid: target.udid,
+      app: target.app,
+      appearance: target.appearance,
+      port: flags.port,
+      connectTimeout: flags.connectTimeout,
+      ...(target.bundleId === undefined ? {} : { bundleId: target.bundleId }),
+    });
+  };
+}
+
+function addCaptureCommand(
+  program: Command,
+  report: Report,
+  run: (flags: CaptureFlagValues) => Promise<unknown>,
+): void {
   const command = program
     .command('capture')
     .description('Capture every story to a directory with a manifest.json (works offline).')
-    .requiredOption('--udid <id>', 'simulator UDID (xcrun simctl list devices)')
-    .requiredOption('--app <path>', 'path to the built simulator .app')
+    .option('--udid <id>', 'ios: simulator UDID (xcrun simctl list devices)')
+    .option('--app <path>', 'ios: path to the built simulator .app')
     .requiredOption('--out <dir>', 'output directory');
   addCaptureFlags(command).action(report(run));
 }
@@ -128,7 +229,7 @@ function runWithConfig(
   run: CommandRunners['run'],
 ) {
   return (flags: RunFlags): Promise<unknown> => {
-    const { threshold, ...options } = flags;
+    const { threshold, platform, ...options } = flags;
     if (threshold !== undefined) {
       throw new TargusError(
         'bad_request',
@@ -137,7 +238,8 @@ function runWithConfig(
       );
     }
     const config = load({ apiUrl: options.apiUrl });
-    return run({ ...options, apiUrl: config.apiUrl }, config);
+    const platforms = platform === undefined ? {} : { platforms: platform };
+    return run({ ...options, ...platforms, apiUrl: config.apiUrl }, config);
   };
 }
 
@@ -207,7 +309,11 @@ export function createProgram(options: ProgramOptions = {}): Command {
     runners.run ?? defaultRunners.run,
   );
 
-  addCaptureCommand(program, report, runners.capture ?? defaultRunners.capture);
+  const allRunners: CommandRunners = { ...defaultRunners, ...runners };
+  const loadProject: LoadProject =
+    options.loadProjectConfig ??
+    ((file) => loadProjectConfig({ cwd: process.cwd(), ...(file === undefined ? {} : { file }) }));
+  addCaptureCommand(program, report, captureAction(loadProject, allRunners));
   addCompareCommand(program, report, runners.compare ?? defaultRunners.compare);
   addRunCommand(program, report, run);
   addFixtureCommand(program, report, runners.fixtureCapture ?? defaultRunners.fixtureCapture);

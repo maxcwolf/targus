@@ -56,6 +56,9 @@ describe('fixture capture', () => {
     expect(await loadCapture(dir)).toEqual({
       report: fixtureCaptureReport(),
       appearance: 'light',
+      platform: 'ios',
+      deviceName: null,
+      pixelRatio: null,
     });
   });
 });

@@ -62,7 +62,8 @@ export interface CaptureProgress {
 
 export interface CaptureStoriesInput {
   readonly channel: StorybookChannel;
-  readonly driver: DeviceDriver;
+  /** Takes the screenshots; the capture needs nothing else from the device (ADR 0037). */
+  readonly driver: Pick<DeviceDriver, 'screenshot'>;
   /** Stories to capture; defaults to the index the app reports. */
   readonly stories?: readonly StoryIndexEntry[];
   readonly options: CaptureOptions;

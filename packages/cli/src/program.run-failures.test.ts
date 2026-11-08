@@ -132,6 +132,8 @@ function deps(override: Override = () => null): RunCommandDeps {
         },
       }),
     createGit: () => git,
+    captureWeb: () => Promise.reject(new Error('no web capture in this test')),
+    loadProjectConfig: () => Promise.resolve(null),
     simulatorName: () => Promise.resolve('iPhone 16'),
     checkApp: (_app, bundleId) => Promise.resolve(bundleId ?? 'co.example'),
   };

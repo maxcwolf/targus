@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { Appearance, TargusError } from '@targus/core';
+import { Appearance, Platform, TargusError } from '@targus/core';
 import { z } from 'zod';
 
 import { summarizeIssues } from '../errors/zod-summary.ts';
@@ -30,10 +30,33 @@ export type StoryRecord = z.infer<typeof StoryRecord>;
 const PerStoryMs = z.object({ mean: Ms, median: Ms, p90: Ms, max: Ms });
 export type PerStoryMs = z.infer<typeof PerStoryMs>;
 
+/** The platform a capture is for (ADR 0036); manifests written before web capture are `ios`. */
+export const CapturePlatform = Platform;
+export type CapturePlatform = Platform;
+
+const Viewport = z.object({
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+});
+
 const Summary = z.object({
-  /** `appearance` is the light or dark mode it was pinned to; null in older manifests. */
-  device: z.object({ udid: z.string(), appearance: Appearance.nullable().default(null) }),
-  app: z.object({ bundleId: z.string(), path: z.string().nullable() }),
+  platform: CapturePlatform.default('ios'),
+  /**
+   * `udid` is the simulator's (null for web); `appearance` the light or dark mode it was pinned
+   * to (null in older manifests); `name` the browser and version of a web capture.
+   */
+  device: z.object({
+    udid: z.string().nullable(),
+    appearance: Appearance.nullable().default(null),
+    name: z.string().nullable().default(null),
+  }),
+  /** The app captured on a simulator; null for web. */
+  app: z.object({ bundleId: z.string(), path: z.string().nullable() }).nullable(),
+  /** The Storybook directory or URL a web capture opened; null for native. */
+  storybook: z.string().nullable().default(null),
+  viewport: Viewport.nullable().default(null),
+  /** Device pixels per CSS pixel of a web capture; null when the CLI does not know it. */
+  pixelRatio: z.number().positive().nullable().default(null),
   settleMs: Ms,
   stabilityGapMs: Ms,
   storyCount: z.number().int().nonnegative(),
@@ -60,14 +83,54 @@ export type CaptureManifest = z.infer<typeof CaptureManifest>;
 
 export const manifestFileName = 'manifest.json';
 
-/** Facts about the run that the capture loop itself does not know. */
-export interface CaptureRunInfo {
+/** A simulator capture: the device and app. */
+export interface NativeRunInfo {
+  readonly platform: 'ios';
   readonly udid: string;
   readonly appearance: Appearance;
   readonly bundleId: string;
   readonly appPath: string | null;
+}
+
+/** A web capture: the browser, the Storybook it opened and how it rendered (ADR 0037). */
+export interface WebRunInfo {
+  readonly platform: 'web';
+  readonly browser: string;
+  readonly storybook: string;
+  readonly viewport: { readonly width: number; readonly height: number };
+  readonly pixelRatio: number;
+}
+
+/** Facts about the run that the capture loop itself does not know. */
+export type CaptureRunInfo = (NativeRunInfo | WebRunInfo) & {
   readonly settleMs: number;
   readonly stabilityGapMs: number;
+};
+
+type Target = Pick<
+  z.infer<typeof Summary>,
+  'platform' | 'device' | 'app' | 'storybook' | 'viewport' | 'pixelRatio'
+>;
+
+function targetOf(run: CaptureRunInfo): Target {
+  if (run.platform === 'web') {
+    return {
+      platform: 'web',
+      device: { udid: null, appearance: null, name: run.browser },
+      app: null,
+      storybook: run.storybook,
+      viewport: run.viewport,
+      pixelRatio: run.pixelRatio,
+    };
+  }
+  return {
+    platform: run.platform,
+    device: { udid: run.udid, appearance: run.appearance, name: null },
+    app: { bundleId: run.bundleId, path: run.appPath },
+    storybook: null,
+    viewport: null,
+    pixelRatio: null,
+  };
 }
 
 export function pngFileName(storyId: string): string {
@@ -108,8 +171,7 @@ export function buildManifest(report: CaptureReport, run: CaptureRunInfo): Captu
   return {
     version: 1,
     summary: {
-      device: { udid: run.udid, appearance: run.appearance },
-      app: { bundleId: run.bundleId, path: run.appPath },
+      ...targetOf(run),
       settleMs: run.settleMs,
       stabilityGapMs: run.stabilityGapMs,
       storyCount: report.stories.length,

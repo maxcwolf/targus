@@ -50,6 +50,8 @@ function deps(overrides: Partial<RunCommandDeps> = {}): RunCommandDeps {
     makeTempDir: () => Promise.resolve(path.join(dir, 'tmp-capture')),
     createApi: () => api,
     createGit: () => fakeGit(),
+    captureWeb: () => Promise.reject(new Error('no web capture in this test')),
+    loadProjectConfig: () => Promise.resolve(null),
     simulatorName: () => Promise.resolve('iPhone 16'),
     checkApp: (_app, bundleId) => Promise.resolve(bundleId ?? 'co.example'),
     ...overrides,
@@ -121,7 +123,7 @@ describe('runRun --from-capture', () => {
       idempotencyKey: 'run-1',
     });
     expect(api.callsOf('uploadImage')).toHaveLength(3);
-    expect(output.counts.new).toBe(3);
+    expect(output[0]?.counts.new).toBe(3);
     expect(lines).toContain('review: https://targus.test/builds/build-1');
     expect(lines).toContain('check run: 1');
     expect(lines.some((line) => /^ {2}new +3$/.test(line))).toBe(true);
@@ -163,7 +165,7 @@ describe('runRun --from-capture against baselines', () => {
       deps(),
     );
 
-    expect(output.results.map((result) => [result.storyId, result.state])).toEqual([
+    expect(output[0]?.results.map((result) => [result.storyId, result.state])).toEqual([
       ['fixture-solid--red', 'unchanged'],
       ['fixture-solid--blue', 'changed'],
       ['fixture-gradient--default', 'new'],
@@ -281,6 +283,7 @@ describe('runRun with an empty capture', () => {
       durationMs: 0,
     };
     const run = {
+      platform: 'ios' as const,
       udid: 'SIM',
       appearance: 'light' as const,
       bundleId: 'co.example',

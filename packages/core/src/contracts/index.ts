@@ -47,6 +47,11 @@ export {
   ReviewRequest,
   ReviewSnapshotResponse,
 } from './review.ts';
+export {
+  ChromaticParameters,
+  parseCaptureParameters,
+  type RawCaptureParameters,
+} from './capture-parameters.ts';
 export { ImageHash, ReviewState, Snapshot, SnapshotState } from './snapshot.ts';
 export {
   maxStoryDelayMs,

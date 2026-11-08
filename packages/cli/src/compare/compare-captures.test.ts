@@ -26,8 +26,12 @@ function manifest(stories: StoryRecord[], skipped: string[] = []): CaptureManife
   return {
     version: 1,
     summary: {
-      device: { udid: 'SIM', appearance: 'light' },
+      platform: 'ios',
+      device: { udid: 'SIM', appearance: 'light', name: null },
       app: { bundleId: 'co.example', path: null },
+      storybook: null,
+      viewport: null,
+      pixelRatio: null,
       settleMs: 300,
       stabilityGapMs: 150,
       storyCount: stories.length,

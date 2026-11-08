@@ -68,6 +68,7 @@ export async function writeFixtureCapture(
   appearance: Appearance = 'light',
 ): Promise<CaptureManifest> {
   return writeCaptureOutput(dir, fixtureCaptureReport(variant), {
+    platform: 'ios',
     udid: 'FIXTURE',
     appearance,
     bundleId: 'dev.targus.fixture',

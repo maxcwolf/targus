@@ -27,6 +27,7 @@ const base: CaptureResult = {
   error: null,
 };
 const run = {
+  platform: 'ios' as const,
   udid: 'SIM',
   appearance: 'dark' as const,
   bundleId: 'co.example',
@@ -56,7 +57,13 @@ describe('loadCapture', () => {
     };
     await writeCaptureOutput(dir, report, run);
 
-    expect(await loadCapture(dir)).toEqual({ report, appearance: 'dark' });
+    expect(await loadCapture(dir)).toEqual({
+      report,
+      appearance: 'dark',
+      platform: 'ios',
+      deviceName: null,
+      pixelRatio: null,
+    });
   });
 
   it('rejects a PNG that no longer matches its manifest hash', async () => {

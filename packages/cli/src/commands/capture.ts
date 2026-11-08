@@ -63,7 +63,7 @@ export const defaultCaptureDeps: CaptureCommandDeps = {
   createDriver: (udid, exec) => new SimctlDriver({ udid, exec }),
 };
 
-function progressLine({ index, total, result, skipped }: CaptureProgress): string {
+export function progressLine({ index, total, result, skipped }: CaptureProgress): string {
   const position = `${index + 1}/${total} ${result.id}`;
   if (skipped) return `${position} SKIPPED (parameters.targus.skip)`;
   if (result.error !== null) return `${position} ERROR ${result.error.slice(0, 160)}`;
@@ -178,6 +178,7 @@ export async function runCapture(
     await prepareDevice(driver, { appPath, bundleId, appearance: options.appearance });
     const report = await captureWhileAppRuns({ options, deps, driver, channel, bundleId });
     const manifest = await writeCaptureOutput(outDir, report, {
+      platform: 'ios',
       udid: options.udid,
       appearance: options.appearance,
       bundleId,

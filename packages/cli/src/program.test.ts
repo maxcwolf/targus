@@ -30,6 +30,7 @@ async function run(
   };
   const program = createProgram({
     loadConfig: () => loadConfig({}),
+    loadProjectConfig: () => Promise.resolve(null),
     debug: false,
     ...options,
     runners: {
