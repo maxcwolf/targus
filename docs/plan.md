@@ -40,6 +40,7 @@ pilot runs on a repository owned by a personal account (ADR 0012).
 
 ## 3. Non-goals for v1
 
+- Web Storybooks. Planned in [web-plan.md](web-plan.md).
 - Android, dark mode, font-scale modes, iPad. The data model carries a `variant` key so these
   slot in later. Every snapshot is stored with variant `default` today.
 - TurboSnap-style "only changed stories". Every story is captured every run.
