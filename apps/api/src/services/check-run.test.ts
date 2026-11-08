@@ -81,6 +81,7 @@ describe('syncCheckRun', () => {
     expect(github.creates).toEqual([
       {
         target: { installationId: 42, repo: 'org-sync/app', headSha: build.sha },
+        name: 'targus/ios',
         state: denied,
         detailsUrl: 'https://targus.test/builds/b1',
       },
@@ -188,5 +189,18 @@ describe('syncCheckRun under constant review', () => {
 
     expect(github.updates).toHaveLength(5);
     expect(deps.log.warnings).toEqual([{ event: 'check_run_update_superseded', attempts: 5 }]);
+  });
+});
+
+describe('syncCheckRun names', () => {
+  it("names a created check run after the build's platform, and updates by id alone", async () => {
+    const { deps, github, project } = await syncSetup(42);
+    const web = await deps.builds.create(newBuild('w1', project.id, { platform: 'web' }));
+
+    await syncCheckRun(deps, project, web, atVersion0);
+    await syncCheckRun(deps, project, { ...web, checkRunId: 901 }, atVersion0);
+
+    expect(github.creates.map((create) => create.name)).toEqual(['targus/web']);
+    expect(github.updates.map((update) => update.checkRunId)).toEqual([901]);
   });
 });

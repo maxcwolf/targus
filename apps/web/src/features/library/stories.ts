@@ -1,15 +1,35 @@
-import type { LibraryStory } from '@targus/core/browser';
+import { Platform, type LibraryStory } from '@targus/core/browser';
 
 import { componentTitle, storyName } from '../build/index.ts';
 
-/** The `?story=` search param of the library route. */
+/** The `?story=` and `?platform=` search params of the library route. */
 export interface LibrarySearch {
   readonly story?: string;
+  /** The platform to show; without it, the first that has a library (ADR 0036). */
+  readonly platform?: Platform;
 }
 
-/** TanStack Router `validateSearch`: anything but a non-empty string is dropped. */
+/**
+ * TanStack Router `validateSearch`: a story that is not a non-empty string, and a platform that
+ * is not a `Platform`, are dropped.
+ */
 export function validateLibrarySearch(search: Record<string, unknown>): LibrarySearch {
-  return typeof search.story === 'string' && search.story !== '' ? { story: search.story } : {};
+  const platform = Platform.safeParse(search.platform);
+  return librarySearch(
+    platform.success ? platform.data : undefined,
+    typeof search.story === 'string' && search.story !== '' ? search.story : undefined,
+  );
+}
+
+/** The library search for a story key (undefined: every story) on a platform (or the default). */
+export function librarySearch(
+  platform: Platform | undefined,
+  story: string | undefined,
+): LibrarySearch {
+  return {
+    ...(story === undefined ? {} : { story }),
+    ...(platform === undefined ? {} : { platform }),
+  };
 }
 
 /** What `?story=` holds: the story id, plus the variant when it is not the default one. */

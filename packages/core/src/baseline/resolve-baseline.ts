@@ -1,7 +1,12 @@
-import { baselineBuildStatuses, type Build, type BuildStatus } from '../contracts/build.ts';
+import {
+  baselineBuildStatuses,
+  type Build,
+  type BuildStatus,
+  type Platform,
+} from '../contracts/build.ts';
 
 /** The build fields baseline resolution reads. */
-export type BaselineCandidate = Pick<Build, 'id' | 'sha' | 'status' | 'createdAt'>;
+export type BaselineCandidate = Pick<Build, 'id' | 'sha' | 'status' | 'createdAt' | 'platform'>;
 
 const successfulStatuses: ReadonlySet<BuildStatus> = new Set<BuildStatus>(baselineBuildStatuses);
 
@@ -24,18 +29,22 @@ function isMoreRecent(a: BaselineCandidate, b: BaselineCandidate): boolean {
 }
 
 /**
- * Pick the baseline build (plan.md section 6, rule 1): among the successful candidates on the
- * earliest sha of `shaOrder` that has any, the most recent by `createdAt`, ties broken by the
- * greater `id`. `null` when no sha in the order has a successful build.
+ * Pick the baseline build of a `platform` build (plan.md section 6, rule 1, and ADR 0036): among
+ * the successful candidates of that platform on the earliest sha of `shaOrder` that has any, the
+ * most recent by `createdAt`, ties broken by the greater `id`. `null` when no sha in the order
+ * has a successful build of the platform.
  *
  * `BuildRepository.findLatestSuccessfulForShas` is the database-side equivalent and must agree
  * with this function; `baselineResolutionCases` is the shared table both are tested against.
  */
 export function resolveBaseline<T extends BaselineCandidate>(
+  platform: Platform,
   shaOrder: readonly string[],
   candidates: readonly T[],
 ): T | null {
-  const successful = candidates.filter((candidate) => successfulStatuses.has(candidate.status));
+  const successful = candidates.filter(
+    (candidate) => candidate.platform === platform && successfulStatuses.has(candidate.status),
+  );
   for (const sha of shaOrder) {
     const onSha = successful.filter((candidate) => candidate.sha === sha);
     const latest = onSha.reduce<T | null>(

@@ -243,8 +243,8 @@ Built. Mirrors Chromatic's review UX, trimmed to what v1 stores:
 
 Built. Pure functions with fixture-based and property-based tests:
 
-- `resolveBaseline(shaOrder, candidates)` picks the most recent successful build on the
-  earliest sha that has one (`baselineShaOrder` puts the merge base first, then its ancestors).
+- `resolveBaseline(platform, shaOrder, candidates)` picks the most recent successful build of
+  the platform (ADR 0036) on the earliest sha that has one (`baselineShaOrder` puts the merge base first, then its ancestors).
   The API runs the same rule in SQL. Both are tested against `baselineResolutionCases`.
 - `compareSnapshot(input)` yields
   `unchanged | changed | new | removed | unstable | error` and whether an existing approval

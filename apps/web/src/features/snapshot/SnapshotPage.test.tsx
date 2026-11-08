@@ -1,3 +1,4 @@
+import type { Build } from '@targus/core/browser';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
@@ -25,7 +26,7 @@ describe('SnapshotPage header', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Button : Primary');
     expect(screen.getByRole('heading', { level: 1 })).toHaveAttribute('title', 'Button : Primary');
     expect(document.querySelector('.snapshot-bar .subline')).toHaveTextContent(
-      'Build 12 on feature/buttons · iPhone 16 / iOS 18.2 · light',
+      'Build 12 on feature/buttons · iOS · iPhone 16 / iOS 18.2 · light',
     );
     expect(screen.getByRole('status', { name: 'Review' })).toHaveTextContent('Unreviewed');
     expect(screen.getByRole('link', { name: 'Back to build 12' })).toHaveAttribute(
@@ -105,6 +106,22 @@ describe('SnapshotPage viewer modes', () => {
     expect(screen.getByRole('button', { name: '100%' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Fit' }));
     expect(container.querySelector('.viewer-pane')).toHaveAttribute('data-zoom', 'fit');
+  });
+});
+
+describe('SnapshotPage pixel ratio', () => {
+  it("shows actual size at the build's pixel ratio, else 1 for a web build", async () => {
+    const ratioWith = async (fields: Pick<Build, 'platform' | 'pixelRatio'>) => {
+      apiState.builds = apiState.builds.map((b) => (b.id === 'build-12' ? { ...b, ...fields } : b));
+      const app = await openSnapshot('/builds/build-12/snapshots/snap-changed');
+      const pane = app.container.querySelector<HTMLElement>('.viewer-pane');
+      const ratio = pane?.style.getPropertyValue('--pixel-ratio');
+      app.unmount();
+      return ratio;
+    };
+
+    expect(await ratioWith({ platform: 'ios', pixelRatio: 2 })).toBe('2');
+    expect(await ratioWith({ platform: 'web', pixelRatio: null })).toBe('1');
   });
 });
 

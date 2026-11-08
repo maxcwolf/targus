@@ -1001,6 +1001,12 @@ p {
 .library-header {
   margin-bottom: 20px;
 }
+.library-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
 .library-group {
   margin-bottom: 28px;
 }
@@ -1283,6 +1289,11 @@ p {
 }
 .zoom-actual .snapshot-image {
   max-width: none;
+}
+/* Actual size: one CSS pixel per device point (or CSS pixel, on web), so a capture is divided by
+   the build's pixel ratio (ADR 0036). The overlays follow the frame the base image sizes. */
+.zoom-actual .snapshot-image:not(.overlay, .image-error) {
+  zoom: calc(1 / var(--pixel-ratio, 1));
 }
 .frame .overlay {
   position: absolute;

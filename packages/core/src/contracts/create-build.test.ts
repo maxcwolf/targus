@@ -54,6 +54,36 @@ describe('CreateBuildRequest appearance', () => {
   });
 });
 
+describe('CreateBuildRequest platform and pixel ratio', () => {
+  const request = {
+    sha: 'a'.repeat(40),
+    branch: 'main',
+    prNumber: null,
+    mergeBaseSha: null,
+    ancestors: [],
+    trigger: 'main',
+    device: 'iPhone 16',
+    snapshots: [],
+  };
+  const valid = (fields: object) => CreateBuildRequest.safeParse({ ...request, ...fields }).success;
+
+  it('reads a request from a CLI that predates them as ios with no pixel ratio', () => {
+    expect(CreateBuildRequest.parse(request)).toMatchObject({ platform: 'ios', pixelRatio: null });
+  });
+
+  it('takes a platform and a pixel ratio above 0 and at most 4', () => {
+    const parsed = CreateBuildRequest.parse({ ...request, platform: 'web', pixelRatio: 2 });
+
+    expect(parsed).toMatchObject({ platform: 'web', pixelRatio: 2 });
+    expect([valid({ platform: 'android' }), valid({ pixelRatio: 4 })]).toEqual([true, true]);
+    expect([
+      valid({ platform: 'macos' }),
+      valid({ pixelRatio: 0 }),
+      valid({ pixelRatio: 5 }),
+    ]).toEqual([false, false, false]);
+  });
+});
+
 describe('CreateBuildResponse', () => {
   it('accepts a build with no baseline and requires a threshold between 0 and 1', () => {
     const hash = 'b'.repeat(64);

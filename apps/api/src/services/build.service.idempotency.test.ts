@@ -89,3 +89,18 @@ describe('createBuild with an idempotency key and an appearance', () => {
     expect(deps.builds.builds).toHaveLength(1);
   });
 });
+
+describe('createBuild with an idempotency key and a platform', () => {
+  it('answers conflict when the key comes back for another platform or pixel ratio', async () => {
+    const { deps, project } = await setup();
+    const request = createBuildRequest(sha('a'), { idempotencyKey: 'run-1' });
+    await createBuild(deps, project, request);
+
+    const web = createBuild(deps, project, { ...request, platform: 'web' });
+    const ratio = createBuild(deps, project, { ...request, pixelRatio: 2 });
+
+    await expect(web).rejects.toThrow('with another platform:');
+    await expect(ratio).rejects.toThrow('with another pixelRatio:');
+    expect(deps.builds.builds).toHaveLength(1);
+  });
+});

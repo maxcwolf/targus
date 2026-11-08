@@ -1,13 +1,15 @@
 import { Link } from '@tanstack/react-router';
-import type { LibraryStory } from '@targus/core/browser';
+import type { LibraryStory, Platform } from '@targus/core/browser';
 import { type ReactElement, useEffect, useRef } from 'react';
 
 import { PathText } from '../../components/PathText.tsx';
 import { storyName } from '../build/index.ts';
-import { groupStories, storyKey } from './stories.ts';
+import { groupStories, librarySearch, storyKey } from './stories.ts';
 
 export interface LibrarySidebarProps {
   readonly projectId: string;
+  /** The `?platform=` the library was opened with, kept by every link. */
+  readonly platform: Platform | undefined;
   /** The stories matching the search, in library order. */
   readonly stories: readonly LibraryStory[];
   readonly currentKey: string | undefined;
@@ -17,16 +19,17 @@ export interface LibrarySidebarProps {
 
 function StoryLink(props: {
   readonly projectId: string;
+  readonly platform: Platform | undefined;
   /** The story to open; undefined is the "All stories" overview. */
   readonly story: LibraryStory | undefined;
   readonly current: boolean;
 }): ReactElement {
-  const { projectId, story, current } = props;
+  const { projectId, platform, story, current } = props;
   return (
     <Link
       to="/projects/$projectId/library"
       params={{ projectId }}
-      search={story ? { story: storyKey(story) } : {}}
+      search={librarySearch(platform, story ? storyKey(story) : undefined)}
       className={current ? 'sidebar-link current' : 'sidebar-link'}
       aria-current={current ? 'page' : undefined}
     >
@@ -37,7 +40,7 @@ function StoryLink(props: {
 
 /** Storybook's sidebar: a search box, then every component with its stories under it. */
 export function LibrarySidebar(props: LibrarySidebarProps): ReactElement {
-  const { projectId, stories, currentKey, query, onQuery } = props;
+  const { projectId, platform, stories, currentKey, query, onQuery } = props;
   const currentRow = useRef<HTMLLIElement>(null);
   useEffect(() => {
     currentRow.current?.scrollIntoView({ block: 'nearest' });
@@ -55,7 +58,12 @@ export function LibrarySidebar(props: LibrarySidebarProps): ReactElement {
           }}
         />
       </div>
-      <StoryLink projectId={projectId} story={undefined} current={currentKey === undefined} />
+      <StoryLink
+        projectId={projectId}
+        platform={platform}
+        story={undefined}
+        current={currentKey === undefined}
+      />
       {groupStories(stories).map((group) => (
         <section key={group.title} className="sidebar-group">
           <h2>
@@ -66,7 +74,12 @@ export function LibrarySidebar(props: LibrarySidebarProps): ReactElement {
               const current = storyKey(story) === currentKey;
               return (
                 <li key={storyKey(story)} ref={current ? currentRow : undefined}>
-                  <StoryLink projectId={projectId} story={story} current={current} />
+                  <StoryLink
+                    projectId={projectId}
+                    platform={platform}
+                    story={story}
+                    current={current}
+                  />
                 </li>
               );
             })}

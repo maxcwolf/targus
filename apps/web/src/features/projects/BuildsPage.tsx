@@ -4,7 +4,13 @@ import type { BuildWithSummary, ProjectSummary } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 import { listBuilds, queryKeys } from '../../api-client/index.ts';
-import { commitUrl, formatDateTime, pullRequestUrl, shortSha } from '../../components/format.ts';
+import {
+  commitUrl,
+  formatDateTime,
+  platformLabel,
+  pullRequestUrl,
+  shortSha,
+} from '../../components/format.ts';
 import { Skeleton } from '../../components/Skeleton.tsx';
 import { StatusChip } from '../../components/StatusChip.tsx';
 import { StatusCircle } from '../../components/StatusCircle.tsx';
@@ -51,6 +57,8 @@ function BuildRow({
           )}
           <span className="dot-sep">·</span>
           <span>{formatDateTime(build.createdAt)}</span>
+          <span className="dot-sep">·</span>
+          <span>{platformLabel(build.platform)}</span>
         </div>
       </div>
       <BuildCounts counts={item.counts} />

@@ -1,4 +1,4 @@
-import { GetLibraryResponse } from '@targus/core';
+import { GetLibraryResponse, type Platform } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import { imageHash, newBuild, newProject, snapshotRecord } from '../../test/support/fixtures.ts';
@@ -23,7 +23,12 @@ describe('getLibrary', () => {
       newBuild('pr', project.id, { status: 'accepted', branch: 'feature/x', prNumber: 3 }),
     );
 
-    expect(await getLibrary(deps, member, project.id)).toEqual({ build: null, stories: [] });
+    expect(await getLibrary(deps, member, project.id)).toEqual({
+      platform: null,
+      platforms: [],
+      build: null,
+      stories: [],
+    });
   });
 
   it('lists the stories of the newest signed-off build on the default branch', async () => {
@@ -49,6 +54,7 @@ describe('getLibrary', () => {
     const response = await getLibrary(deps, member, project.id);
 
     expect(GetLibraryResponse.parse(response)).toEqual(response);
+    expect([response.platform, response.platforms]).toEqual(['ios', ['ios']]);
     expect(response.build).toMatchObject({ id: 'latest', number: 2, status: 'accepted' });
     expect(response.build).not.toHaveProperty('tally');
     expect(response.stories).toEqual([
@@ -60,6 +66,32 @@ describe('getLibrary', () => {
         imageHash: imageHash('2'),
       },
     ]);
+  });
+});
+
+describe('getLibrary platforms and access', () => {
+  it('reads one platform: the one asked for, else the first in ios, android, web order', async () => {
+    const { deps, project, member } = await setup();
+    const signedOff = (id: string, platform: Platform) =>
+      deps.builds.create(newBuild(id, project.id, { status: 'passed', platform }));
+    await signedOff('web-1', 'web');
+    await signedOff('android-1', 'android');
+    await deps.builds.create(newBuild('ios-pending', project.id, { status: 'pending' }));
+    const read = (platform?: Platform) =>
+      getLibrary(deps, member, project.id, platform === undefined ? {} : { platform });
+
+    expect(await read()).toMatchObject({
+      platform: 'android',
+      platforms: ['android', 'web'],
+      build: { id: 'android-1', platform: 'android' },
+    });
+    expect(await read('web')).toMatchObject({ platform: 'web', build: { id: 'web-1' } });
+    expect(await read('ios')).toEqual({
+      platform: 'ios',
+      platforms: ['android', 'web'],
+      build: null,
+      stories: [],
+    });
   });
 
   it('answers not_found for an unknown project and forbidden outside the org', async () => {

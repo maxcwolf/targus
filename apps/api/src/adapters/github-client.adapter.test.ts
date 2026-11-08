@@ -16,12 +16,13 @@ beforeAll(async () => {
 });
 
 describe('OctokitGitHubClient (stubbed fetch)', () => {
-  it('creates a targus/ios check run with an installation token', async () => {
+  it('creates a check run under the name it is given, with an installation token', async () => {
     const stub = createGitHubStub();
     const client = new OctokitGitHubClient({ appId: '123', privateKey }, stub.fetch, freshTokens());
 
     const result = await client.createCheckRun(
       target,
+      'targus/web',
       { status: 'in_progress', summary: '2 changes awaiting review' },
       'https://targus.example/builds/b1',
     );
@@ -35,7 +36,7 @@ describe('OctokitGitHubClient (stubbed fetch)', () => {
       path: '/repos/example-org/example-app/check-runs',
       authorization: 'token installation-token',
       body: {
-        name: 'targus/ios',
+        name: 'targus/web',
         head_sha: target.headSha,
         details_url: 'https://targus.example/builds/b1',
         status: 'in_progress',
@@ -63,6 +64,8 @@ describe('OctokitGitHubClient (stubbed fetch)', () => {
         output: { title: 'Visual review failed', summary: '1 change denied' },
       },
     });
+    // The name is set once, at creation; an update never renames the check run.
+    expect(stub.requests.at(-1)?.body).not.toHaveProperty('name');
   });
 });
 
@@ -152,7 +155,9 @@ describe('NoopGitHubClient', () => {
     const client: GitHubClient = new NoopGitHubClient();
     const state = { status: 'completed', conclusion: 'success', summary: 'ok' } as const;
 
-    expect(await client.createCheckRun(target, state, 'https://x.test')).toEqual({ id: 0 });
+    expect(await client.createCheckRun(target, 'targus/ios', state, 'https://x.test')).toEqual({
+      id: 0,
+    });
     await expect(client.updateCheckRun(target, 1, state)).resolves.toBeUndefined();
     expect(await client.isOrgMember(42, 'example-org', 'member')).toBe(false);
     await expect(client.installationAccountId(42)).rejects.toThrow('not configured');

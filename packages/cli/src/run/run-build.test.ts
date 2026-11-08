@@ -95,6 +95,8 @@ describe('runBuild', () => {
       trigger: 'pr',
       device: 'iPhone 16',
       appearance: 'light',
+      platform: 'ios',
+      pixelRatio: null,
       snapshots: [
         { storyId: 'a', variant: 'default', imageHash: sha256Hex(whitePng), width: 10, height: 10 },
       ],

@@ -39,6 +39,8 @@ const buildRequest: CreateBuildRequest = {
   trigger: 'pr',
   device: 'iPhone 16',
   appearance: 'light',
+  platform: 'ios',
+  pixelRatio: null,
   snapshots: [{ storyId: 's', variant: 'default', imageHash: hash, width: 1, height: 1 }],
 };
 

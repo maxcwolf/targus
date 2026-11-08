@@ -136,7 +136,7 @@ describe('LibraryPage story navigation', () => {
 
 describe('LibraryPage states', () => {
   it('explains an empty library before any main build is accepted', async () => {
-    apiState.library = { build: null, stories: [] };
+    apiState.library = { platform: null, platforms: [], build: null, stories: [] };
     renderApp(library);
 
     expect(await screen.findByText(/No accepted build on/)).toHaveTextContent('main');

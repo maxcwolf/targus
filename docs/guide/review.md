@@ -1,7 +1,9 @@
 # Review changes
 
 When a pull request changes how a story looks, its `targus/ios` check says how many changes
-await review. The check's **Details** link opens the build in the targus review UI.
+await review. The check's **Details** link opens the build in the targus review UI. Each platform
+reports its own check, named after it (`targus/ios`, and `targus/web` or `targus/android` once
+those are captured), and has its own baselines; branch protection requires each one separately.
 
 ## Who can review
 
@@ -13,8 +15,8 @@ reviews.
 
 The counters across the top are also filters: **Stories**, **Changes**, **Accepted**,
 **Denied** and **Unreviewed**, with **New**, **Removed** and **Changed** under **More**. The page
-opens on **Unreviewed**. The header shows the device, the PR, the commit and the baseline build
-the build was compared with.
+opens on **Unreviewed**. The header shows the platform and device, the PR, the commit and the
+baseline build the build was compared with.
 
 **Approve all** approves every change still pending in the build. If someone else decides one of
 them while it runs, their decision stands and the result says how many were left that way.
@@ -27,6 +29,9 @@ Open a story to compare it with its baseline:
 - **2 up**: baseline and new side by side.
 - **Slider**: drag across the image to wipe from one to the other.
 - **Diff**: highlights the changed pixels on top of the image (not available in Slider).
+- **Fit** and **100%**: fit the images to the pane, or show them at the size they had on the
+  device: each image is divided by the pixel ratio it was captured at, so a 3x iOS capture is shown
+  at a third of its pixel width and height.
 
 | Key       | Action                                   |
 | --------- | ---------------------------------------- |

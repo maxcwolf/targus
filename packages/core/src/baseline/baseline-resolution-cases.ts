@@ -1,3 +1,4 @@
+import type { Platform } from '../contracts/build.ts';
 import type { BaselineCandidate } from './resolve-baseline.ts';
 
 /**
@@ -7,6 +8,8 @@ import type { BaselineCandidate } from './resolve-baseline.ts';
  */
 export interface BaselineResolutionCase {
   readonly name: string;
+  /** The platform of the build being opened; only candidates of it may be chosen. */
+  readonly platform: Platform;
   readonly mergeBaseSha: string | null;
   readonly ancestors: readonly string[];
   readonly candidates: readonly BaselineCandidate[];
@@ -26,13 +29,15 @@ function build(
   onSha: string,
   status: BaselineCandidate['status'],
   createdAt: string,
+  platform: Platform = 'ios',
 ): BaselineCandidate {
-  return { id, sha: onSha, status, createdAt };
+  return { id, sha: onSha, status, createdAt, platform };
 }
 
 export const baselineResolutionCases: readonly BaselineResolutionCase[] = [
   {
     name: 'no merge base means no baseline',
+    platform: 'ios',
     mergeBaseSha: null,
     ancestors: [parent],
     candidates: [build('b1', parent, 'passed', '2026-11-01T00:00:00.000Z')],
@@ -40,6 +45,7 @@ export const baselineResolutionCases: readonly BaselineResolutionCase[] = [
   },
   {
     name: 'no candidates means no baseline',
+    platform: 'ios',
     mergeBaseSha: mergeBase,
     ancestors: [parent],
     candidates: [],
@@ -47,6 +53,7 @@ export const baselineResolutionCases: readonly BaselineResolutionCase[] = [
   },
   {
     name: 'a successful build on the merge base wins over an ancestor',
+    platform: 'ios',
     mergeBaseSha: mergeBase,
     ancestors: [parent],
     candidates: [
@@ -57,6 +64,7 @@ export const baselineResolutionCases: readonly BaselineResolutionCase[] = [
   },
   {
     name: 'the most recent successful build on the sha wins',
+    platform: 'ios',
     mergeBaseSha: mergeBase,
     ancestors: [],
     candidates: [
@@ -68,6 +76,7 @@ export const baselineResolutionCases: readonly BaselineResolutionCase[] = [
   },
   {
     name: 'equal createdAt is broken by the greater id',
+    platform: 'ios',
     mergeBaseSha: mergeBase,
     ancestors: [],
     candidates: [
@@ -78,6 +87,7 @@ export const baselineResolutionCases: readonly BaselineResolutionCase[] = [
   },
   {
     name: 'unsuccessful builds on the merge base fall back to the nearest ancestor with one',
+    platform: 'ios',
     mergeBaseSha: mergeBase,
     ancestors: [parent, grandparent],
     candidates: [
@@ -91,9 +101,44 @@ export const baselineResolutionCases: readonly BaselineResolutionCase[] = [
   },
   {
     name: 'builds on shas outside the order are ignored',
+    platform: 'ios',
     mergeBaseSha: mergeBase,
     ancestors: [parent],
     candidates: [build('b1', sha('d'), 'passed', '2026-11-04T00:00:00.000Z')],
+    expectedBuildId: null,
+  },
+  {
+    name: 'a web build takes the web build on the sha, not a newer ios one',
+    platform: 'web',
+    mergeBaseSha: mergeBase,
+    ancestors: [],
+    candidates: [
+      build('b1', mergeBase, 'passed', '2026-11-01T00:00:00.000Z', 'web'),
+      build('b2', mergeBase, 'accepted', '2026-11-02T00:00:00.000Z'),
+    ],
+    expectedBuildId: 'b1',
+  },
+  {
+    name: 'builds of another platform on the merge base fall back to an ancestor of the platform',
+    platform: 'ios',
+    mergeBaseSha: mergeBase,
+    ancestors: [parent],
+    candidates: [
+      build('b1', mergeBase, 'passed', '2026-11-02T00:00:00.000Z', 'web'),
+      build('b2', mergeBase, 'accepted', '2026-11-02T00:00:00.000Z', 'android'),
+      build('b3', parent, 'passed', '2026-11-01T00:00:00.000Z'),
+    ],
+    expectedBuildId: 'b3',
+  },
+  {
+    name: 'no build of the platform means no baseline',
+    platform: 'android',
+    mergeBaseSha: mergeBase,
+    ancestors: [parent],
+    candidates: [
+      build('b1', mergeBase, 'passed', '2026-11-01T00:00:00.000Z'),
+      build('b2', parent, 'accepted', '2026-11-01T00:00:00.000Z', 'web'),
+    ],
     expectedBuildId: null,
   },
 ];

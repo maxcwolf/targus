@@ -31,10 +31,17 @@ function buildQueries(
   builds: readonly BuildRecord[],
 ): Pick<
   ApiBuildRepository,
-  'listForProject' | 'findLatestBaselineOnBranch' | 'findLatestSuccessfulForShas'
+  | 'listForProject'
+  | 'findLatestBaselineOnBranch'
+  | 'listBaselinePlatformsOnBranch'
+  | 'findLatestSuccessfulForShas'
 > {
   const newestFirst = (projectId: string): BuildRecord[] =>
     builds.filter((b) => b.projectId === projectId).sort((a, b) => b.number - a.number);
+  const signedOffOn = (projectId: string, branch: string): BuildRecord[] =>
+    newestFirst(projectId).filter(
+      (b) => b.branch === branch && baselineBuildStatuses.some((status) => status === b.status),
+    );
   return {
     // As the D1 query: validate first, then `number < cursor`, newest first, one extra build.
     // A rejected promise, not a throw, for a bad limit or cursor, as the D1 adapter's.
@@ -45,15 +52,14 @@ function buildQueries(
         const older = newestFirst(projectId).filter((b) => b.number < before);
         return toBuildPage(older.slice(0, checked + 1), checked);
       }),
-    findLatestBaselineOnBranch: (projectId, branch) =>
-      Promise.resolve(
-        newestFirst(projectId)
-          .filter((b) => b.branch === branch)
-          .find((b) => baselineBuildStatuses.some((status) => status === b.status)) ?? null,
-      ),
-    findLatestSuccessfulForShas: (projectId, shas) =>
+    findLatestBaselineOnBranch: (projectId, platform, branch) =>
+      Promise.resolve(signedOffOn(projectId, branch).find((b) => b.platform === platform) ?? null),
+    listBaselinePlatformsOnBranch: (projectId, branch) =>
+      Promise.resolve([...new Set(signedOffOn(projectId, branch).map((b) => b.platform))]),
+    findLatestSuccessfulForShas: (projectId, platform, shas) =>
       Promise.resolve(
         resolveBaseline(
+          platform,
           shas,
           builds.filter((b) => b.projectId === projectId),
         ),

@@ -1,5 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import type { BuildWithSummary, ProjectSummary, Snapshot } from '@targus/core/browser';
+import {
+  displayPixelRatio,
+  type Build,
+  type BuildWithSummary,
+  type ProjectSummary,
+  type Snapshot,
+} from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 import { getBuild, queryKeys } from '../../api-client/index.ts';
@@ -74,7 +80,7 @@ function viewerLabels(
 }
 
 function SnapshotContent(props: {
-  readonly buildId: string;
+  readonly build: Build;
   readonly snapshots: readonly Snapshot[];
   readonly snapshot: Snapshot;
   readonly viewer: ViewerState;
@@ -83,9 +89,14 @@ function SnapshotContent(props: {
 }): ReactElement {
   return (
     <div className="snapshot-content">
-      <FailedDecisions buildId={props.buildId} snapshots={props.snapshots} />
+      <FailedDecisions buildId={props.build.id} snapshots={props.snapshots} />
       <StateNotice state={props.snapshot.state} />
-      <SnapshotViewer snapshot={props.snapshot} viewer={props.viewer} labels={props.labels} />
+      <SnapshotViewer
+        snapshot={props.snapshot}
+        viewer={props.viewer}
+        labels={props.labels}
+        pixelRatio={displayPixelRatio(props.build)}
+      />
       <BaselineSection baseline={props.baseline} />
     </div>
   );
@@ -129,7 +140,7 @@ function SnapshotDetail(props: DetailProps): ReactElement {
           }
         />
         <SnapshotContent
-          buildId={item.build.id}
+          build={item.build}
           snapshots={props.snapshots}
           snapshot={snapshot}
           viewer={viewer}

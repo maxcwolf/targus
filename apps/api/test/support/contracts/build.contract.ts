@@ -1,4 +1,4 @@
-import { baselineResolutionCases, baselineShaOrder, emptyTally } from '@targus/core';
+import { baselineResolutionCases, baselineShaOrder, emptyTally, type Platform } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import { isForeignKeyViolation } from '../d1-semantics.ts';
@@ -25,12 +25,20 @@ async function numbersPerProject({ repository, seedProject }: BuildHarness): Pro
     newBuild('bc-a2', projectA, { prNumber: 12, appearance: 'dark' }),
     tally,
   );
-  const other = await repository.create(newBuild('bc-b1', projectB, { appearance: null }));
+  const other = await repository.create(
+    newBuild('bc-b1', projectB, { appearance: null, platform: 'web', pixelRatio: 1.5 }),
+  );
 
   expect([first.number, second.number, other.number]).toEqual([1, 2, 1]);
   expect(first).toEqual({ ...newBuild('bc-a1', projectA), number: 1, tally: emptyTally });
   expect(second.tally).toEqual(tally);
   expect([first.appearance, second.appearance, other.appearance]).toEqual(['light', 'dark', null]);
+  expect([first.platform, first.pixelRatio, other.platform, other.pixelRatio]).toEqual([
+    'ios',
+    null,
+    'web',
+    1.5,
+  ]);
   expect(await repository.findById(projectA, 'bc-a2')).toEqual(second);
   expect(await repository.findById(projectB, 'bc-a2')).toBeNull();
   expect(await repository.findAnyById('bc-a2')).toEqual(second);
@@ -145,11 +153,40 @@ async function latestBaselineOnBranch({ repository, seedProject }: BuildHarness)
   await repository.create(newBuild('bc-lib-3', projectId, { status: 'pending' }));
   await repository.create(newBuild('bc-lib-4', projectId, { status: 'accepted', branch: 'dev' }));
   await repository.create(newBuild('bc-lib-5', otherId, { status: 'failed' }));
+  await repository.create(newBuild('bc-lib-6', projectId, { status: 'passed', platform: 'web' }));
+  await repository.create(newBuild('bc-lib-7', projectId, { status: 'pending', platform: 'web' }));
+  const latest = (projectOf: string, platform: Platform, branch: string) =>
+    repository.findLatestBaselineOnBranch(projectOf, platform, branch).then((b) => b?.id ?? null);
 
-  expect((await repository.findLatestBaselineOnBranch(projectId, 'main'))?.id).toBe('bc-lib-2');
-  expect((await repository.findLatestBaselineOnBranch(projectId, 'dev'))?.id).toBe('bc-lib-4');
-  expect(await repository.findLatestBaselineOnBranch(otherId, 'main')).toBeNull();
-  expect(await repository.findLatestBaselineOnBranch(projectId, 'none')).toBeNull();
+  expect(await latest(projectId, 'ios', 'main')).toBe('bc-lib-2');
+  expect(await latest(projectId, 'web', 'main')).toBe('bc-lib-6');
+  expect(await latest(projectId, 'android', 'main')).toBeNull();
+  expect(await latest(projectId, 'ios', 'dev')).toBe('bc-lib-4');
+  expect(await latest(otherId, 'ios', 'main')).toBeNull();
+  expect(await latest(projectId, 'ios', 'none')).toBeNull();
+}
+
+async function baselinePlatformsOnBranch({ repository, seedProject }: BuildHarness): Promise<void> {
+  const projectId = await seedProject('bc-plat-a');
+  const otherId = await seedProject('bc-plat-b');
+  await repository.create(newBuild('bc-plat-1', projectId, { status: 'passed', platform: 'web' }));
+  await repository.create(newBuild('bc-plat-2', projectId, { status: 'accepted' }));
+  await repository.create(newBuild('bc-plat-3', projectId, { status: 'passed', platform: 'web' }));
+  await repository.create(
+    newBuild('bc-plat-4', projectId, { status: 'pending', platform: 'android' }),
+  );
+  await repository.create(
+    newBuild('bc-plat-5', projectId, { status: 'passed', platform: 'android', branch: 'dev' }),
+  );
+  await repository.create(
+    newBuild('bc-plat-6', otherId, { status: 'passed', platform: 'android' }),
+  );
+  const platforms = (projectOf: string, branch: string) =>
+    repository.listBaselinePlatformsOnBranch(projectOf, branch).then((found) => found.sort());
+
+  expect(await platforms(projectId, 'main')).toEqual(['ios', 'web']);
+  expect(await platforms(projectId, 'dev')).toEqual(['android']);
+  expect(await platforms(projectId, 'none')).toEqual([]);
 }
 
 async function longShaOrder({ repository, seedProject }: BuildHarness): Promise<void> {
@@ -160,6 +197,7 @@ async function longShaOrder({ repository, seedProject }: BuildHarness): Promise<
 
   const found = await repository.findLatestSuccessfulForShas(
     projectId,
+    'ios',
     baselineShaOrder(sha('e'), ancestors),
   );
 
@@ -171,8 +209,8 @@ async function successfulScopedByProject({ repository, seedProject }: BuildHarne
   const otherId = await seedProject('bc-scoped-b');
   await repository.create(newBuild('bc-scoped-1', otherId, { sha: sha('a'), status: 'passed' }));
 
-  expect(await repository.findLatestSuccessfulForShas(projectId, [sha('a')])).toBeNull();
-  expect(await repository.findLatestSuccessfulForShas(otherId, [])).toBeNull();
+  expect(await repository.findLatestSuccessfulForShas(projectId, 'ios', [sha('a')])).toBeNull();
+  expect(await repository.findLatestSuccessfulForShas(otherId, 'ios', [])).toBeNull();
 }
 
 type ResolutionCase = (typeof baselineResolutionCases)[number] & { readonly index: number };
@@ -180,19 +218,18 @@ type ResolutionCase = (typeof baselineResolutionCases)[number] & { readonly inde
 /** One of core's `baselineResolutionCases`, run through the repository. */
 async function resolvesLikeCore(
   { repository, seedProject }: BuildHarness,
-  { index, mergeBaseSha, ancestors, candidates, expectedBuildId }: ResolutionCase,
+  { index, platform, mergeBaseSha, ancestors, candidates, expectedBuildId }: ResolutionCase,
 ): Promise<void> {
   const projectId = await seedProject(`bc-case-${index}`);
   const prefix = `bc-case-${index}-`;
   for (const candidate of candidates) {
-    const { sha: onSha, status, createdAt } = candidate;
-    await repository.create(
-      newBuild(`${prefix}${candidate.id}`, projectId, { sha: onSha, status, createdAt }),
-    );
+    const { id, sha: onSha, ...fields } = candidate;
+    await repository.create(newBuild(`${prefix}${id}`, projectId, { sha: onSha, ...fields }));
   }
 
   const found = await repository.findLatestSuccessfulForShas(
     projectId,
+    platform,
     baselineShaOrder(mergeBaseSha, ancestors),
   );
 
@@ -214,8 +251,10 @@ export function describeBuildContract(name: string, harness: Harness): void {
       storesCompletionAndCheckRun(harness()));
     it('lets one request at a time claim creating the check run', () =>
       claimsCheckRunCreation(harness()));
-    it('finds the newest signed-off build of a branch within the project', () =>
+    it('finds the newest signed-off build of a platform and branch within the project', () =>
       latestBaselineOnBranch(harness()));
+    it('lists the platforms with a signed-off build of a branch within the project', () =>
+      baselinePlatformsOnBranch(harness()));
   });
 
   describe(`${name} findLatestSuccessfulForShas`, () => {

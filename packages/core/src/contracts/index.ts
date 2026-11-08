@@ -6,6 +6,8 @@ export {
   BuildStatus,
   BuildTrigger,
   GitSha,
+  PixelRatio,
+  Platform,
 } from './build.ts';
 export {
   BuildStatusSummary,
@@ -35,7 +37,7 @@ export {
   CreateBuildResponse,
 } from './create-build.ts';
 export { HealthResponse } from './health.ts';
-export { GetLibraryResponse, LibraryStory } from './library.ts';
+export { GetLibraryQuery, GetLibraryResponse, LibraryStory } from './library.ts';
 export {
   ApproveAllResponse,
   ListProjectsResponse,

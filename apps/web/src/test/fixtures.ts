@@ -33,6 +33,8 @@ const buildBase = {
   baselineBuildId: null,
   device: 'iPhone 16 / iOS 18.2',
   appearance: 'light',
+  platform: 'ios',
+  pixelRatio: 3,
   completedAt: '2026-11-01T10:05:00Z',
   checkRunId: null,
 } as const;
@@ -188,6 +190,8 @@ export function initialLibrary(): GetLibraryResponse {
     imageHash: hash(digit),
   });
   return {
+    platform: 'ios',
+    platforms: ['ios'],
     build: libraryBuild,
     stories: [
       story('button--primary', 'Button', 'Primary', '1'),

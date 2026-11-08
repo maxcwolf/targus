@@ -29,7 +29,7 @@ describe('BuildPage header', () => {
       /^Pending review$/,
     );
     expect(
-      screen.getByText(/^Started .*2026.* · iPhone 16 \/ iOS 18\.2 · light$/),
+      screen.getByText(/^Started .*2026.* · iOS · iPhone 16 \/ iOS 18\.2 · light$/),
     ).toBeInTheDocument();
     expect(screen.getByText('2 changes awaiting review')).toBeInTheDocument();
     const stats = document.querySelector('.stats');

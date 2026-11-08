@@ -46,6 +46,8 @@ export function newBuild(
     trigger: 'main',
     device: 'iPhone 17',
     appearance: 'light',
+    platform: 'ios',
+    pixelRatio: null,
     status: 'in_progress',
     createdAt: fakeClockEpoch,
     completedAt: null,
@@ -119,6 +121,8 @@ export function createBuildRequest(
     trigger: 'main',
     device: 'iPhone 17',
     appearance: 'light',
+    platform: 'ios',
+    pixelRatio: null,
     snapshots: [],
     ...overrides,
   };

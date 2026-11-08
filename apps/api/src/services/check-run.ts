@@ -1,5 +1,6 @@
 import {
   buildStatusFromTally,
+  checkRunName,
   tallySnapshots,
   type Build,
   type BuildStatusSummary,
@@ -67,6 +68,10 @@ async function bestEffort<T>(
   }
 }
 
+function targetOf(installationId: number, project: Project, build: Build): CheckRunTarget {
+  return { installationId, repo: project.repo, headSha: build.sha };
+}
+
 /** Ask GitHub for the check run: its id, 0 from the no-op client, or null when GitHub failed. */
 function requestCheckRun(
   deps: CheckRunDeps,
@@ -76,9 +81,10 @@ function requestCheckRun(
   summary: BuildStatusSummary,
 ): Promise<number | null> {
   return bestEffort(deps, 'check_run_create_failed', async () => {
-    const target = { installationId, repo: project.repo, headSha: build.sha };
+    const target = targetOf(installationId, project, build);
+    const name = checkRunName(build.platform);
     const url = reviewUrlOf(deps, build.id);
-    return (await deps.github.createCheckRun(target, checkRunState(summary), url)).id;
+    return (await deps.github.createCheckRun(target, name, checkRunState(summary), url)).id;
   });
 }
 
@@ -128,10 +134,6 @@ export interface ReviewedSummary {
 
 /** How many updates one sync sends at most, the first included, while newer reviews commit. */
 const syncAttempts = 5;
-
-function targetOf(installationId: number, project: Project, build: Build): CheckRunTarget {
-  return { installationId, repo: project.repo, headSha: build.sha };
-}
 
 /** Send `state`; false, with a warning, when GitHub fails. */
 async function sendUpdate(

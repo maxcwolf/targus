@@ -1,3 +1,5 @@
+import type { Platform } from '@targus/core/browser';
+
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 /** An absolute, locale-formatted timestamp (the UI never shows relative times). */
@@ -5,15 +7,24 @@ export function formatDateTime(iso: string): string {
   return dateFormat.format(new Date(iso));
 }
 
+const platformLabels: Record<Platform, string> = { ios: 'iOS', android: 'Android', web: 'Web' };
+
+/** A platform as people write it: `iOS`, `Android`, `Web`. */
+export function platformLabel(platform: Platform): string {
+  return platformLabels[platform];
+}
+
 /**
- * Where a build ran, e.g. `iPhone 16 · dark`. A build from a CLI that did not pin the appearance
- * shows the device alone (ADR 0035).
+ * Where a build ran, e.g. `iOS · iPhone 16 · dark` (ADR 0036). A build from a CLI that did not
+ * pin the appearance leaves it out (ADR 0035).
  */
 export function deviceLabel(build: {
+  readonly platform: Platform;
   readonly device: string;
   readonly appearance: string | null;
 }): string {
-  return build.appearance === null ? build.device : `${build.device} · ${build.appearance}`;
+  const where = `${platformLabel(build.platform)} · ${build.device}`;
+  return build.appearance === null ? where : `${where} · ${build.appearance}`;
 }
 
 /** The 7-character abbreviation of a commit sha. */

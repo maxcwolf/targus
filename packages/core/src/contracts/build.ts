@@ -34,6 +34,19 @@ export const baselineBuildStatuses = [
 export const Appearance = z.enum(['light', 'dark']);
 export type Appearance = z.infer<typeof Appearance>;
 
+/**
+ * What a build was captured on (ADR 0036). Each platform of a project has its own baselines,
+ * check run and library. A build opened by a CLI that predates the field is `ios`.
+ */
+export const Platform = z.enum(['ios', 'android', 'web']);
+export type Platform = z.infer<typeof Platform>;
+
+/**
+ * Device pixels per point (iOS, Android) or per CSS pixel (web) of a build's captures, which the
+ * review UI divides by for its actual-size view (ADR 0036). No device in use goes above 4.
+ */
+export const PixelRatio = z.number().positive().max(4);
+
 /** A full 40-character git commit sha, lowercase hex. */
 export const GitSha = z.string().regex(/^[0-9a-f]{40}$/, 'expected a full 40-character git sha');
 
@@ -51,10 +64,13 @@ export const Build = z.object({
   device: z.string().min(1),
   /** Null for a build opened by a CLI that did not pin the appearance. */
   appearance: Appearance.nullable(),
+  platform: Platform,
+  /** Null when the CLI did not report it; `displayPixelRatio` then assumes the platform's. */
+  pixelRatio: PixelRatio.nullable(),
   status: BuildStatus,
   createdAt: z.iso.datetime(),
   completedAt: z.iso.datetime().nullable(),
-  /** The `targus/ios` GitHub check run, or null when none was created. */
+  /** The build's `targus/<platform>` GitHub check run, or null when none was created. */
   checkRunId: z.number().int().positive().nullable(),
 });
 export type Build = z.infer<typeof Build>;

@@ -19,9 +19,10 @@ export type CheckRunState =
  * installation token per request from the App's private key.
  */
 export interface GitHubClient {
-  /** Create the `targus/ios` check run and return its id. */
+  /** Create the check run named `name` (`checkRunName`) and return its id. */
   createCheckRun(
     target: CheckRunTarget,
+    name: string,
     state: CheckRunState,
     detailsUrl: string,
   ): Promise<{ id: number }>;
