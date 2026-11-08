@@ -7,12 +7,21 @@ and the [setup prompt](../prompts/setup-app.md) has an AI agent make them for yo
 
 You need an app where on-device Storybook already works in the iOS simulator
 (`@storybook/react-native` 10 or later), usually switched on with an environment variable such
-as `EXPO_PUBLIC_STORYBOOK_ENABLED=true`.
+as `EXPO_PUBLIC_STORYBOOK_ENABLED=true`. An app that is only a Storybook needs no such switch.
+
+> [!NOTE]
+> **In a monorepo**, "your app" on this page is the React Native app's own folder, the one with
+> its `app.json` (Expo) or `ios/` folder and its own `package.json`, for example `apps/storybook`.
+> Install the packages into that package, put `scripts/`, `build/` and `visual/` there, and run
+> the scripts and the CLI from there. The stories themselves can live anywhere Storybook's
+> `stories` glob finds them.
 
 ## 1. Install the packages
 
 ```sh
 yarn add -D @targus/cli @targus/react-native   # or: npm install -D / pnpm add -D
+# in a monorepo, into the app's own package:
+yarn workspace <app package name> add -D @targus/cli @targus/react-native
 ```
 
 - `@targus/cli` is the `targus` command. It runs on your Mac and in CI, never in the app.
@@ -30,30 +39,44 @@ git clone https://github.com/maxcwolf/targus.git ../targus
 (cd ../targus && yarn install && yarn workspace @targus/cli build && yarn workspace @targus/react-native build)
 ```
 
-Then, in your app:
+Then, in your app's `package.json`:
 
 - Add `"@targus/react-native": "portal:../targus/packages/react-native"` to `devDependencies`
-  (Yarn; with npm use `"file:../targus/packages/react-native"`) and install.
-- Add a script `"targus": "node ../targus/packages/cli/dist/bin.js"` and run the CLI as
-  `yarn targus ...` wherever these docs say `npx targus ...`.
+  (Yarn; with npm use `"file:../targus/packages/react-native"`) and install. The path is relative
+  to the `package.json` that declares it: for an app in `apps/storybook` of a repository next to
+  the targus checkout, it is `portal:../../../targus/packages/react-native`.
+- Add a script `"targus": "node ../targus/packages/cli/dist/bin.js"` (same rule for the path) and
+  run the CLI as `yarn targus ...` wherever these docs say `npx targus ...`. Yarn runs a
+  workspace's script in that workspace's folder, so `--app` and `--out` are relative to it. From
+  the repository root of a monorepo, use `yarn workspace <app package name> targus ...`.
 - Tell Metro to watch the package and to resolve `react` from your app, or the bundle gets two
-  Reacts:
+  Reacts. This finds the package wherever it is installed, so it needs no path:
 
   ```js
-  // metro.config.js, before the config is exported
+  // metro.config.js, after `config` is created and before it is exported or wrapped
+  // (for example by withStorybook, which keeps a resolveRequest set here)
+  const fs = require('node:fs');
   const path = require('node:path');
-  const targusPackage = path.resolve(__dirname, '../targus/packages/react-native');
+  const targusPackage = path.resolve(fs.realpathSync(require.resolve('@targus/react-native')), '../..');
   config.watchFolders = [...(config.watchFolders ?? []), targusPackage];
   const upstreamResolveRequest = config.resolver.resolveRequest;
   config.resolver.resolveRequest = (context, moduleName, platform) => {
     const resolve = upstreamResolveRequest ?? context.resolveRequest;
     const fromTargus = context.originModulePath.startsWith(targusPackage + path.sep);
     if (fromTargus && (moduleName === 'react' || moduleName.startsWith('react/'))) {
-      return resolve({ ...context, originModulePath: path.join(__dirname, 'index.ts') }, moduleName, platform);
+      const fromApp = { ...context, originModulePath: path.join(__dirname, 'package.json') };
+      return resolve(fromApp, moduleName, platform);
     }
     return resolve(context, moduleName, platform);
   };
   ```
+
+  A monorepo that already sets `watchFolders` to its root still needs the line that adds the
+  package: the checkout is outside the repository.
+
+Two side effects to expect: Yarn warns `YN0072` about `--preserve-symlinks` on every install,
+which is harmless here, and `yarn install` fails on any machine without the checkout next to the
+repository, CI included.
 
 In CI, check out the targus repo beside yours (it is public, so no key is needed); the
 [GitHub Actions guide](ci-github-actions.md#until-the-packages-are-on-npm) shows the steps.
@@ -114,7 +137,8 @@ const StorybookUI = view.getStorybookUI({
 export default StorybookUI;
 ```
 
-Keep whatever other options you already pass. If you change the port (`port` here), pass the same
+Keep whatever other options you already pass. If the file already switches on
+`EXPO_PUBLIC_TARGUS` under another name, keep it: only the three options matter. If you change the port (`port` here), pass the same
 number to the CLI with `--port`.
 
 `EXPO_PUBLIC_*` variables are inlined into the bundle by Expo's Babel preset. In a bare React
@@ -166,7 +190,12 @@ affected by either setting.
 targus installs a **Release** build for the iOS simulator with the JavaScript bundled in, so no
 Metro server is involved. Build it with both variables set, so the bundle contains Storybook in
 capture mode. For an Expo app, save this as `scripts/build-ios-sim.sh` and replace `MyApp` with
-your workspace and scheme name (the `ios/*.xcworkspace` file):
+your workspace and scheme name (the `ios/*.xcworkspace` file). Before the first `expo prebuild`
+there is no `ios/` folder yet: Expo names the workspace after `expo.name` in `app.json` with
+everything but letters and digits removed, so `"Wolf UI Storybook"` becomes `WolfUIStorybook`.
+Use an Xcode release that your Expo SDK supports; with an older one the build can fail inside
+Expo's own native modules (see
+[Troubleshooting](troubleshooting.md#the-xcode-build-fails-inside-a-dependency)).
 
 ```sh
 #!/usr/bin/env bash
@@ -239,6 +268,10 @@ xcrun simctl list devices available | grep "iPhone 16"   # copy a UDID in parent
 npx targus capture --udid <udid> --app build/MyApp.app --out visual/current --limit 3
 open visual/current
 ```
+
+If more than one iPhone 16 is listed, they are on different iOS runtimes: use the one on the
+runtime you will use in CI, and the same one every time, since another runtime renders
+differently.
 
 Each story is a `<storyId>.png` in `visual/current`, next to a `manifest.json`. If a screenshot
 shows the Storybook sidebar, the app was built without `EXPO_PUBLIC_TARGUS=true`. If the command

@@ -11,18 +11,25 @@ finds. Nothing is uploaded.
 Build this app for targus and run a first local capture. targus is set up already: there is a
 withTargus decorator in .rnstorybook/preview.tsx, a capture-mode switch on
 EXPO_PUBLIC_TARGUS in .rnstorybook/index.tsx, and scripts/build-ios-sim.sh and
-scripts/bundle-js.sh. If any of those is missing, stop and tell me.
+scripts/bundle-js.sh. All of these paths, and build/ and visual/, are relative to the app
+folder: the React Native app's own folder (with its app.json or ios/ and its package.json), which
+is the repository root unless this is a monorepo. Run every command below from it. If any of
+those files is missing, stop and tell me.
 
 1. Check the machine: `xcodebuild -version`, Node 22 or later, and an "iPhone 16" simulator
    (`xcrun simctl list devices available`). If there is no iPhone 16, tell me which iPhones exist
-   and use the newest one.
+   and use the newest one. If several are listed, they are on different iOS runtimes: use the
+   newest runtime and tell me which.
 2. Run `bash scripts/build-ios-sim.sh`. It can take 5 to 15 minutes; run it in the background if
    you can and wait for it. If it fails, show me the first real error (not the last lines of the
-   log) and fix it only if the cause is in the two scripts; otherwise stop and explain.
+   log) and fix it only if the cause is in the two scripts; otherwise stop and explain. A compile
+   error in a file under node_modules/ is a toolchain problem, not a script problem: report
+   `xcodebuild -version`, say that this Xcode may not support the app's Expo SDK, and stop.
 3. Take the simulator's UDID from `xcrun simctl list devices available` (do not boot it: targus
    capture boots it and silences system notices), and run:
      npx targus capture --udid <udid> --app build/<Name>.app --out visual/current --limit 5
-   (use `yarn targus` instead of `npx targus` if package.json has a "targus" script).
+   (use `yarn targus` instead of `npx targus` if the app folder's package.json has a "targus"
+   script).
 4. Read the output. For each failure, use these meanings:
    - "the app did not connect within ...": the bundle was not built with EXPO_PUBLIC_TARGUS=true,
      or enableWebsockets is off, or the port differs from 7007. Check, fix, re-bundle with

@@ -10,7 +10,8 @@ your own Mac. Nothing is uploaded until the last, optional step.
 **You need:** macOS with Xcode and an "iPhone 16" simulator, Node 22+, and a React Native app
 whose on-device Storybook (`@storybook/react-native` 10+) already runs in the simulator. The
 steps below are for Expo; [Prepare your app](prepare-your-app.md) covers bare React Native and
-explains every step.
+explains every step. In a monorepo, run everything from the app's own folder (see
+[Prepare your app](prepare-your-app.md)), and use an Xcode release your Expo SDK supports.
 
 ## 1. Install
 

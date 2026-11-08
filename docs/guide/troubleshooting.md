@@ -214,6 +214,9 @@ error: port 7007 is already in use
 
 Another capture or a Storybook server holds the channel port. Find it with
 `lsof -nP -iTCP:7007 -sTCP:LISTEN`. On a self-hosted runner, stop leftovers at the end of each job.
+A running Metro or `expo start` holds it when `withStorybook` in `metro.config.js` is given a
+`websockets` option, because Storybook then starts its own channel server on that port; stop
+Metro before capturing, or set `STORYBOOK_SERVER=false` for it.
 
 ```text
 error: xcrun simctl bootstatus <udid> -b did not finish within 5m and was stopped
@@ -231,6 +234,20 @@ On a simulator's first boot, targus switches off the services that post system n
 reboots it. The error means that sequence failed partway; once the simulator is shut down, the
 next run's boot finishes the job. The warning means the simulator refused to stop one of those
 services. The capture goes on, so check its first screenshots for a banner.
+
+## The Xcode build fails inside a dependency
+
+```text
+node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/Values/JavaScriptObject.swift:946:36: error: sending 'slot' risks causing data races
+```
+
+A compile error in a file under `node_modules/` comes from the Xcode release, not from your
+scripts or targus. The line above is Expo SDK 58 on Xcode 26.2: Expo's native modules are
+compiled from source on every build, and a Swift compiler older than the SDK expects rejects
+them. Use an Xcode that your Expo SDK supports
+([Expo's compatibility notes](https://github.com/expo/fyi/blob/main/expo-sdk-xcode-compatibility.md)),
+on your Mac and on the CI runner image (`xcodebuild -version` prints it), then delete
+`build/derived` and build again. For this error, pinning `expo-modules-jsi` back does not help: 58.0.21 has the same code.
 
 ## Results the server refuses
 

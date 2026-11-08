@@ -138,9 +138,33 @@ Why the less obvious lines are there:
   as changed.
 - **`--connect-timeout 120000`.** The first launch of a freshly installed app on a cold CI
   simulator can take longer than the default minute.
+- **`runs-on: macos-26`.** Its default Xcode has to be one your Expo SDK supports; check the
+  image's Xcode list in [actions/runner-images](https://github.com/actions/runner-images), and
+  select another installed Xcode with `sudo xcode-select -s` in a step if needed.
+- **Pull requests from forks** get no secrets, so `targus run` stops with `TARGUS_TOKEN is not
+  set`. Skip the job for them with
+  `if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'`
+  on the job, or accept the failure.
 - **The job passes even when stories changed.** `targus run` exits `0` with changes pending; the
   `targus/ios` check is what gates the merge, not the job. The job fails only when the capture or
   the upload fails, or a story throws while rendering.
+
+### In a monorepo
+
+When the app is a package such as `apps/storybook`, the scripts, `build/` and `visual/` live
+there. Set the job's default working directory, and prefix the paths that actions (not `run:`
+steps) resolve from the repository root:
+
+```yaml
+    defaults:
+      run:
+        working-directory: apps/storybook
+    # ...in actions/cache/restore, actions/cache/save and actions/upload-artifact:
+    #   path: apps/storybook/${{ env.APP }}   and   path: apps/storybook/visual/current
+```
+
+Install dependencies from the repository root (`working-directory: .` on that step), and run
+the CLI with the app's own script runner, for example `yarn workspace <app package name> targus run ...`.
 
 ## 3. Open a pull request
 
@@ -172,7 +196,8 @@ A self-hosted runner keeps its state between jobs, so:
 
 Check out the targus repository beside yours and build the two packages there, as
 [Prepare your app](prepare-your-app.md#1-install-the-packages) describes. The targus repository
-is public, so the checkout needs no key. Check out both repositories side by side, set `working-directory: my-app` as the job default (or on each
+is public, so the checkout needs no key; pin it with `ref:` to a commit you have tested, or every
+change to targus reaches your CI at once. Check out both repositories side by side, set `working-directory: my-app` as the job default (or on each
 step), and add the build before `yarn install`:
 
 ```yaml
@@ -187,6 +212,7 @@ step), and add the build before `yarn install`:
       - uses: actions/checkout@v4
         with:
           repository: maxcwolf/targus
+          ref: <a tested targus commit>
           path: targus
       - uses: actions/setup-node@v4
         with:
