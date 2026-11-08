@@ -84,5 +84,6 @@ differ (the service's threshold), and `changed` otherwise.
 
 If every story in a build shows as changed, something about the capture environment moved, not
 your components: a new Xcode or iOS runtime, another simulator device, the other light or dark
-mode (shown next to the device), or a font that failed to load. Check the CI runner image before approving. If the new look is right, **Approve all**, and
-the next build on `main` becomes the new baseline.
+mode (shown next to the device), or a font that failed to load. Check the CI runner image before
+approving. If the new look is right, **Approve all**, and the next build on `main` becomes the new
+baseline.

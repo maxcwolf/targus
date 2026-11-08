@@ -28,7 +28,7 @@ export const baselineBuildStatuses = [
 ] as const satisfies readonly BuildStatus[];
 
 /**
- * The light or dark mode the device was in when the build was captured (ADR 0034). The CLI pins
+ * The light or dark mode the device was in when the build was captured (ADR 0035). The CLI pins
  * it before the first story, `light` unless `--appearance` says otherwise.
  */
 export const Appearance = z.enum(['light', 'dark']);

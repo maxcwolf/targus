@@ -187,7 +187,7 @@ export class SimctlDriver implements DeviceDriver {
   }
 
   /**
-   * `simctl ui appearance` (ADR 0034). It needs a booted simulator and persists across reboots,
+   * `simctl ui appearance` (ADR 0035). It needs a booted simulator and persists across reboots,
    * so it is set on every run rather than trusted from the last one.
    */
   async setAppearance(appearance: Appearance): Promise<void> {

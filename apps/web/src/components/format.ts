@@ -7,7 +7,7 @@ export function formatDateTime(iso: string): string {
 
 /**
  * Where a build ran, e.g. `iPhone 16 · dark`. A build from a CLI that did not pin the appearance
- * shows the device alone (ADR 0034).
+ * shows the device alone (ADR 0035).
  */
 export function deviceLabel(build: {
   readonly device: string;

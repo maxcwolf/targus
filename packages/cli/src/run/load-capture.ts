@@ -24,7 +24,7 @@ async function loadStory(dir: string, record: StoryRecord): Promise<CaptureResul
 /** A capture directory read back: the report, and the appearance its manifest records. */
 export interface LoadedCapture {
   readonly report: CaptureReport;
-  /** Null for a capture written before the CLI pinned the appearance (ADR 0034). */
+  /** Null for a capture written before the CLI pinned the appearance (ADR 0035). */
   readonly appearance: Appearance | null;
 }
 

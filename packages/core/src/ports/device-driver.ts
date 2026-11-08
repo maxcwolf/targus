@@ -31,7 +31,7 @@ export interface DeviceDriver {
   silenceSystemNotices(): Promise<void>;
   /**
    * Put the device in light or dark mode, so an app whose theme follows the system renders the
-   * same on every machine (ADR 0034). Called after `boot` and before the app is launched: a
+   * same on every machine (ADR 0035). Called after `boot` and before the app is launched: a
    * launched app starts in the new mode, while a running one cross-fades into it.
    */
   setAppearance(appearance: Appearance): Promise<void>;

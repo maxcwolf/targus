@@ -40,7 +40,7 @@ export interface RunBuildInput extends Omit<StoryJudge, 'api' | 'threshold'> {
   readonly git: RunGitInfo;
   readonly ci: CiContext;
   readonly device: string;
-  /** What the capture's manifest records; null for a capture that predates it (ADR 0034). */
+  /** What the capture's manifest records; null for a capture that predates it (ADR 0035). */
   readonly appearance: Appearance | null;
   readonly api: TargusApi;
   readonly clock: Clock;

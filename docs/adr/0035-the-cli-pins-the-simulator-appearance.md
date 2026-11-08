@@ -1,4 +1,4 @@
-# 0034. The CLI pins the simulator appearance
+# 0035. The CLI pins the simulator appearance
 
 ## Status
 

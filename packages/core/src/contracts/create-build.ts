@@ -30,7 +30,7 @@ const IdempotencyKey = z
  * `idempotencyKey` of a build the project already opened returns that build; the same key with a
  * different build (sha, branch, PR, merge base, trigger, device or appearance) is a `conflict`
  * (ADR 0027). Without a key every request opens a new build. `appearance` is absent from CLIs
- * that predate it (ADR 0034) and reads as `null`.
+ * that predate it (ADR 0035) and reads as `null`.
  */
 export const CreateBuildRequest = z.object({
   sha: GitSha,

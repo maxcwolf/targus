@@ -28,7 +28,7 @@ export interface CaptureCommandOptions {
   readonly udid: string;
   readonly app: string;
   readonly out: string;
-  /** Light or dark mode, pinned on the simulator before the app launches (ADR 0034). */
+  /** Light or dark mode, pinned on the simulator before the app launches (ADR 0035). */
   readonly appearance: Appearance;
   readonly bundleId?: string;
   readonly port: number;
