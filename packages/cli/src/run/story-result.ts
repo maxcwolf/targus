@@ -7,9 +7,6 @@ import {
 } from '../capture/capture-stories.ts';
 import type { TargusApi } from './targus-api.ts';
 
-/** Every story is captured once per build, so it is always the default variant (plan.md 6). */
-export const defaultVariant = 'default';
-
 /** What judging one story needs besides the story and its baseline. */
 export interface StoryJudge {
   readonly api: Pick<TargusApi, 'getImage'>;
@@ -55,7 +52,7 @@ export function errorResult(
 ): StoryResult {
   return {
     storyId: story.id,
-    variant: defaultVariant,
+    variant: story.variant,
     title: story.title,
     name: story.name,
     state: 'error',
@@ -113,7 +110,7 @@ export async function judgeStory(
   return {
     result: {
       storyId: story.id,
-      variant: defaultVariant,
+      variant: story.variant,
       title: story.title,
       name: story.name,
       state,

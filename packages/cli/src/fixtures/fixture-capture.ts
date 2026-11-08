@@ -11,6 +11,7 @@ const height = 48;
 function story(id: string, title: string, name: string, png: Uint8Array): CaptureResult {
   return {
     id,
+    variant: 'default',
     title,
     name,
     png,

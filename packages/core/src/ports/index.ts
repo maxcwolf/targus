@@ -12,6 +12,8 @@ export type { IdGenerator } from './id-generator.ts';
 export { createFakeIdGenerator } from './id-generator.fake.ts';
 export type { ImageStore } from './image-store.ts';
 export type {
+  CaptureMode,
+  ModeViewport,
   StoryCaptureParameters,
   StoryIndexEntry,
   StorybookChannel,
@@ -20,5 +22,6 @@ export type {
 export {
   createFakeStorybookChannel,
   type FakeStorybookChannel,
+  type FakeStorybookChannelOptions,
   type FakeStoryOutcome,
 } from './storybook-channel.fake.ts';

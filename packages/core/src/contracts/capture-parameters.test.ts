@@ -39,9 +39,7 @@ describe('parseCaptureParameters', () => {
   });
 
   it('ignores Chromatic keys targus does not use', () => {
-    expect(parseCaptureParameters({ chromatic: { modes: { a: {} }, diffThreshold: 0.2 } })).toEqual(
-      defaults,
-    );
+    expect(parseCaptureParameters({ chromatic: { diffThreshold: 0.2 } })).toEqual(defaults);
   });
 
   it('rejects a known Chromatic key with a bad value, naming it', () => {
@@ -52,6 +50,28 @@ describe('parseCaptureParameters', () => {
     const root = parseCaptureParameters({ chromatic: 'yes' });
     expect(root.ok ? '' : root.message).toBe(
       'invalid parameters.chromatic: Invalid input: expected object, received string',
+    );
+  });
+});
+
+describe('parseCaptureParameters modes', () => {
+  it('reads modes from parameters.chromatic and parameters.targus', () => {
+    const modes = { light: { theme: 'light' }, dark: { theme: 'dark', viewport: 390 } };
+    const expected = [
+      { name: 'light', globals: { theme: 'light' }, viewport: null },
+      { name: 'dark', globals: { theme: 'dark' }, viewport: { width: 390, height: null } },
+    ];
+    expect(parseCaptureParameters({ chromatic: { modes } })).toEqual({
+      ok: true,
+      parameters: { delay: null, skip: false, modes: expected },
+    });
+    expect(parseCaptureParameters({ targus: { modes, delay: 5 } })).toEqual({
+      ok: true,
+      parameters: { delay: 5, skip: false, modes: expected },
+    });
+    const bad = parseCaptureParameters({ targus: { modes: { phone: { viewport: 'iphone' } } } });
+    expect(bad.ok ? '' : bad.message).toMatch(
+      /^invalid parameters\.targus: modes\.phone\.viewport/,
     );
   });
 });

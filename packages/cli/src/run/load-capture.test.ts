@@ -13,6 +13,7 @@ import { loadCapture } from './load-capture.ts';
 const png = encodeSolidPng(2, 2, [1, 2, 3, 255]);
 const base: CaptureResult = {
   id: 'a--ok',
+  variant: 'default',
   title: 'A',
   name: 'Ok',
   png,

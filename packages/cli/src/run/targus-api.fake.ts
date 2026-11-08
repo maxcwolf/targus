@@ -31,7 +31,10 @@ export interface FakeTargusApi extends TargusApi {
 }
 
 export interface FakeTargusApiOptions {
-  /** Accepted baseline PNG per story id; the fake stores them and serves them from `getImage`. */
+  /**
+   * Accepted baseline PNG per story id, or `id@mode` for a mode's variant; the fake stores them
+   * and serves them from `getImage`.
+   */
   readonly baselines?: Readonly<Record<string, Uint8Array>>;
   /** Extra images the server already has. */
   readonly stored?: readonly Uint8Array[];
@@ -80,6 +83,16 @@ function currentProject(error: Error | undefined): Promise<CurrentProjectRespons
   return error === undefined ? Promise.resolve({ project: fakeProject }) : Promise.reject(error);
 }
 
+/** Baselines keyed `id` or `id@mode`, their images stored. */
+function seedBaselines(options: FakeTargusApiOptions, images: Map<string, Uint8Array>) {
+  return Object.entries(options.baselines ?? {}).map(([key, png]) => {
+    const imageHash = sha256Hex(png);
+    images.set(imageHash, png);
+    const [storyId = key, variant = 'default'] = key.split('@');
+    return { storyId, variant, imageHash };
+  });
+}
+
 /**
  * An in-memory targus API: it serves the given baselines, reports every snapshot hash it does
  * not hold as missing, stores uploads, checks submitted results against the contract, and
@@ -88,11 +101,7 @@ function currentProject(error: Error | undefined): Promise<CurrentProjectRespons
 export function createFakeTargusApi(options: FakeTargusApiOptions = {}): FakeTargusApi {
   const calls: FakeApiCall[] = [];
   const images = new Map<string, Uint8Array>();
-  const baselines = Object.entries(options.baselines ?? {}).map(([storyId, png]) => {
-    const imageHash = sha256Hex(png);
-    images.set(imageHash, png);
-    return { storyId, variant: 'default', imageHash };
-  });
+  const baselines = seedBaselines(options, images);
   for (const png of options.stored ?? []) images.set(sha256Hex(png), png);
   const checkRunId = options.checkRunId === undefined ? 1 : options.checkRunId;
 

@@ -47,6 +47,7 @@ export {
   ReviewRequest,
   ReviewSnapshotResponse,
 } from './review.ts';
+export { Modes, toCaptureModes } from './capture-modes.ts';
 export {
   ChromaticParameters,
   parseCaptureParameters,

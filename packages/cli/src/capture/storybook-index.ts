@@ -34,6 +34,20 @@ export function parseStorybookIndex(body: unknown, source: string): readonly Sto
 }
 
 /** `iframe.html` showing one story on its own, as a capture opens it. */
-export function storyUrl(baseUrl: string, storyId: string): string {
-  return `${baseUrl}/iframe.html?id=${encodeURIComponent(storyId)}&viewMode=story`;
+/** A story global as Storybook reads it from the URL: booleans are `!true` and `!false`. */
+function globalValue(value: string | number | boolean): string {
+  return typeof value === 'boolean' ? `!${String(value)}` : encodeURIComponent(String(value));
+}
+
+/** The URL of one story, with `globals` (a mode's) in Storybook's `key:value;…` form. */
+export function storyUrl(
+  baseUrl: string,
+  storyId: string,
+  globals: Readonly<Record<string, string | number | boolean>> = {},
+): string {
+  const url = `${baseUrl}/iframe.html?id=${encodeURIComponent(storyId)}&viewMode=story`;
+  const pairs = Object.entries(globals).map(
+    ([key, value]) => `${encodeURIComponent(key)}:${globalValue(value)}`,
+  );
+  return pairs.length === 0 ? url : `${url}&globals=${pairs.join(';')}`;
 }

@@ -1,6 +1,7 @@
 import {
   parseCaptureParameters,
   TargusError,
+  type CaptureMode,
   type StoryIndexEntry,
   type StorybookChannel,
   type StorySelection,
@@ -36,13 +37,21 @@ export interface BrowserPage {
   goto(url: string, options: { readonly timeout: number }): Promise<void>;
   evaluate<T>(expression: string): Promise<T>;
   screenshot(options: PageScreenshotOptions): Promise<Uint8Array>;
+  setViewportSize(size: ViewportSize): Promise<void>;
   /** Call `listener` once if the page crashes or closes. */
   onGone(listener: () => void): void;
+}
+
+export interface ViewportSize {
+  readonly width: number;
+  readonly height: number;
 }
 
 export interface WebStorybookOptions {
   /** Base URL of the built Storybook, without a trailing slash. */
   readonly baseUrl: string;
+  /** The viewport the page opened at; a mode without a viewport of its own uses it. */
+  readonly viewport: ViewportSize;
   /** The element a capture is cropped to (ADR 0037). */
   readonly rootSelector?: string;
   readonly fetch?: (url: string) => Promise<Response>;
@@ -81,13 +90,17 @@ function pixelClip(box: PageBox): PageBox {
  * from the preview's story store. It also takes the screenshots, cropped to the story's root.
  */
 export class WebStorybook implements StorybookChannel {
+  /** Modes are captured as variants: each sets globals in the URL and maybe the viewport. */
+  readonly supportsModes = true;
   private readonly gone: Promise<void>;
   private closing = false;
+  private viewport: ViewportSize;
 
   private constructor(
     private readonly page: BrowserPage,
     private readonly options: WebStorybookOptions,
   ) {
+    this.viewport = options.viewport;
     this.gone = new Promise((resolve) => {
       page.onGone(() => {
         if (!this.closing) resolve();
@@ -117,8 +130,26 @@ export class WebStorybook implements StorybookChannel {
     return parseStorybookIndex(await response.json(), url);
   }
 
-  async selectStory(storyId: string, timeoutMs: number): Promise<StorySelection> {
-    await this.page.goto(storyUrl(this.options.baseUrl, storyId), { timeout: timeoutMs });
+  /** Resize the page when the mode's viewport, or the default one, differs from the current. */
+  private async resizeFor(mode: CaptureMode | undefined): Promise<void> {
+    const fallback = this.options.viewport;
+    const size =
+      mode?.viewport == null
+        ? fallback
+        : { width: mode.viewport.width, height: mode.viewport.height ?? fallback.height };
+    if (size.width === this.viewport.width && size.height === this.viewport.height) return;
+    await this.page.setViewportSize(size);
+    this.viewport = size;
+  }
+
+  async selectStory(
+    storyId: string,
+    timeoutMs: number,
+    mode?: CaptureMode,
+  ): Promise<StorySelection> {
+    await this.resizeFor(mode);
+    const url = storyUrl(this.options.baseUrl, storyId, mode?.globals);
+    await this.page.goto(url, { timeout: timeoutMs });
     const outcome = await timeout(
       this.page.evaluate<PreviewOutcome>(inPage(readStoryOutcome)),
       timeoutMs,

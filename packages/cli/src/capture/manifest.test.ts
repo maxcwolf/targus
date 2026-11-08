@@ -26,6 +26,7 @@ const run: CaptureRunInfo = {
 function result(id: string, overrides: Partial<CaptureResult> = {}): CaptureResult {
   return {
     id,
+    variant: 'default',
     title: 'T',
     name: id,
     png: Uint8Array.of(1, 2, 3),
@@ -180,5 +181,22 @@ describe('writeCaptureOutput', () => {
     await expect(readCaptureManifest(dir)).rejects.toThrow(
       `${path.join(dir, 'manifest.json')} is not valid JSON`,
     );
+  });
+});
+
+describe('writeCaptureOutput with mode variants', () => {
+  it('names a mode variant id@mode, in file names and the summary', async () => {
+    const dark = result('a', { variant: 'dark/rtl', stable: false });
+    const written = await writeCaptureOutput(
+      path.join(dir, 'out'),
+      { ...report, stories: [result('a'), dark] },
+      run,
+    );
+
+    const files = (await readdir(path.join(dir, 'out'))).sort();
+    expect(files).toEqual(['a.png', 'a@dark%2Frtl.png', 'manifest.json']);
+    expect(written.stories.map((story) => story.file)).toEqual(['a.png', 'a@dark%2Frtl.png']);
+    expect(written.summary.unstable).toEqual(['a@dark/rtl']);
+    expect(written.summary.duplicateHashes).toEqual([['a', 'a@dark/rtl']]);
   });
 });

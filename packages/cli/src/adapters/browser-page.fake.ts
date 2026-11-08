@@ -1,5 +1,5 @@
 import { encodeSolidPng, type Rgba } from '../capture/solid-png.fake.ts';
-import type { BrowserPage, PageScreenshotOptions } from './web-storybook.adapter.ts';
+import type { BrowserPage, PageScreenshotOptions, ViewportSize } from './web-storybook.adapter.ts';
 
 /** How the fake preview answers a story: the event it emits, its payload and parameters. */
 export interface ScriptedStory {
@@ -24,6 +24,7 @@ export const fakeViewportShot = { width: 4, height: 3 };
 export class FakePage implements BrowserPage {
   readonly visited: string[] = [];
   readonly shots: PageScreenshotOptions[] = [];
+  readonly resized: ViewportSize[] = [];
   private readonly initScripts: string[] = [];
   private win: Record<string, unknown> = {};
   private goneListener: () => void = () => undefined;
@@ -56,6 +57,11 @@ export class FakePage implements BrowserPage {
 
   evaluate<T>(expression: string): Promise<T> {
     return Promise.resolve(this.run(expression) as T);
+  }
+
+  setViewportSize(size: ViewportSize): Promise<void> {
+    this.resized.push(size);
+    return Promise.resolve();
   }
 
   screenshot(options: PageScreenshotOptions): Promise<Uint8Array> {

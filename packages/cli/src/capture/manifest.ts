@@ -6,11 +6,14 @@ import { z } from 'zod';
 
 import { summarizeIssues } from '../errors/zod-summary.ts';
 import type { CaptureReport, CaptureResult } from './capture-stories.ts';
+import { defaultVariant, fileStem, variantLabel } from './variant.ts';
 
 const Ms = z.number().int().nonnegative();
 
 const StoryRecord = z.object({
   id: z.string(),
+  /** The mode the story was captured in (`default` without modes); absent in older manifests. */
+  variant: z.string().min(1).default(defaultVariant),
   title: z.string(),
   name: z.string(),
   /** PNG path relative to the manifest, or `null` when the story errored. */
@@ -62,6 +65,7 @@ const Summary = z.object({
   storyCount: z.number().int().nonnegative(),
   captured: z.number().int().nonnegative(),
   failed: z.number().int().nonnegative(),
+  /** Stories as `id`, or `id@mode` for a mode's variant, like `duplicateHashes`. */
   unstable: z.array(z.string()),
   blank: z.array(z.string()),
   /** Ids left out by `parameters.targus.skip`; absent in manifests written before it. */
@@ -133,8 +137,13 @@ function targetOf(run: CaptureRunInfo): Target {
   };
 }
 
-export function pngFileName(storyId: string): string {
-  return `${storyId}.png`;
+/** `<id>.png`, or `<id>@<mode>.png` for a mode's variant. */
+export function pngFileName(storyId: string, variant: string = defaultVariant): string {
+  return `${fileStem(variantLabel(storyId, variant))}.png`;
+}
+
+function labelOf(story: Pick<CaptureResult, 'id' | 'variant'>): string {
+  return variantLabel(story.id, story.variant);
 }
 
 /** Mean, median, p90 and max of the capture times of the stories that produced a PNG. */
@@ -153,16 +162,16 @@ export function perStoryStats(times: readonly number[]): PerStoryMs | null {
 
 function duplicateGroups(stories: readonly CaptureResult[]): string[][] {
   const byHash = new Map<string, string[]>();
-  for (const { id, hash } of stories) {
-    if (hash === null) continue;
-    byHash.set(hash, [...(byHash.get(hash) ?? []), id]);
+  for (const story of stories) {
+    if (story.hash === null) continue;
+    byHash.set(story.hash, [...(byHash.get(story.hash) ?? []), labelOf(story)]);
   }
   return [...byHash.values()].filter((ids) => ids.length > 1);
 }
 
 function toRecord(result: CaptureResult): StoryRecord {
   const { png, ...rest } = result;
-  return { ...rest, file: png === null ? null : pngFileName(result.id) };
+  return { ...rest, file: png === null ? null : pngFileName(result.id, result.variant) };
 }
 
 /** Build the manifest for a capture report. Pure; `writeCaptureOutput` does the I/O. */
@@ -177,8 +186,8 @@ export function buildManifest(report: CaptureReport, run: CaptureRunInfo): Captu
       storyCount: report.stories.length,
       captured: captured.length,
       failed: report.stories.filter((story) => story.error !== null).length,
-      unstable: captured.filter((story) => !story.stable).map((story) => story.id),
-      blank: captured.filter((story) => story.blank === true).map((story) => story.id),
+      unstable: captured.filter((story) => !story.stable).map(labelOf),
+      blank: captured.filter((story) => story.blank === true).map(labelOf),
       skipped: [...report.skipped],
       duplicateHashes: duplicateGroups(captured),
       startedAt: report.startedAt,
@@ -189,7 +198,7 @@ export function buildManifest(report: CaptureReport, run: CaptureRunInfo): Captu
   };
 }
 
-/** Write `<storyId>.png` for every captured story plus `manifest.json` into `dir`. */
+/** Write a PNG for every captured story and variant plus `manifest.json` into `dir`. */
 export async function writeCaptureOutput(
   dir: string,
   report: CaptureReport,
@@ -198,7 +207,8 @@ export async function writeCaptureOutput(
   const manifest = buildManifest(report, run);
   await mkdir(dir, { recursive: true });
   for (const story of report.stories) {
-    if (story.png !== null) await writeFile(path.join(dir, pngFileName(story.id)), story.png);
+    if (story.png === null) continue;
+    await writeFile(path.join(dir, pngFileName(story.id, story.variant)), story.png);
   }
   await writeFile(path.join(dir, manifestFileName), `${JSON.stringify(manifest, null, 2)}\n`);
   return manifest;

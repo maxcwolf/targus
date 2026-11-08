@@ -4,6 +4,7 @@ import { FakePage, type ScriptedStory } from './browser-page.fake.ts';
 import { WebStorybook } from './web-storybook.adapter.ts';
 
 const baseUrl = 'http://127.0.0.1:6006';
+const viewport = { width: 1200, height: 900 };
 
 async function open(stories: Record<string, ScriptedStory>, fetchBody?: unknown) {
   const page = new FakePage(stories);
@@ -13,7 +14,7 @@ async function open(stories: Record<string, ScriptedStory>, fetchBody?: unknown)
         ? Response.json(fetchBody)
         : new Response('missing', { status: 404 }),
     );
-  return { page, storybook: await WebStorybook.open(page, { baseUrl, fetch: fetchFn }) };
+  return { page, storybook: await WebStorybook.open(page, { baseUrl, viewport, fetch: fetchFn }) };
 }
 
 describe('WebStorybook.getIndex', () => {
@@ -48,6 +49,7 @@ describe('WebStorybook.getIndex', () => {
     const page = new FakePage({});
     const storybook = await WebStorybook.open(page, {
       baseUrl,
+      viewport,
       fetch: () => Promise.reject(new TypeError('fetch failed')),
     });
     await expect(storybook.getIndex()).rejects.toThrow(
@@ -94,6 +96,35 @@ describe('WebStorybook.selectStory', () => {
     await expect(storybook.selectStory('a--slow', 20)).rejects.toThrow(
       'story a--slow did not render within 20 ms',
     );
+  });
+});
+
+describe('WebStorybook modes', () => {
+  const rendered = { event: 'storyRendered' } as const;
+
+  it('opens a mode with its globals in the URL and resizes only for a viewport', async () => {
+    const { page, storybook } = await open({ 'a--one': rendered });
+    expect(storybook.supportsModes).toBe(true);
+    const dark = { name: 'dark', globals: { theme: 'dark', rtl: false }, viewport: null };
+    const phone = { name: 'phone', globals: {}, viewport: { width: 390, height: null } };
+    await storybook.selectStory('a--one', 1000, dark);
+    await storybook.selectStory('a--one', 1000, phone);
+    await storybook.selectStory('a--one', 1000, phone);
+    await storybook.selectStory('a--one', 1000);
+    expect(page.visited).toEqual([
+      `${baseUrl}/iframe.html?id=a--one&viewMode=story&globals=theme:dark;rtl:!false`,
+      `${baseUrl}/iframe.html?id=a--one&viewMode=story`,
+      `${baseUrl}/iframe.html?id=a--one&viewMode=story`,
+      `${baseUrl}/iframe.html?id=a--one&viewMode=story`,
+    ]);
+    expect(page.resized).toEqual([{ width: 390, height: 900 }, viewport]);
+  });
+
+  it('takes both sides of a mode viewport that gives a height', async () => {
+    const { page, storybook } = await open({ 'a--one': rendered });
+    const tablet = { name: 'tablet', globals: {}, viewport: { width: 768, height: 1024 } };
+    await storybook.selectStory('a--one', 1000, tablet);
+    expect(page.resized).toEqual([{ width: 768, height: 1024 }]);
   });
 });
 

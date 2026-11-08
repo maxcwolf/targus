@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { Modes, toCaptureModes } from './capture-modes.ts';
 import {
   maxStoryDelayMs,
   parseStoryParameters,
@@ -15,6 +16,7 @@ export const ChromaticParameters = z.object({
   disable: z.boolean().optional(),
   disableSnapshot: z.boolean().optional(),
   delay: z.number().min(0).max(maxStoryDelayMs).optional(),
+  modes: Modes.optional(),
 });
 export type ChromaticParameters = z.infer<typeof ChromaticParameters>;
 
@@ -50,9 +52,13 @@ export function parseCaptureParameters(raw: RawCaptureParameters): ParsedStoryPa
       message: `invalid parameters.chromatic: ${issuesText(parsed.error.issues)}`,
     };
   }
-  const { disable, disableSnapshot, delay } = parsed.data;
+  const { disable, disableSnapshot, delay, modes } = parsed.data;
   return {
     ok: true,
-    parameters: { delay: delay ?? null, skip: disable === true || disableSnapshot === true },
+    parameters: {
+      delay: delay ?? null,
+      skip: disable === true || disableSnapshot === true,
+      ...(modes === undefined ? {} : { modes: toCaptureModes(modes) }),
+    },
   };
 }

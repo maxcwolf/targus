@@ -1,4 +1,9 @@
-import type { StoryIndexEntry, StorybookChannel, StorySelection } from './storybook-channel.ts';
+import type {
+  CaptureMode,
+  StoryIndexEntry,
+  StorybookChannel,
+  StorySelection,
+} from './storybook-channel.ts';
 
 /**
  * What selecting a story does in a `FakeStorybookChannel`: a selection result, a timeout, or the
@@ -11,6 +16,8 @@ export type FakeStoryOutcome =
 export interface FakeStorybookChannel extends StorybookChannel {
   /** Story ids passed to `selectStory`, oldest first. */
   readonly selected: readonly string[];
+  /** The mode name of each selection in `selected`; `null` when none was passed. */
+  readonly selectedModes: readonly (string | null)[];
   /** Whether `close()` has been called. */
   readonly closed: boolean;
   /** Script what selecting `storyId` does from now on. The default is `rendered`. */
@@ -19,10 +26,17 @@ export interface FakeStorybookChannel extends StorybookChannel {
   disconnect(): void;
 }
 
+export interface FakeStorybookChannelOptions {
+  /** Whether the channel captures modes, as the web channel does. Default false. */
+  readonly supportsModes?: boolean;
+}
+
 export function createFakeStorybookChannel(
   index: readonly StoryIndexEntry[] = [],
+  options: FakeStorybookChannelOptions = {},
 ): FakeStorybookChannel {
   const selected: string[] = [];
+  const selectedModes: (string | null)[] = [];
   const outcomes = new Map<string, FakeStoryOutcome>();
   const unanswered: ((error: Error) => void)[] = [];
   let closed = false;
@@ -32,7 +46,9 @@ export function createFakeStorybookChannel(
   });
 
   return {
+    supportsModes: options.supportsModes ?? false,
     selected,
+    selectedModes,
     get closed() {
       return closed;
     },
@@ -44,8 +60,9 @@ export function createFakeStorybookChannel(
     },
     whenDisconnected: () => disconnected,
     getIndex: () => Promise.resolve(index.map((entry) => ({ ...entry }))),
-    selectStory: (storyId, timeoutMs) => {
+    selectStory: (storyId, timeoutMs, mode?: CaptureMode) => {
       selected.push(storyId);
+      selectedModes.push(mode?.name ?? null);
       const outcome = outcomes.get(storyId) ?? { kind: 'rendered' };
       if (outcome.kind === 'timeout') {
         return Promise.reject(new Error(`timeout after ${timeoutMs}ms waiting for ${storyId}`));

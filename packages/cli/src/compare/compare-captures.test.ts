@@ -6,6 +6,7 @@ import { compareCaptures } from './compare-captures.ts';
 function story(id: string, overrides: Partial<StoryRecord> = {}): StoryRecord {
   return {
     id,
+    variant: 'default',
     title: 'T',
     name: id,
     file: `${id}.png`,
@@ -131,5 +132,29 @@ describe('compareCaptures', () => {
     });
 
     expect(comparison.removed).toEqual([]);
+  });
+});
+
+describe('compareCaptures with mode variants', () => {
+  it('pairs each mode variant with its own baseline', async () => {
+    const comparison = await compareCaptures({
+      baseline: manifest([
+        story('a', { variant: 'dark', file: 'a@dark.png' }),
+        story('a', { variant: 'print', file: 'a@print.png' }),
+      ]),
+      current: manifest([
+        story('a', { variant: 'dark', file: 'a@dark.png', hash: 'new' }),
+        story('a', { variant: 'light', file: 'a@light.png' }),
+      ]),
+      threshold: 0.001,
+      loadPng,
+      compareImages: () => ({ ratio: 0.5, diffPng: null }),
+    });
+
+    expect(comparison.changed.map(({ id, baselineFile }) => [id, baselineFile])).toEqual([
+      ['a@dark', 'a@dark.png'],
+    ]);
+    expect(comparison.new).toEqual([{ id: 'a@light' }]);
+    expect(comparison.removed).toEqual([{ id: 'a@print' }]);
   });
 });

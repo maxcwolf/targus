@@ -16,7 +16,6 @@ import type { CaptureReport } from '../capture/capture-stories.ts';
 import type { CapturePlatform } from '../capture/manifest.ts';
 import type { CiContext } from './ci-context.ts';
 import {
-  defaultVariant,
   errorResult,
   isCaptured,
   judgeStory,
@@ -95,7 +94,7 @@ export function createBuildRequest(input: RunBuildInput): CreateBuildRequest {
     pixelRatio: input.pixelRatio ?? null,
     snapshots: input.report.stories.filter(isCaptured).map((story) => ({
       storyId: story.id,
-      variant: defaultVariant,
+      variant: story.variant,
       imageHash: story.hash,
       width: story.width,
       height: story.height,
@@ -134,7 +133,7 @@ async function judgeAll(input: RunBuildInput, created: CreateBuildResponse): Pro
   );
   const judged: Judged = { results: [], diffs: [] };
   for (const story of input.report.stories) {
-    const baseline = byKey.get(baselineKey(story.id, defaultVariant));
+    const baseline = byKey.get(baselineKey(story.id, story.variant));
     if (!isCaptured(story)) {
       judged.results.push(errorResult(story, baseline));
       continue;
@@ -174,8 +173,11 @@ async function uploadImages(
 }
 
 function removedCount(input: RunBuildInput, baselines: readonly BaselineEntry[]): number {
-  const ids = new Set([...input.report.stories.map((story) => story.id), ...input.report.skipped]);
-  return baselines.filter((entry) => !ids.has(entry.storyId)).length;
+  const keys = new Set(input.report.stories.map((story) => baselineKey(story.id, story.variant)));
+  const skipped = new Set(input.report.skipped);
+  return baselines.filter(
+    (entry) => !skipped.has(entry.storyId) && !keys.has(baselineKey(entry.storyId, entry.variant)),
+  ).length;
 }
 
 const indexHint =

@@ -18,6 +18,7 @@ const grey = encodeSolidPng(10, 10, [128, 128, 128, 255]);
 function story(id: string, png: Uint8Array | null, error: string | null = null): CaptureResult {
   return {
     id,
+    variant: 'default',
     title: 'T',
     name: id,
     png,
@@ -105,5 +106,25 @@ describe('runBuild pins the baseline of each result', () => {
       baselineHash: sha256Hex(white),
       diffRatio: 0,
     });
+  });
+});
+
+describe('runBuild with mode variants', () => {
+  it('judges each variant against its own baseline and counts a dropped mode removed', async () => {
+    const api = createFakeTargusApi({
+      baselines: { 'a@light': white, 'a@dark': white, 'a@print': white },
+    });
+    const light = { ...story('a', white), variant: 'light' };
+    const dark = { ...story('a', black), variant: 'dark' };
+
+    const output = await runBuild(input(api, [light, dark]));
+
+    expect(output.results.map((result) => [result.variant, result.state])).toEqual([
+      ['light', 'unchanged'],
+      ['dark', 'changed'],
+    ]);
+    const snapshots = api.callsOf('createBuild')[0]?.request.snapshots ?? [];
+    expect(snapshots.map((snapshot) => snapshot.variant)).toEqual(['light', 'dark']);
+    expect(output.counts.removed).toBe(1);
   });
 });

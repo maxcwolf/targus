@@ -74,6 +74,7 @@ describe('captureStories', () => {
     expect(report.stories).toEqual([
       {
         id: 'button--primary',
+        variant: 'default',
         title: 'UI/Button',
         name: 'Primary',
         png: frameA,

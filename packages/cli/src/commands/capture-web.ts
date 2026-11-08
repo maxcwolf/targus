@@ -137,6 +137,7 @@ export async function runWebCapture(
     );
     const storybook = await WebStorybook.open(session.page, {
       baseUrl: source.url,
+      viewport: options.viewport,
       ...(deps.fetch === undefined ? {} : { fetch: deps.fetch }),
     });
     const report = await captureWhilePageLives(storybook, options, deps);

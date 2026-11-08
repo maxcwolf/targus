@@ -58,6 +58,7 @@ export function wrapPage(page: Page): BrowserPage {
     },
     evaluate: <T>(expression: string) => page.evaluate<T>(expression),
     screenshot: async (options) => new Uint8Array(await page.screenshot(options)),
+    setViewportSize: (size) => page.setViewportSize(size),
     onGone: (listener) => {
       page.once('crash', listener);
       page.once('close', listener);
