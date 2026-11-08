@@ -171,9 +171,8 @@ A self-hosted runner keeps its state between jobs, so:
 ## Until the packages are on npm
 
 Check out the targus repository beside yours and build the two packages there, as
-[Prepare your app](prepare-your-app.md#1-install-the-packages) describes. Add a read-only deploy
-key for the targus repository and store its private key as the secret `TARGUS_DEPLOY_KEY`. Check
-out both repositories side by side, set `working-directory: my-app` as the job default (or on each
+[Prepare your app](prepare-your-app.md#1-install-the-packages) describes. The targus repository
+is public, so the checkout needs no key. Check out both repositories side by side, set `working-directory: my-app` as the job default (or on each
 step), and add the build before `yarn install`:
 
 ```yaml
@@ -188,7 +187,6 @@ step), and add the build before `yarn install`:
       - uses: actions/checkout@v4
         with:
           repository: maxcwolf/targus
-          ssh-key: ${{ secrets.TARGUS_DEPLOY_KEY }}
           path: targus
       - uses: actions/setup-node@v4
         with:
@@ -209,6 +207,6 @@ Run the CLI as `yarn targus run ...` instead of `npx targus run ...`.
 ## Other CI providers
 
 [CircleCI](ci-circleci.md) has its own recipe. Anywhere else, the job is the same five steps:
-full git history, build or restore the simulator app, re-bundle the JavaScript, boot a simulator,
-and `targus run` with `TARGUS_TOKEN` set and the branch and PR number passed as `--branch` and
+full git history, build or restore the simulator app, re-bundle the JavaScript, create a simulator
+(left shut down: targus boots it), and `targus run` with `TARGUS_TOKEN` set and the branch and PR number passed as `--branch` and
 `--pr` (the CLI reads them from the environment only on GitHub Actions and CircleCI).

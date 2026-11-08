@@ -172,7 +172,9 @@ The last lines of `targus run` say what happened to the check run:
 | `check run: <id>`                                                             | Created. If it is not on the PR, it is on another commit: pass `--sha` with the PR's head commit (GitHub Actions `pull_request` runs). |
 | `check run: none (the project has no GitHub App installation)`                | Ask your targus admin to install the targus GitHub App on the repository's account or org and record the installation on the project. |
 | `check run: none (the server has no GitHub App configured)`                   | The targus service itself has no GitHub App set up. An admin issue.                                         |
+| `check run: still being created by an earlier attempt or a review`            | A retried submission or a review is creating it right now. Nothing to do: it appears on the PR shortly. |
 | `check run not created: GitHub failed; the next review of this build creates it` | GitHub was unavailable. Nothing to do: the first review decision on the build creates it.              |
+| `check run not created: GitHub failed; run targus run again to retry`         | GitHub was unavailable and the build has nothing to review, so no review will create it. Re-run the job. |
 
 ## The simulator and the app bundle
 
@@ -239,10 +241,20 @@ error: POST /api/builds/<id>/results failed with 409: the results were diffed wi
 The service's diff threshold changed while your build was open. Run again.
 
 ```text
-error: POST /api/builds/<id>/results failed with 409: build <id> already has results; an earlier attempt may have succeeded before its response was lost (gave up after 4 attempts)
+error: POST /api/builds/<id>/results failed with 409: build <id> already has other results; the build already has different results, from another submission
 ```
 
-The first attempt most likely landed. Open the build in the review UI before running again.
+Something else stored different results for this build first. A retry of the same submission is
+not refused (the service answers it as it did the first time), so this is not a lost response.
+Run `targus run` again: every run opens a new build.
+
+```text
+error: POST /api/builds/<id>/results failed with 400: ✖ Invalid input: expected string, received undefined
+  → at results[0].baselineHash
+```
+
+The CLI is older than the service: since `@targus/cli` sends the baseline each story was diffed
+against, the service refuses results without it. Upgrade `@targus/cli` to match the service.
 
 ```text
 error: PUT /api/images/<hash> failed with 413: image larger than 10 MB
