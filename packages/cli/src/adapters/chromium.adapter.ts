@@ -42,7 +42,7 @@ function launchFailure(error: unknown): TargusError {
     'bad_request',
     `cannot start Chromium (${reason}): run in the mcr.microsoft.com/playwright image that ` +
       'matches your playwright-core version, or install the browser with ' +
-      '`npx playwright install chromium`',
+      '`npx playwright-core install chromium`',
     { cause: error },
   );
 }

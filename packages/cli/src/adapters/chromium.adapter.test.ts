@@ -92,7 +92,7 @@ describe('launchChromium', () => {
     ).rejects.toThrow(
       "cannot start Chromium (Executable doesn't exist at /x): run in the " +
         'mcr.microsoft.com/playwright image that matches your playwright-core version, or ' +
-        'install the browser with `npx playwright install chromium`',
+        'install the browser with `npx playwright-core install chromium`',
     );
     const odd = fakePlaywright({ failLaunch: 'weird' as unknown as Error });
     await expect(

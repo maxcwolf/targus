@@ -1,8 +1,10 @@
 # CLI reference
 
-The `targus` binary (`@targus/cli`) captures on-device Storybook stories in an iOS simulator,
-diffs them against the accepted baselines on the machine it runs on, and publishes the build to
-the targus service for review.
+The `targus` binary (`@targus/cli`) captures Storybook stories, on-device in an iOS simulator or
+from a built web Storybook in headless Chromium ([web guide](../guide/web.md)), diffs them
+against the accepted baselines on the machine it runs on, and publishes the build to the targus
+service for review. A [`targus.config.json`](config-file.md) can name the platforms a project
+captures.
 
 > [!NOTE]
 > The `--help` blocks on this page are generated from the CLI itself (`yarn docs:cli`), and

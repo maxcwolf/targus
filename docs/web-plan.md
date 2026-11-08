@@ -130,7 +130,7 @@ same file.
 - `playwright-core` is an **optional peer dependency** of `@targus/cli`, loaded with a dynamic
   import only for `--platform web`, with an error naming the package when it is missing. iOS
   users never install it. Browsers come from the official Playwright Docker image, or from
-  `npx playwright install chromium`. The CLI records the browser name and version as the build's
+  `npx playwright-core install chromium`. The CLI records the browser name and version as the build's
   `device`.
 - No app-side package for web. The web preview already exposes what the native decorator
   reports: render events on its channel (`storyRendered`, `storyErrored`, `storyThrewException`,
@@ -179,6 +179,10 @@ server and the review rules do not change.
 ## 6. Steps
 
 Each step is one PR or a few, with `yarn check` green, and leaves iOS working.
+
+Progress on 2026-11-08: W0 to W3b and W5 are built and tested, the web path end to end in
+`e2e/web.spec.ts`. W5 still has to be checked against wolf-ui's and the pilot app's real modes
+(its "done when"). W4 and W6 run in other repositories and are not started.
 
 | Step | What | Done when |
 | --- | --- | --- |
