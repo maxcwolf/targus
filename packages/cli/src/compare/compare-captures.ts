@@ -10,7 +10,7 @@ export interface ComparedStory {
 }
 
 export interface ChangedStory extends ComparedStory {
-  /** The pixelmatch diff image, or `null` when the sizes differ. */
+  /** The pixelmatch diff image, or `null` when the comparer made none. */
   readonly diffPng: Uint8Array | null;
 }
 
