@@ -25,7 +25,8 @@ accepted one, and holds a GitHub check until each change is approved.
 - [CLI](reference/cli.md): `targus capture`, `compare` and `run`, environment, exit codes.
 - [Story parameters](reference/story-parameters.md): `parameters.targus.skip`, `delay` and
   `modes`.
-- [Config file](reference/config-file.md): `targus.config.json`, the platforms a project captures.
+- [Config file](reference/config-file.md): `targus.config.ts` or `.json`, the platforms a project
+  captures.
 - [API](../apps/api/README.md): the service's routes and configuration.
 
 ## Working on targus

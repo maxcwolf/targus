@@ -33,7 +33,7 @@ type CaptureFlags = Omit<CaptureCommandOptions, 'udid' | 'app' | 'out' | 'appear
 export interface RunCommandOptions extends CaptureFlags, TargetFlags {
   /** Where the capture is written; a fresh temp directory by default, per platform. */
   readonly out?: string;
-  /** `--config`: the project config file (default: `targus.config.json` if present). */
+  /** `--config`: the project config file (default: `targus.config.ts` or `.json` if present). */
   readonly config?: string;
   readonly apiUrl: string;
   readonly baseBranch: string;
@@ -252,7 +252,7 @@ async function publishAll(
 }
 
 /**
- * `targus run`: for each platform the flags and `targus.config.json` select (ADR 0038), capture
+ * `targus run`: for each platform the flags and the targus config select (ADR 0038), capture
  * (or load `--from-capture`), open a build, diff against the baselines locally, upload images and
  * submit the results (plan.md section 4). Everything that can fail cheaply (targets, devices,
  * app, token and project, git, branch) is checked before the minutes-long captures.

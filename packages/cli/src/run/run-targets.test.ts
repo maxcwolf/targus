@@ -59,7 +59,7 @@ describe('resolveTargets', () => {
 describe('resolveTargets refusals', () => {
   it('needs a Storybook for web', () => {
     expect(() => resolveTargets({ platforms: ['web'] }, null)).toThrow(
-      'pass --storybook <dir or url> for web, or set platforms.web.storybook in targus.config.json',
+      'pass --storybook <dir or url> for web, or set platforms.web.storybook in the targus config',
     );
   });
 

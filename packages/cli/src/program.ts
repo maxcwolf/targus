@@ -45,7 +45,7 @@ export interface ProgramOptions {
   /** Print stack traces with errors. Default: `TARGUS_DEBUG=1`. */
   readonly debug?: boolean;
   readonly runners?: Partial<CommandRunners>;
-  /** Reads `targus.config.json` or `--config` (ADR 0038). Default: `loadProjectConfig`. */
+  /** Reads `targus.config.ts`, `.json` or `--config` (ADR 0038). Default: `loadProjectConfig`. */
   readonly loadProjectConfig?: (file: string | undefined) => Promise<ProjectConfig | null>;
 }
 
@@ -128,7 +128,7 @@ function platformList(value: string): CapturePlatformName[] {
 
 /**
  * `--appearance`, a new Option for each command, since Commander keeps state on each one. Its
- * default (light) is applied after `targus.config.json`, which may set another.
+ * default (light) is applied after the targus config, which may set another.
  */
 function appearanceOption(): Option {
   return new Option(
@@ -145,7 +145,10 @@ function addTargetFlags(command: Command): Command {
       'ios, web or both, e.g. ios,web (default: the config, else ios)',
       platformList,
     )
-    .option('--config <path>', 'project config file (default: targus.config.json, if present)')
+    .option(
+      '--config <path>',
+      'project config file (default: targus.config.ts or .json, if present)',
+    )
     .option('--storybook <dir|url>', 'web: built Storybook directory, or the URL of one')
     .option('--viewport <WxH>', 'web: browser viewport in CSS pixels (default: 1200x900)', viewport)
     .option('--pixel-ratio <n>', 'web: device pixels per CSS pixel (default: 1)', positiveNumber);

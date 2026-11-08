@@ -54,8 +54,8 @@ Options:
   --out <dir>             output directory
   --platform <list>       ios, web or both, e.g. ios,web (default: the config,
                           else ios)
-  --config <path>         project config file (default: targus.config.json, if
-                          present)
+  --config <path>         project config file (default: targus.config.ts or
+                          .json, if present)
   --storybook <dir|url>   web: built Storybook directory, or the URL of one
   --viewport <WxH>        web: browser viewport in CSS pixels (default:
                           1200x900)
@@ -169,8 +169,8 @@ Options:
   --sha <sha>             commit of the build (default: git rev-parse HEAD)
   --platform <list>       ios, web or both, e.g. ios,web (default: the config,
                           else ios)
-  --config <path>         project config file (default: targus.config.json, if
-                          present)
+  --config <path>         project config file (default: targus.config.ts or
+                          .json, if present)
   --storybook <dir|url>   web: built Storybook directory, or the URL of one
   --viewport <WxH>        web: browser viewport in CSS pixels (default:
                           1200x900)

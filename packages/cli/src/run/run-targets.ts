@@ -85,8 +85,8 @@ function webTarget(flags: TargetFlags, config: ProjectConfig | null): WebTarget 
   if (storybook === undefined) {
     throw new TargusError(
       'bad_request',
-      'pass --storybook <dir or url> for web, or set platforms.web.storybook in ' +
-        'targus.config.json',
+      'pass --storybook <dir or url> for web, or set platforms.web.storybook in the targus ' +
+        'config',
     );
   }
   return {
@@ -122,7 +122,7 @@ export function resolveTargets(flags: TargetFlags, config: ProjectConfig | null)
     throw new TargusError(
       'bad_request',
       '--device-name names one device: pass one --platform, or set deviceName per platform ' +
-        'in targus.config.json',
+        'in the targus config',
     );
   }
   return platforms.map((platform) =>

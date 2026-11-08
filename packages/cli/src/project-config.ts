@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { Appearance, TargusError } from '@targus/core';
 import { z } from 'zod';
@@ -34,7 +35,7 @@ const WebConfig = z.strictObject({
   deviceName: z.string().min(1).optional(),
 });
 
-/** `targus.config.json`: the platforms a project captures and the settings of each. */
+/** `targus.config.ts` or `.json`: the platforms a project captures and the settings of each. */
 export const ProjectConfig = z.strictObject({
   $schema: z.string().optional(),
   platforms: z
@@ -42,10 +43,24 @@ export const ProjectConfig = z.strictObject({
     .refine((platforms) => Object.keys(platforms).length > 0, 'name at least one platform'),
 });
 export type ProjectConfig = z.infer<typeof ProjectConfig>;
+/**
+ * What a `targus.config.ts` exports: the config as written, before validation, so a viewport is
+ * still `'1200x900'`.
+ */
+export type TargusConfig = z.input<typeof ProjectConfig>;
+
+/** Types a `targus.config.ts`: `export default defineConfig({ platforms: { … } })`. */
+export function defineConfig(config: TargusConfig): TargusConfig {
+  return config;
+}
 export type IosConfig = z.infer<typeof IosConfig>;
 export type WebConfig = z.infer<typeof WebConfig>;
 
-export const projectConfigFileName = 'targus.config.json';
+/** The files looked for when `--config` is not given; a project keeps only one of them. */
+export const projectConfigFileNames = ['targus.config.ts', 'targus.config.json'] as const;
+
+/** Extensions loaded with `import()`; any other file is read as JSON. */
+const moduleExtensions = new Set(['.ts', '.mts', '.js', '.mjs']);
 
 function isUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
@@ -68,14 +83,16 @@ function resolvePaths(config: ProjectConfig, dir: string): ProjectConfig {
   return { ...config, platforms };
 }
 
-function parseConfig(text: string, file: string): ProjectConfig {
-  let json: unknown;
+function parseJson(text: string, file: string): unknown {
   try {
-    json = JSON.parse(text);
+    return JSON.parse(text);
   } catch (error) {
     throw new TargusError('bad_request', `${file} is not valid JSON`, { cause: error });
   }
-  const parsed = ProjectConfig.safeParse(json);
+}
+
+function validate(value: unknown, file: string): ProjectConfig {
+  const parsed = ProjectConfig.safeParse(value);
   if (!parsed.success) {
     throw new TargusError(
       'bad_request',
@@ -86,26 +103,107 @@ function parseConfig(text: string, file: string): ProjectConfig {
 }
 
 export interface LoadProjectConfigOptions {
-  /** `--config`: must exist. Without it, `targus.config.json` in `cwd` is read if present. */
+  /** `--config`: must exist. Without it, `projectConfigFileNames` in `cwd` are looked for. */
   readonly file?: string;
   readonly cwd: string;
   readonly read?: (file: string) => Promise<string>;
+  /** Import a TypeScript or JavaScript config and answer the module. Default: Node's import. */
+  readonly importModule?: (file: string) => Promise<unknown>;
 }
 
-/** Read and validate the project config; `null` when there is none and none was asked for. */
+interface FoundConfig {
+  readonly file: string;
+  readonly text: string;
+}
+
+const isMissing = (error: unknown): boolean => (error as { code?: unknown }).code === 'ENOENT';
+
+const cannotRead = (file: string, cause?: unknown): TargusError =>
+  new TargusError('bad_request', `cannot read the targus config ${file}`, { cause });
+
+async function readIfPresent(
+  file: string,
+  read: (file: string) => Promise<string>,
+): Promise<FoundConfig | null> {
+  try {
+    return { file, text: await read(file) };
+  } catch (error) {
+    if (isMissing(error)) return null;
+    throw cannotRead(file, error);
+  }
+}
+
+/** `--config`, which must exist, or the one default file present; `null` when there is none. */
+async function findConfig(options: LoadProjectConfigOptions): Promise<FoundConfig | null> {
+  const read = options.read ?? ((file: string) => readFile(file, 'utf8'));
+  if (options.file !== undefined) {
+    const file = path.resolve(options.cwd, options.file);
+    const found = await readIfPresent(file, read);
+    if (found === null) throw cannotRead(file);
+    return found;
+  }
+  const found: FoundConfig[] = [];
+  for (const name of projectConfigFileNames) {
+    const config = await readIfPresent(path.resolve(options.cwd, name), read);
+    if (config !== null) found.push(config);
+  }
+  if (found.length > 1) {
+    throw new TargusError(
+      'bad_request',
+      `${options.cwd} has both ${projectConfigFileNames.join(' and ')}: keep one`,
+    );
+  }
+  return found[0] ?? null;
+}
+
+const importWithNode = (file: string): Promise<unknown> => import(pathToFileURL(file).href);
+
+function importFailure(file: string, error: unknown): string {
+  if ((error as { code?: unknown }).code === 'ERR_UNKNOWN_FILE_EXTENSION') {
+    return (
+      `cannot load ${file}: a TypeScript config needs Node 22.18 or later, which runs .ts ` +
+      'files itself; upgrade Node, or use targus.config.json'
+    );
+  }
+  const reason = error instanceof Error ? error.message : String(error);
+  return `cannot load the targus config ${file}: ${reason}`;
+}
+
+/** The default export of a TypeScript or JavaScript config. */
+async function importConfig(file: string, options: LoadProjectConfigOptions): Promise<unknown> {
+  let loaded: unknown;
+  try {
+    loaded = await (options.importModule ?? importWithNode)(file);
+  } catch (error) {
+    throw new TargusError('bad_request', importFailure(file, error), { cause: error });
+  }
+  const exported =
+    typeof loaded === 'object' && loaded !== null && 'default' in loaded
+      ? loaded.default
+      : undefined;
+  if (exported === undefined) {
+    throw new TargusError(
+      'bad_request',
+      `${file} has no default export: end it with \`export default defineConfig({ … })\``,
+    );
+  }
+  return exported;
+}
+
+/**
+ * Read and validate the project config (ADR 0038): `targus.config.ts`, imported by Node, or
+ * `targus.config.json`. `null` when there is none and none was asked for.
+ */
 export async function loadProjectConfig(
   options: LoadProjectConfigOptions,
 ): Promise<ProjectConfig | null> {
-  const read = options.read ?? ((file: string) => readFile(file, 'utf8'));
-  const file = path.resolve(options.cwd, options.file ?? projectConfigFileName);
-  let text: string;
-  try {
-    text = await read(file);
-  } catch (error) {
-    if (options.file === undefined && (error as { code?: unknown }).code === 'ENOENT') return null;
-    throw new TargusError('bad_request', `cannot read the targus config ${file}`, { cause: error });
-  }
-  return parseConfig(text, file);
+  const found = await findConfig(options);
+  if (found === null) return null;
+  const { file, text } = found;
+  const value = moduleExtensions.has(path.extname(file))
+    ? await importConfig(file, options)
+    : parseJson(text, file);
+  return validate(value, file);
 }
 
 /** `--platform ios,web` as a list of known platforms, in run order, without duplicates. */

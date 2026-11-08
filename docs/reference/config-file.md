@@ -1,35 +1,64 @@
 # Config file
 
-`targus.config.json` names the platforms a project captures and the settings of each
-([ADR 0038](../adr/0038-a-config-file-chooses-the-platforms.md)). It is optional: without it the
-CLI captures iOS from its flags, as it always has.
+`targus.config.ts`, or `targus.config.json`, names the platforms a project captures and the
+settings of each ([ADR 0038](../adr/0038-a-config-file-chooses-the-platforms.md),
+[ADR 0039](../adr/0039-a-typed-typescript-config-file.md)). It is optional: without it the CLI
+captures iOS from its flags, as it always has.
 
-`targus capture` and `targus run` read `targus.config.json` in the directory they run in, or the
-file `--config <path>` names, which must exist. Relative paths in it are relative to the file, so
-a run from another directory finds them.
+`targus capture` and `targus run` look for `targus.config.ts`, then `targus.config.json`, in the
+directory they run in, and stop if both are there. `--config <path>` names another file, which
+must exist. Relative paths in the config are relative to its file, so a run from another
+directory finds them.
+
+## TypeScript
+
+`defineConfig` types the file, so your editor completes and checks every key:
+
+```ts
+// targus.config.ts
+import { defineConfig } from '@targus/cli';
+
+export default defineConfig({
+  platforms: {
+    ios: {
+      app: 'build/MyApp.app',
+      deviceName: 'iPhone 16',
+      appearance: 'light',
+      bundleId: 'com.example.myapp',
+    },
+    web: {
+      storybook: 'storybook-static',
+      viewport: '1200x900',
+      pixelRatio: 1,
+      deviceName: 'Chrome desktop',
+    },
+  },
+});
+```
+
+Node loads the file itself by stripping the types, which needs **Node 22.18 or later**. That
+leaves out TypeScript that needs compiling, such as `enum`, which a config has no use for. The
+type is also exported as `TargusConfig`, for `satisfies TargusConfig` instead of `defineConfig`.
+`--config` loads `.mts`, `.js` and `.mjs` files the same way.
+
+## JSON
+
+The same config as JSON, for older Node or a project without TypeScript:
 
 ```json
 {
   "platforms": {
-    "ios": {
-      "app": "build/MyApp.app",
-      "udid": "7B480548-DCA1-41C0-85DF-E0D64B010344",
-      "deviceName": "iPhone 16",
-      "appearance": "light",
-      "bundleId": "com.example.myapp"
-    },
-    "web": {
-      "storybook": "storybook-static",
-      "viewport": "1200x900",
-      "pixelRatio": 1,
-      "deviceName": "Chrome desktop"
-    }
+    "ios": { "app": "build/MyApp.app", "deviceName": "iPhone 16" },
+    "web": { "storybook": "storybook-static", "viewport": "1200x900" }
   }
 }
 ```
 
-Name at least one platform. An unknown key is an error, so a typo is never silently ignored.
 `$schema` is allowed for editors and is not read.
+
+Either way, name at least one platform. An unknown key is an error, so a typo is never silently
+ignored. Keep secrets (`TARGUS_TOKEN`) and machine-specific settings (a simulator UDID) out of the
+file: they belong in the environment and in flags.
 
 ## Which platforms a run captures
 
@@ -43,8 +72,8 @@ error. `targus capture` writes one capture, so with a config that names both it 
 `--platform`.
 
 A flag always wins over the config: `--app`, `--udid`, `--storybook` and the rest override the
-value in the file for that run. `--device-name` applies to every platform the run captures, so
-in a run of both, name each device in the file instead.
+value in the file for that run. `--device-name` names one device, so a run of both platforms
+refuses it: set `deviceName` for each platform in the file instead.
 
 ## `platforms.ios`
 

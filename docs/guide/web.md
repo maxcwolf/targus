@@ -108,17 +108,19 @@ the iOS job. The web build reports the `targus/web` check; make it required like
 
 ## Native, web or both
 
-A `targus.config.json` at the root of the project names the platforms it captures and the
-settings of each, so `targus run` with no platform flags captures and publishes every one of
-them, each as its own build:
+A `targus.config.ts` (or `targus.config.json`) at the root of the project names the platforms it
+captures and the settings of each, so `targus run` with no platform flags captures and publishes
+every one of them, each as its own build:
 
-```json
-{
-  "platforms": {
-    "ios": { "app": "build/MyApp.app", "deviceName": "iPhone 16" },
-    "web": { "storybook": "storybook-static", "viewport": "1200x900" }
-  }
-}
+```ts
+import { defineConfig } from '@targus/cli';
+
+export default defineConfig({
+  platforms: {
+    ios: { app: 'build/MyApp.app', deviceName: 'iPhone 16' },
+    web: { storybook: 'storybook-static', viewport: '1200x900' },
+  },
+});
 ```
 
 `--platform ios`, `--platform web` or `--platform ios,web` picks some of them for one run, which
