@@ -2,7 +2,15 @@
 
 ## Status
 
-accepted
+accepted, amended by [0034](0034-published-declarations-name-the-js-file.md)
+
+## Amended by
+
+The decision still holds. One consequence below was overtaken:
+
+- **Published declaration files keep the `.ts` paths.** A post-build step,
+  `scripts/fix-declarations.mjs`, now rewrites them to `.js` in `dist/**/*.d.ts`, and a script
+  test fails if one is left (ADR 0034).
 
 ## Date
 

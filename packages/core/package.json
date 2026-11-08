@@ -35,7 +35,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node ../../scripts/fix-declarations.mjs .",
     "test": "vitest run --coverage"
   },
   "dependencies": {

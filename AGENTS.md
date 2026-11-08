@@ -40,8 +40,10 @@ app imports `@targus/core/browser` (`src/browser.ts`), which leaves out the Node
 - User documentation: plain Markdown in `docs/guide/`, `docs/reference/` or `docs/prompts/`,
   linked from `docs/README.md` (ADR 0029). After changing a CLI flag or its description, run
   `yarn workspace @targus/cli build && yarn docs:cli` to regenerate the `--help` blocks.
-- Packages build to `dist/` with `tsc -b`; tests and dev servers resolve their `src/` through the
-  `development` export condition (ADR 0010). Import another package only through its exports.
+- Packages build to `dist/` with `tsc -b`, then `scripts/fix-declarations.mjs` rewrites `./x.ts`
+  to `./x.js` in the `.d.ts` files (ADR 0034); a script that emits a package's `dist/` runs both.
+  Tests and dev servers resolve their `src/` through the `development` export condition
+  (ADR 0010). Import another package only through its exports.
 
 ## Ports (`packages/core/src/ports/`)
 
