@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { StoryCaptureParameters } from '../ports/storybook-channel.ts';
+import { Modes, toCaptureModes } from './capture-modes.ts';
 
 /** The longest `parameters.targus.delay` a story may ask for (ADR 0022). */
 export const maxStoryDelayMs = 10_000;
@@ -15,6 +16,8 @@ export const storyParametersEvent = 'targus/storyParameters';
 export const StoryParameters = z.object({
   delay: z.number().min(0).max(maxStoryDelayMs).optional(),
   skip: z.boolean().optional(),
+  /** Web only for now: a channel without `supportsModes` captures the default globals once. */
+  modes: Modes.optional(),
 });
 export type StoryParameters = z.infer<typeof StoryParameters>;
 
@@ -45,6 +48,13 @@ export function parseStoryParameters(targus: unknown): ParsedStoryParameters {
     );
     return { ok: false, message: `invalid parameters.targus: ${issues.join('; ')}` };
   }
-  const { delay, skip } = parsed.data;
-  return { ok: true, parameters: { delay: delay ?? null, skip: skip ?? false } };
+  const { delay, skip, modes } = parsed.data;
+  return {
+    ok: true,
+    parameters: {
+      delay: delay ?? null,
+      skip: skip ?? false,
+      ...(modes === undefined ? {} : { modes: toCaptureModes(modes) }),
+    },
+  };
 }

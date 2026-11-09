@@ -56,7 +56,6 @@ describe('targus run options', () => {
       fromCapture: 'cap',
       apiUrl: 'https://targus.example',
       baseBranch: 'main',
-      appearance: 'light',
       port: 7007,
       settle: 300,
       stabilityGap: 150,

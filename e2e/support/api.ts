@@ -18,6 +18,9 @@ const BuildBody = z.object({
     status: z.string(),
     baselineBuildId: z.string().nullable(),
     checkRunId: z.number().nullable(),
+    platform: z.enum(['ios', 'android', 'web']),
+    pixelRatio: z.number().nullable(),
+    appearance: z.string().nullable(),
   }),
   summary: z.object({ status: z.string(), pendingCount: z.number() }),
 });
@@ -25,7 +28,14 @@ export type BuildBody = z.infer<typeof BuildBody>;
 
 const SnapshotsBody = z.object({
   snapshots: z.array(
-    z.object({ storyId: z.string(), state: z.string(), imageHash: z.string().nullable() }),
+    z.object({
+      storyId: z.string(),
+      variant: z.string(),
+      state: z.string(),
+      imageHash: z.string().nullable(),
+      width: z.number().nullable(),
+      height: z.number().nullable(),
+    }),
   ),
 });
 export type SnapshotsBody = z.infer<typeof SnapshotsBody>;

@@ -2662,11 +2662,17 @@ __metadata:
     "@types/ws": "npm:^8.18.2"
     "@vitest/coverage-v8": "npm:5.1.0"
     commander: "npm:15.0.0"
+    playwright-core: "npm:1.64.1"
     typescript: "npm:6.0.3"
     vite: "npm:8.3.5"
     vitest: "npm:5.1.0"
     ws: "npm:^8.22.1"
     zod: "npm:4.6.7"
+  peerDependencies:
+    playwright-core: ">=1.50.0"
+  peerDependenciesMeta:
+    playwright-core:
+      optional: true
   bin:
     targus: ./dist/bin.js
   languageName: unknown

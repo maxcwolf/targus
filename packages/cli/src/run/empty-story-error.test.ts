@@ -16,7 +16,7 @@ import { errorResult } from './story-result.ts';
 // A story that throws `new Error()` reports an empty message. The server refuses an error result
 // without one, and with it the whole results body, so the CLI never sends one empty.
 
-const story = { id: 'chat--mine', title: 'Chat', name: 'Mine' };
+const story = { id: 'chat--mine', variant: 'default', title: 'Chat', name: 'Mine' };
 
 let server: WsStorybookChannel | undefined;
 

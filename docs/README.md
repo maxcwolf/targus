@@ -1,8 +1,8 @@
 # targus documentation
 
-targus is visual review for a React Native app's on-device Storybook: CI screenshots every story
-in an iOS simulator, compares it with the accepted one, and holds a GitHub check until each change
-is approved.
+targus is visual review for a React Native app's on-device Storybook, and for web Storybooks: CI
+screenshots every story in an iOS simulator or in headless Chromium, compares it with the
+accepted one, and holds a GitHub check until each change is approved.
 
 ## Get started
 
@@ -15,13 +15,18 @@ is approved.
 - [Prepare your app](guide/prepare-your-app.md): install, the decorator, capture mode,
   deterministic stories, the simulator build.
 - [Run targus in GitHub Actions](guide/ci-github-actions.md), or [in CircleCI](guide/ci-circleci.md).
+- [Capture a web Storybook](guide/web.md): Chromium captures, Chromatic parameters, modes, and
+  running native, web or both.
 - [Review changes](guide/review.md): the review UI, and how baselines and approvals work.
 - [Troubleshooting](guide/troubleshooting.md): every error message and its fix.
 
 ## Reference
 
 - [CLI](reference/cli.md): `targus capture`, `compare` and `run`, environment, exit codes.
-- [Story parameters](reference/story-parameters.md): `parameters.targus.skip` and `delay`.
+- [Story parameters](reference/story-parameters.md): `parameters.targus.skip`, `delay` and
+  `modes`.
+- [Config file](reference/config-file.md): `targus.config.ts` or `.json`, the platforms a project
+  captures.
 - [API](../apps/api/README.md): the service's routes and configuration.
 
 ## Working on targus

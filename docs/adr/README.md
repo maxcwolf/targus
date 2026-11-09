@@ -52,4 +52,5 @@ the same change.
 | [0035](0035-the-cli-pins-the-simulator-appearance.md) | The CLI pins the simulator appearance | accepted |
 | [0036](0036-builds-belong-to-a-platform.md) | Builds belong to a platform | accepted |
 | [0037](0037-web-capture-with-playwright-on-the-runner.md) | Web capture with Playwright on the runner | accepted |
-| [0038](0038-a-config-file-chooses-the-platforms.md) | A config file chooses the platforms a run captures | accepted |
+| [0038](0038-a-config-file-chooses-the-platforms.md) | A config file chooses the platforms a run captures | accepted, amended by [0039](0039-a-typed-typescript-config-file.md) |
+| [0039](0039-a-typed-typescript-config-file.md) | A typed TypeScript config file | accepted |

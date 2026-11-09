@@ -1,16 +1,19 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { Appearance, TargusError } from '@targus/core';
+import { Appearance, Platform, TargusError } from '@targus/core';
 import { z } from 'zod';
 
 import { summarizeIssues } from '../errors/zod-summary.ts';
 import type { CaptureReport, CaptureResult } from './capture-stories.ts';
+import { defaultVariant, fileStem, variantLabel } from './variant.ts';
 
 const Ms = z.number().int().nonnegative();
 
 const StoryRecord = z.object({
   id: z.string(),
+  /** The mode the story was captured in (`default` without modes); absent in older manifests. */
+  variant: z.string().min(1).default(defaultVariant),
   title: z.string(),
   name: z.string(),
   /** PNG path relative to the manifest, or `null` when the story errored. */
@@ -30,15 +33,39 @@ export type StoryRecord = z.infer<typeof StoryRecord>;
 const PerStoryMs = z.object({ mean: Ms, median: Ms, p90: Ms, max: Ms });
 export type PerStoryMs = z.infer<typeof PerStoryMs>;
 
+/** The platform a capture is for (ADR 0036); manifests written before web capture are `ios`. */
+export const CapturePlatform = Platform;
+export type CapturePlatform = Platform;
+
+const Viewport = z.object({
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+});
+
 const Summary = z.object({
-  /** `appearance` is the light or dark mode it was pinned to; null in older manifests. */
-  device: z.object({ udid: z.string(), appearance: Appearance.nullable().default(null) }),
-  app: z.object({ bundleId: z.string(), path: z.string().nullable() }),
+  platform: CapturePlatform.default('ios'),
+  /**
+   * `udid` is the simulator's (null for web); `appearance` the light or dark mode it was pinned
+   * to (null in older manifests); `name` the browser and version of a web capture.
+   */
+  device: z.object({
+    udid: z.string().nullable(),
+    appearance: Appearance.nullable().default(null),
+    name: z.string().nullable().default(null),
+  }),
+  /** The app captured on a simulator; null for web. */
+  app: z.object({ bundleId: z.string(), path: z.string().nullable() }).nullable(),
+  /** The Storybook directory or URL a web capture opened; null for native. */
+  storybook: z.string().nullable().default(null),
+  viewport: Viewport.nullable().default(null),
+  /** Device pixels per CSS pixel of a web capture; null when the CLI does not know it. */
+  pixelRatio: z.number().positive().nullable().default(null),
   settleMs: Ms,
   stabilityGapMs: Ms,
   storyCount: z.number().int().nonnegative(),
   captured: z.number().int().nonnegative(),
   failed: z.number().int().nonnegative(),
+  /** Stories as `id`, or `id@mode` for a mode's variant, like `duplicateHashes`. */
   unstable: z.array(z.string()),
   blank: z.array(z.string()),
   /** Ids left out by `parameters.targus.skip`; absent in manifests written before it. */
@@ -60,18 +87,63 @@ export type CaptureManifest = z.infer<typeof CaptureManifest>;
 
 export const manifestFileName = 'manifest.json';
 
-/** Facts about the run that the capture loop itself does not know. */
-export interface CaptureRunInfo {
+/** A simulator capture: the device and app. */
+export interface NativeRunInfo {
+  readonly platform: 'ios';
   readonly udid: string;
   readonly appearance: Appearance;
   readonly bundleId: string;
   readonly appPath: string | null;
-  readonly settleMs: number;
-  readonly stabilityGapMs: number;
 }
 
-export function pngFileName(storyId: string): string {
-  return `${storyId}.png`;
+/** A web capture: the browser, the Storybook it opened and how it rendered (ADR 0037). */
+export interface WebRunInfo {
+  readonly platform: 'web';
+  readonly browser: string;
+  readonly storybook: string;
+  readonly viewport: { readonly width: number; readonly height: number };
+  readonly pixelRatio: number;
+}
+
+/** Facts about the run that the capture loop itself does not know. */
+export type CaptureRunInfo = (NativeRunInfo | WebRunInfo) & {
+  readonly settleMs: number;
+  readonly stabilityGapMs: number;
+};
+
+type Target = Pick<
+  z.infer<typeof Summary>,
+  'platform' | 'device' | 'app' | 'storybook' | 'viewport' | 'pixelRatio'
+>;
+
+function targetOf(run: CaptureRunInfo): Target {
+  if (run.platform === 'web') {
+    return {
+      platform: 'web',
+      device: { udid: null, appearance: null, name: run.browser },
+      app: null,
+      storybook: run.storybook,
+      viewport: run.viewport,
+      pixelRatio: run.pixelRatio,
+    };
+  }
+  return {
+    platform: run.platform,
+    device: { udid: run.udid, appearance: run.appearance, name: null },
+    app: { bundleId: run.bundleId, path: run.appPath },
+    storybook: null,
+    viewport: null,
+    pixelRatio: null,
+  };
+}
+
+/** `<id>.png`, or `<id>@<mode>.png` for a mode's variant. */
+export function pngFileName(storyId: string, variant: string = defaultVariant): string {
+  return `${fileStem(variantLabel(storyId, variant))}.png`;
+}
+
+function labelOf(story: Pick<CaptureResult, 'id' | 'variant'>): string {
+  return variantLabel(story.id, story.variant);
 }
 
 /** Mean, median, p90 and max of the capture times of the stories that produced a PNG. */
@@ -90,16 +162,16 @@ export function perStoryStats(times: readonly number[]): PerStoryMs | null {
 
 function duplicateGroups(stories: readonly CaptureResult[]): string[][] {
   const byHash = new Map<string, string[]>();
-  for (const { id, hash } of stories) {
-    if (hash === null) continue;
-    byHash.set(hash, [...(byHash.get(hash) ?? []), id]);
+  for (const story of stories) {
+    if (story.hash === null) continue;
+    byHash.set(story.hash, [...(byHash.get(story.hash) ?? []), labelOf(story)]);
   }
   return [...byHash.values()].filter((ids) => ids.length > 1);
 }
 
 function toRecord(result: CaptureResult): StoryRecord {
   const { png, ...rest } = result;
-  return { ...rest, file: png === null ? null : pngFileName(result.id) };
+  return { ...rest, file: png === null ? null : pngFileName(result.id, result.variant) };
 }
 
 /** Build the manifest for a capture report. Pure; `writeCaptureOutput` does the I/O. */
@@ -108,15 +180,14 @@ export function buildManifest(report: CaptureReport, run: CaptureRunInfo): Captu
   return {
     version: 1,
     summary: {
-      device: { udid: run.udid, appearance: run.appearance },
-      app: { bundleId: run.bundleId, path: run.appPath },
+      ...targetOf(run),
       settleMs: run.settleMs,
       stabilityGapMs: run.stabilityGapMs,
       storyCount: report.stories.length,
       captured: captured.length,
       failed: report.stories.filter((story) => story.error !== null).length,
-      unstable: captured.filter((story) => !story.stable).map((story) => story.id),
-      blank: captured.filter((story) => story.blank === true).map((story) => story.id),
+      unstable: captured.filter((story) => !story.stable).map(labelOf),
+      blank: captured.filter((story) => story.blank === true).map(labelOf),
       skipped: [...report.skipped],
       duplicateHashes: duplicateGroups(captured),
       startedAt: report.startedAt,
@@ -127,7 +198,7 @@ export function buildManifest(report: CaptureReport, run: CaptureRunInfo): Captu
   };
 }
 
-/** Write `<storyId>.png` for every captured story plus `manifest.json` into `dir`. */
+/** Write a PNG for every captured story and variant plus `manifest.json` into `dir`. */
 export async function writeCaptureOutput(
   dir: string,
   report: CaptureReport,
@@ -136,7 +207,8 @@ export async function writeCaptureOutput(
   const manifest = buildManifest(report, run);
   await mkdir(dir, { recursive: true });
   for (const story of report.stories) {
-    if (story.png !== null) await writeFile(path.join(dir, pngFileName(story.id)), story.png);
+    if (story.png === null) continue;
+    await writeFile(path.join(dir, pngFileName(story.id, story.variant)), story.png);
   }
   await writeFile(path.join(dir, manifestFileName), `${JSON.stringify(manifest, null, 2)}\n`);
   return manifest;

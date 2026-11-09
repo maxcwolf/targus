@@ -143,7 +143,7 @@ describe('runCapture', () => {
 
     expect(execCalls).toEqual([]);
     expect(channel.selected).toEqual(['b--two']);
-    expect(manifest.summary.app.bundleId).toBe('co.given');
+    expect(manifest.summary.app?.bundleId).toBe('co.given');
   });
 });
 

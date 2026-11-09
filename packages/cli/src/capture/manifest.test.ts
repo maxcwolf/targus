@@ -14,6 +14,7 @@ import {
 } from './manifest.ts';
 
 const run: CaptureRunInfo = {
+  platform: 'ios',
   udid: 'SIM',
   appearance: 'dark',
   bundleId: 'co.example',
@@ -25,6 +26,7 @@ const run: CaptureRunInfo = {
 function result(id: string, overrides: Partial<CaptureResult> = {}): CaptureResult {
   return {
     id,
+    variant: 'default',
     title: 'T',
     name: id,
     png: Uint8Array.of(1, 2, 3),
@@ -68,8 +70,12 @@ describe('buildManifest', () => {
     const manifest = buildManifest(report, run);
 
     expect(manifest.summary).toEqual({
-      device: { udid: 'SIM', appearance: 'dark' },
+      platform: 'ios',
+      device: { udid: 'SIM', appearance: 'dark', name: null },
       app: { bundleId: 'co.example', path: '/apps/Example.app' },
+      storybook: null,
+      viewport: null,
+      pixelRatio: null,
       settleMs: 300,
       stabilityGapMs: 150,
       storyCount: 4,
@@ -85,6 +91,28 @@ describe('buildManifest', () => {
     });
     expect(manifest.stories.map((story) => story.file)).toEqual(['a.png', 'b.png', null, 'd.png']);
     expect(manifest.stories[0]).not.toHaveProperty('png');
+  });
+});
+
+describe('buildManifest for web', () => {
+  it('records the browser, Storybook, viewport and pixel ratio instead of a device and app', () => {
+    const manifest = buildManifest(report, {
+      platform: 'web',
+      browser: 'chromium 141.0.1',
+      storybook: 'storybook-static',
+      viewport: { width: 1200, height: 900 },
+      pixelRatio: 2,
+      settleMs: 300,
+      stabilityGapMs: 150,
+    });
+    expect(manifest.summary).toMatchObject({
+      platform: 'web',
+      device: { udid: null, appearance: null, name: 'chromium 141.0.1' },
+      app: null,
+      storybook: 'storybook-static',
+      viewport: { width: 1200, height: 900 },
+      pixelRatio: 2,
+    });
   });
 });
 
@@ -123,7 +151,20 @@ describe('writeCaptureOutput', () => {
     await writeFile(path.join(dir, 'out', 'manifest.json'), JSON.stringify(older));
 
     const read = await readCaptureManifest(path.join(dir, 'out'));
-    expect(read.summary.device).toEqual({ udid: 'SIM', appearance: null });
+    expect(read.summary.device).toEqual({ udid: 'SIM', appearance: null, name: null });
+  });
+
+  it('reads a manifest written before web capture as an iOS capture', async () => {
+    const written = await writeCaptureOutput(path.join(dir, 'out'), report, run);
+    const { platform, storybook, viewport, pixelRatio, ...older } = written.summary;
+    await writeFile(
+      path.join(dir, 'out', 'manifest.json'),
+      JSON.stringify({ ...written, summary: older }),
+    );
+
+    expect([platform, storybook, viewport, pixelRatio]).toEqual(['ios', null, null, null]);
+    const read = await readCaptureManifest(path.join(dir, 'out'));
+    expect(read.summary).toMatchObject({ platform: 'ios', storybook: null, pixelRatio: null });
   });
 
   it('rejects a manifest that does not match the schema', async () => {
@@ -140,5 +181,22 @@ describe('writeCaptureOutput', () => {
     await expect(readCaptureManifest(dir)).rejects.toThrow(
       `${path.join(dir, 'manifest.json')} is not valid JSON`,
     );
+  });
+});
+
+describe('writeCaptureOutput with mode variants', () => {
+  it('names a mode variant id@mode, in file names and the summary', async () => {
+    const dark = result('a', { variant: 'dark/rtl', stable: false });
+    const written = await writeCaptureOutput(
+      path.join(dir, 'out'),
+      { ...report, stories: [result('a'), dark] },
+      run,
+    );
+
+    const files = (await readdir(path.join(dir, 'out'))).sort();
+    expect(files).toEqual(['a.png', 'a@dark%2Frtl.png', 'manifest.json']);
+    expect(written.stories.map((story) => story.file)).toEqual(['a.png', 'a@dark%2Frtl.png']);
+    expect(written.summary.unstable).toEqual(['a@dark/rtl']);
+    expect(written.summary.duplicateHashes).toEqual([['a', 'a@dark/rtl']]);
   });
 });

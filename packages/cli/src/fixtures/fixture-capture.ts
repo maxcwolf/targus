@@ -11,6 +11,7 @@ const height = 48;
 function story(id: string, title: string, name: string, png: Uint8Array): CaptureResult {
   return {
     id,
+    variant: 'default',
     title,
     name,
     png,
@@ -68,6 +69,7 @@ export async function writeFixtureCapture(
   appearance: Appearance = 'light',
 ): Promise<CaptureManifest> {
   return writeCaptureOutput(dir, fixtureCaptureReport(variant), {
+    platform: 'ios',
     udid: 'FIXTURE',
     appearance,
     bundleId: 'dev.targus.fixture',

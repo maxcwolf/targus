@@ -4,7 +4,11 @@ import path from 'node:path';
 import { TargusError, type Appearance } from '@targus/core';
 
 import type { CaptureReport, CaptureResult } from '../capture/capture-stories.ts';
-import { readCaptureManifest, type StoryRecord } from '../capture/manifest.ts';
+import {
+  readCaptureManifest,
+  type CapturePlatform,
+  type StoryRecord,
+} from '../capture/manifest.ts';
 import { sha256Hex } from '../capture/png.ts';
 
 async function loadStory(dir: string, record: StoryRecord): Promise<CaptureResult> {
@@ -26,6 +30,11 @@ export interface LoadedCapture {
   readonly report: CaptureReport;
   /** Null for a capture written before the CLI pinned the appearance (ADR 0035). */
   readonly appearance: Appearance | null;
+  /** The platform the capture is for; `ios` for captures written before web capture. */
+  readonly platform: CapturePlatform;
+  /** The browser of a web capture; null for a simulator capture (its name comes from simctl). */
+  readonly deviceName: string | null;
+  readonly pixelRatio: number | null;
 }
 
 /**
@@ -42,5 +51,6 @@ export async function loadCapture(dir: string): Promise<LoadedCapture> {
     startedAt: manifest.summary.startedAt,
     durationMs: manifest.summary.durationMs,
   };
-  return { report, appearance: manifest.summary.device.appearance };
+  const { device, platform, pixelRatio } = manifest.summary;
+  return { report, appearance: device.appearance, platform, deviceName: device.name, pixelRatio };
 }

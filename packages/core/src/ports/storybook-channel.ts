@@ -5,13 +5,32 @@ export interface StoryIndexEntry {
   readonly name: string;
 }
 
+/** A viewport size in CSS pixels; a `null` height keeps the run's viewport height. */
+export interface ModeViewport {
+  readonly width: number;
+  readonly height: number | null;
+}
+
+/**
+ * A named set of Storybook globals, and optionally a viewport, that a story is captured in
+ * (web-plan.md step W5). Each mode is its own snapshot variant, named after the mode.
+ */
+export interface CaptureMode {
+  readonly name: string;
+  readonly globals: Readonly<Record<string, string | number | boolean>>;
+  readonly viewport: ModeViewport | null;
+}
+
 /**
  * A story's validated `parameters.targus`, as the app reported it after the story committed
  * (ADR 0022). `delay` is `null` when the story set none, so the capture uses `--settle`.
+ * `modes`, when set, replaces the single default capture with one capture per mode; an empty
+ * list (every mode disabled) captures nothing.
  */
 export interface StoryCaptureParameters {
   readonly delay: number | null;
   readonly skip: boolean;
+  readonly modes?: readonly CaptureMode[];
 }
 
 /**
@@ -37,7 +56,12 @@ export interface StorybookChannel {
    * `parameters.targus` is an `error`. Rejects after `timeoutMs`. `rendered` means React
    * committed, not that the frame was painted, so callers still apply the settle delay.
    */
-  selectStory(storyId: string, timeoutMs: number): Promise<StorySelection>;
+  selectStory(storyId: string, timeoutMs: number, mode?: CaptureMode): Promise<StorySelection>;
+  /**
+   * Whether `selectStory` can apply a `CaptureMode`. A channel without it captures each story
+   * once, in its default globals, whatever modes the story sets.
+   */
+  readonly supportsModes?: boolean;
   /**
    * Resolve when the app, having connected, drops its last connection (ADR 0021). Never resolves
    * if the app never connects or when the CLI itself calls `close`.

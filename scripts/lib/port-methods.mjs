@@ -30,7 +30,7 @@ function toMethod(member, source, type) {
 
 /**
  * The methods of interface `type` in `file`, those of the interfaces it extends first, each
- * name once (a redeclared or overloaded method keeps its first position).
+ * name once; optional properties are skipped (a redeclared or overloaded method keeps its first position).
  * @param {string} file absolute path
  * @param {string} type
  * @param {(base: string) => PortMethod[]} methodsOfBase methods of an extended interface
@@ -50,7 +50,11 @@ export function portMethods(file, type, methodsOfBase) {
   const inherited = (declaration.heritageClauses ?? [])
     .flatMap((clause) => clause.types)
     .flatMap((base) => methodsOfBase(base.expression.getText(source)));
-  const own = declaration.members.map((member) => toMethod(member, source, type));
+  // An optional property (a capability flag such as `supportsModes`) can be left out of an
+  // adapter, so there is nothing to stub.
+  const own = declaration.members
+    .filter((member) => !(ts.isPropertySignature(member) && member.questionToken !== undefined))
+    .map((member) => toMethod(member, source, type));
   /** @type {Map<string, PortMethod>} */
   const byName = new Map();
   for (const method of [...inherited, ...own]) byName.set(method.name, method);

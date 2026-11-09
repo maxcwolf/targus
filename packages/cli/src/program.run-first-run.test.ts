@@ -68,6 +68,8 @@ function deps(listing = '{"devices":{}}'): RunCommandDeps {
     makeTempDir: () => Promise.resolve('/tmp/never-used'),
     createApi: () => api,
     createGit: () => git,
+    captureWeb: () => Promise.reject(new Error('no web capture in this test')),
+    loadProjectConfig: () => Promise.resolve(null),
     simulatorName: (udid, run) => new SimctlDriver({ udid, exec: run }).deviceName(),
     checkApp: () => Promise.resolve('co.example'),
   };

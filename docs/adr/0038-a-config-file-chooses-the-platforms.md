@@ -2,7 +2,13 @@
 
 ## Status
 
-accepted
+accepted, amended by [0039](0039-a-typed-typescript-config-file.md)
+
+## Amended by
+
+The decision still holds. One alternative below was overtaken: a TypeScript config file,
+`targus.config.ts`, is now read as well as `targus.config.json`, loaded by Node's own type
+stripping with no loader dependency. See [ADR 0039](0039-a-typed-typescript-config-file.md).
 
 ## Date
 

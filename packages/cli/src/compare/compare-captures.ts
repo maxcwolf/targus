@@ -1,7 +1,11 @@
 import type { CompareImages } from '../capture/capture-stories.ts';
+import { variantLabel } from '../capture/variant.ts';
 import type { CaptureManifest, StoryRecord } from '../capture/manifest.ts';
 
-/** A story present in both captures, with its changed-pixel ratio against the baseline. */
+/**
+ * A story present in both captures, with its changed-pixel ratio against the baseline. Every
+ * `id` in a comparison is the story id, or `id@mode` for a mode's variant.
+ */
 export interface ComparedStory {
   readonly id: string;
   readonly ratio: number;
@@ -55,20 +59,22 @@ interface Buckets {
 
 /** Sort every current story into changed / new / unchanged / unstable / errored, plus removed. */
 export async function compareCaptures(input: CompareCapturesInput): Promise<CaptureComparison> {
-  const baselineById = new Map(input.baseline.stories.map((story) => [story.id, story]));
+  const baselineByLabel = new Map(input.baseline.stories.map((story) => [labelOf(story), story]));
+  const currentLabels = new Set(input.current.stories.map(labelOf));
   // A story the current capture skipped (parameters.targus.skip) is absent on purpose.
-  const currentIds = new Set([
-    ...input.current.stories.map((story) => story.id),
-    ...input.current.summary.skipped,
-  ]);
+  const skipped = new Set(input.current.summary.skipped);
   const buckets: Buckets = { changed: [], new: [], unchanged: [], unstable: [], errored: [] };
   for (const story of input.current.stories) {
-    await classify(input, buckets, story, baselineById.get(story.id));
+    await classify(input, buckets, story, baselineByLabel.get(labelOf(story)));
   }
   const removed = input.baseline.stories
-    .filter((story) => !currentIds.has(story.id))
-    .map(({ id }) => ({ id }));
+    .filter((story) => !skipped.has(story.id) && !currentLabels.has(labelOf(story)))
+    .map((story) => ({ id: labelOf(story) }));
   return { threshold: input.threshold, ...buckets, removed };
+}
+
+function labelOf(story: StoryRecord): string {
+  return variantLabel(story.id, story.variant);
 }
 
 async function classify(
@@ -78,14 +84,14 @@ async function classify(
   baseline: StoryRecord | undefined,
 ): Promise<void> {
   if (current.file === null) {
-    buckets.errored.push({ id: current.id, error: current.error ?? 'no capture' });
+    buckets.errored.push({ id: labelOf(current), error: current.error ?? 'no capture' });
     return;
   }
   if (baseline === undefined || baseline.file === null) {
-    buckets.new.push({ id: current.id });
+    buckets.new.push({ id: labelOf(current) });
     return;
   }
-  const files = { id: current.id, baselineFile: baseline.file, currentFile: current.file };
+  const files = { id: labelOf(current), baselineFile: baseline.file, currentFile: current.file };
   const comparison =
     current.hash !== null && current.hash === baseline.hash
       ? { ratio: 0, diffPng: null }

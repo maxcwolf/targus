@@ -1,6 +1,15 @@
-import type { Clock, DeviceDriver, StoryIndexEntry, StorybookChannel } from '@targus/core';
+import type {
+  CaptureMode,
+  Clock,
+  DeviceDriver,
+  StoryCaptureParameters,
+  StoryIndexEntry,
+  StorybookChannel,
+} from '@targus/core';
 
 import { readPngSize } from './png.ts';
+import { settle } from './settle.ts';
+import { defaultVariant } from './variant.ts';
 
 export interface CaptureOptions {
   /** Wait after `storyRendered` before the first screenshot; doubled on each retry. */
@@ -25,6 +34,8 @@ export type CompareImages = (a: Uint8Array, b: Uint8Array) => ImageComparison;
 
 export interface CaptureResult {
   readonly id: string;
+  /** `default`, or the name of the mode the story was captured in (web-plan.md step W5). */
+  readonly variant: string;
   readonly title: string;
   readonly name: string;
   /** The first screenshot of the last attempt, or `null` when the story errored. */
@@ -62,7 +73,8 @@ export interface CaptureProgress {
 
 export interface CaptureStoriesInput {
   readonly channel: StorybookChannel;
-  readonly driver: DeviceDriver;
+  /** Takes the screenshots; the capture needs nothing else from the device (ADR 0037). */
+  readonly driver: Pick<DeviceDriver, 'screenshot'>;
   /** Stories to capture; defaults to the index the app reports. */
   readonly stories?: readonly StoryIndexEntry[];
   readonly options: CaptureOptions;
@@ -116,10 +128,20 @@ export async function captureStories(input: CaptureStoriesInput): Promise<Captur
   for (const [index, story] of stories.entries()) {
     const outcome = await captureStory(input, story);
     input.signal?.throwIfAborted();
-    const result = outcome === 'skipped' ? emptyResult(story) : outcome;
-    if (outcome === 'skipped') skipped.push(story.id);
-    else results.push(result);
-    input.onProgress?.({ index, total: stories.length, result, skipped: outcome === 'skipped' });
+    if (outcome === 'skipped') {
+      skipped.push(story.id);
+      input.onProgress?.({
+        index,
+        total: stories.length,
+        result: emptyResult(story),
+        skipped: true,
+      });
+      continue;
+    }
+    results.push(...outcome);
+    for (const result of outcome) {
+      input.onProgress?.({ index, total: stories.length, result, skipped: false });
+    }
   }
   return {
     stories: results,
@@ -129,75 +151,128 @@ export async function captureStories(input: CaptureStoriesInput): Promise<Captur
   };
 }
 
+/** The modes to capture a story in, or `null` for one default capture. */
+function modesOf(
+  input: CaptureStoriesInput,
+  parameters: StoryCaptureParameters | undefined,
+): readonly CaptureMode[] | null {
+  return input.channel.supportsModes === true ? (parameters?.modes ?? null) : null;
+}
+
 /**
  * Capture one story, or `skipped` when its `parameters.targus.skip` is set. Its
- * `parameters.targus.delay` replaces `settleMs` as the wait before the first screenshot.
+ * `parameters.targus.delay` replaces `settleMs` as the wait before the first screenshot. A story
+ * with modes, on a channel that supports them, is captured once per mode, each its own variant.
  */
 async function captureStory(
   input: CaptureStoriesInput,
   story: StoryIndexEntry,
-): Promise<CaptureResult | 'skipped'> {
-  const { channel, clock, options } = input;
-  const started = clock.now();
-  const failed = (error: string, renderMs: number): CaptureResult => ({
-    ...emptyResult(story),
+): Promise<CaptureResult[] | 'skipped'> {
+  const first = await captureSelection(input, story, null);
+  if (first === 'skipped') return 'skipped';
+  const modes = modesOf(input, first.parameters);
+  if (modes === null) return [first.result];
+  if (modes.length === 0) return 'skipped';
+  const results: CaptureResult[] = [];
+  for (const mode of modes) {
+    const captured = await captureSelection(input, story, mode);
+    if (captured !== 'skipped') results.push(captured.result);
+  }
+  return results;
+}
+
+interface Captured {
+  readonly result: CaptureResult;
+  readonly parameters?: StoryCaptureParameters;
+}
+
+/** Where one selection started, and the variant it captures. */
+interface Selecting {
+  readonly story: StoryIndexEntry;
+  readonly variant: string;
+  readonly started: Date;
+}
+
+function failedCapture(
+  input: CaptureStoriesInput,
+  at: Selecting,
+  error: string,
+  renderMs: number,
+): Captured {
+  const result: CaptureResult = {
+    ...emptyResult(at.story),
+    variant: at.variant,
     renderMs,
-    captureMs: elapsedMs(clock, started),
+    captureMs: elapsedMs(input.clock, at.started),
     error: storyErrorMessage(error),
-  });
+  };
+  return { result };
+}
+
+/** Select without a mode argument when there is none, as channels before modes expect. */
+const select = ({ channel, options }: CaptureStoriesInput, id: string, mode: CaptureMode | null) =>
+  mode === null
+    ? channel.selectStory(id, options.renderTimeoutMs)
+    : channel.selectStory(id, options.renderTimeoutMs, mode);
+
+/** Settle the selected story and screenshot it. */
+async function shoot(
+  input: CaptureStoriesInput,
+  at: Selecting,
+  parameters: StoryCaptureParameters | undefined,
+  renderMs: number,
+): Promise<CaptureResult> {
+  const settled = await settle(input, parameters?.delay ?? input.options.settleMs);
+  return {
+    ...emptyResult(at.story),
+    variant: at.variant,
+    ...settled,
+    ...readPngSize(settled.png),
+    hash: input.hash(settled.png),
+    blank: input.isBlank ? input.isBlank(settled.png) : null,
+    renderMs,
+    captureMs: elapsedMs(input.clock, at.started),
+  };
+}
+
+function selecting(
+  input: CaptureStoriesInput,
+  story: StoryIndexEntry,
+  mode: CaptureMode | null,
+): Selecting {
+  return { story, variant: mode?.name ?? defaultVariant, started: input.clock.now() };
+}
+
+/** Select the story (in `mode`, if any), then settle and screenshot it. */
+async function captureSelection(
+  input: CaptureStoriesInput,
+  story: StoryIndexEntry,
+  mode: CaptureMode | null,
+): Promise<Captured | 'skipped'> {
+  const at = selecting(input, story, mode);
   let renderMs: number | null = null;
   try {
-    const selection = await channel.selectStory(story.id, options.renderTimeoutMs);
-    renderMs = elapsedMs(clock, started);
-    if (selection.kind === 'error') return failed(selection.message, renderMs);
-    if (selection.parameters?.skip === true) return 'skipped';
-    const settled = await settle(input, selection.parameters?.delay ?? options.settleMs);
-    return {
-      ...emptyResult(story),
-      ...settled,
-      ...readPngSize(settled.png),
-      hash: input.hash(settled.png),
-      blank: input.isBlank ? input.isBlank(settled.png) : null,
-      renderMs,
-      captureMs: elapsedMs(clock, started),
-    };
+    const selection = await select(input, story.id, mode);
+    renderMs = elapsedMs(input.clock, at.started);
+    if (selection.kind === 'error') return failedCapture(input, at, selection.message, renderMs);
+    const { parameters } = selection;
+    if (parameters?.skip === true) return 'skipped';
+    const withParameters = parameters ? { parameters } : {};
+    // The default selection only reads the modes; each mode is then captured on its own.
+    if (mode === null && modesOf(input, parameters) !== null) {
+      return { result: emptyResult(story), ...withParameters };
+    }
+    return { result: await shoot(input, at, parameters, renderMs), ...withParameters };
   } catch (error) {
-    return failed(errorMessage(error), renderMs ?? elapsedMs(clock, started));
+    const ms = renderMs ?? elapsedMs(input.clock, at.started);
+    return failedCapture(input, at, errorMessage(error), ms);
   }
-}
-
-interface Settled {
-  readonly png: Uint8Array;
-  readonly attempts: number;
-  readonly stable: boolean;
-}
-
-async function settle(input: CaptureStoriesInput, firstSettleMs: number): Promise<Settled> {
-  const { driver, options, sleep } = input;
-  let settleMs = firstSettleMs;
-  let last: Settled | undefined;
-  for (let attempt = 1; attempt <= Math.max(1, options.maxAttempts); attempt += 1) {
-    await sleep(settleMs);
-    const first = await driver.screenshot();
-    await sleep(options.stabilityGapMs);
-    const second = await driver.screenshot();
-    last = { png: first, attempts: attempt, stable: isSame(input, first, second) };
-    if (last.stable) return last;
-    settleMs *= 2;
-  }
-  if (last === undefined) throw new Error('no capture attempt ran');
-  return last;
-}
-
-/** Equal bytes are equal images; only differing bytes pay for a pixel comparison. */
-function isSame(input: CaptureStoriesInput, first: Uint8Array, second: Uint8Array): boolean {
-  if (input.hash(first) === input.hash(second)) return true;
-  return input.compareImages(first, second).ratio === 0;
 }
 
 function emptyResult(story: StoryIndexEntry): CaptureResult {
   return {
     id: story.id,
+    variant: defaultVariant,
     title: story.title,
     name: story.name,
     png: null,

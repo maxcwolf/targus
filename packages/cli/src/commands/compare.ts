@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { CompareImages } from '../capture/capture-stories.ts';
 import { compareWithCore } from '../capture/compare-images.ts';
 import { readCaptureManifest } from '../capture/manifest.ts';
+import { fileStem } from '../capture/variant.ts';
 import { compareCaptures, type CaptureComparison } from '../compare/compare-captures.ts';
 import { comparisonHtml, comparisonJson, type ReportPaths } from '../compare/compare-report.ts';
 
@@ -27,8 +28,9 @@ export const defaultCompareDeps: CompareCommandDeps = {
   },
 };
 
-export function diffFileName(storyId: string): string {
-  return `${storyId}.diff.png`;
+/** `<id>.diff.png`, or `<id>@<mode>.diff.png` for a mode's variant. */
+export function diffFileName(label: string): string {
+  return `${fileStem(label)}.diff.png`;
 }
 
 /**

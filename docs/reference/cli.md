@@ -1,8 +1,10 @@
 # CLI reference
 
-The `targus` binary (`@targus/cli`) captures on-device Storybook stories in an iOS simulator,
-diffs them against the accepted baselines on the machine it runs on, and publishes the build to
-the targus service for review.
+The `targus` binary (`@targus/cli`) captures Storybook stories, on-device in an iOS simulator or
+from a built web Storybook in headless Chromium ([web guide](../guide/web.md)), diffs them
+against the accepted baselines on the machine it runs on, and publishes the build to the targus
+service for review. A [`targus.config.json`](config-file.md) can name the platforms a project
+captures.
 
 > [!NOTE]
 > The `--help` blocks on this page are generated from the CLI itself (`yarn docs:cli`), and
@@ -47,11 +49,19 @@ Usage: targus capture [options]
 Capture every story to a directory with a manifest.json (works offline).
 
 Options:
-  --udid <id>             simulator UDID (xcrun simctl list devices)
-  --app <path>            path to the built simulator .app
+  --udid <id>             ios: simulator UDID (xcrun simctl list devices)
+  --app <path>            ios: path to the built simulator .app
   --out <dir>             output directory
+  --platform <list>       ios, web or both, e.g. ios,web (default: the config,
+                          else ios)
+  --config <path>         project config file (default: targus.config.ts or
+                          .json, if present)
+  --storybook <dir|url>   web: built Storybook directory, or the URL of one
+  --viewport <WxH>        web: browser viewport in CSS pixels (default:
+                          1200x900)
+  --pixel-ratio <n>       web: device pixels per CSS pixel (default: 1)
   --appearance <mode>     simulator light or dark mode, set before launch
-                          (choices: "light", "dark", default: "light")
+                          (default: light) (choices: "light", "dark")
   --bundle-id <id>        bundle id (default: read from the app Info.plist)
   --port <n>              Storybook channel port the app connects to (default:
                           7007)
@@ -157,8 +167,16 @@ Options:
   --branch <name>         branch (default: from CI env, then git)
   --pr <n>                pull request number (default: from CI env)
   --sha <sha>             commit of the build (default: git rev-parse HEAD)
+  --platform <list>       ios, web or both, e.g. ios,web (default: the config,
+                          else ios)
+  --config <path>         project config file (default: targus.config.ts or
+                          .json, if present)
+  --storybook <dir|url>   web: built Storybook directory, or the URL of one
+  --viewport <WxH>        web: browser viewport in CSS pixels (default:
+                          1200x900)
+  --pixel-ratio <n>       web: device pixels per CSS pixel (default: 1)
   --appearance <mode>     simulator light or dark mode, set before launch
-                          (choices: "light", "dark", default: "light")
+                          (default: light) (choices: "light", "dark")
   --bundle-id <id>        bundle id (default: read from the app Info.plist)
   --port <n>              Storybook channel port the app connects to (default:
                           7007)

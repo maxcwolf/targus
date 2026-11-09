@@ -20,7 +20,9 @@ anybody mean that?_
   account or org. Both come from whoever runs your targus service; see
   [Get a project token](quickstart.md#get-a-project-token).
 
-iOS is the only platform in this version. Android is planned.
+iOS is the only native platform in this version; Android is planned. targus also captures
+**web Storybooks** in headless Chromium, on Linux, as Chromatic does; see
+[Capture a web Storybook](web.md).
 
 ## How it works
 

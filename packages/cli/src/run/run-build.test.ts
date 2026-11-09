@@ -30,6 +30,7 @@ function captured(
 ): CaptureResult {
   return {
     id,
+    variant: 'default',
     title: 'T',
     name: id,
     png,
