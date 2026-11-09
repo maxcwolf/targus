@@ -27,5 +27,5 @@ is approved.
 ## Working on targus
 
 For contributors: [AGENTS.md](../AGENTS.md) (where code goes, the rules),
-[engineering standards](engineering-standards.md), the [design plan](plan.md) and the
-[architecture decisions](adr/README.md).
+[engineering standards](engineering-standards.md), the [design plan](plan.md), the
+[web plan](web-plan.md) and the [architecture decisions](adr/README.md).

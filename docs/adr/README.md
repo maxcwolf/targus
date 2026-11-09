@@ -50,3 +50,6 @@ the same change.
 | [0033](0033-the-cli-silences-system-notices-before-capture.md) | The CLI silences system notices before capture | accepted |
 | [0034](0034-published-declarations-name-the-js-file.md) | Published declaration files name the `.js` file | accepted |
 | [0035](0035-the-cli-pins-the-simulator-appearance.md) | The CLI pins the simulator appearance | accepted |
+| [0036](0036-builds-belong-to-a-platform.md) | Builds belong to a platform | proposed |
+| [0037](0037-web-capture-with-playwright-on-the-runner.md) | Web capture with Playwright on the runner | accepted |
+| [0038](0038-a-config-file-chooses-the-platforms.md) | A config file chooses the platforms a run captures | accepted |
