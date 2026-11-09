@@ -24,11 +24,10 @@ store fits the same way.
 
 ## What is still Cloudflare-specific
 
-1. **The database.** The drizzle schema (`apps/api/src/db/schema.ts`) uses `sqlite-core`, the
-   repository files under `apps/api/src/repositories/` wrap a `D1Database`, the batched
-   writes of ADR 0013 use D1's `batch`, and the migrations under `apps/api/migrations/` are
-   SQLite SQL. The in-memory doubles copy SQLite's semantics (text ordering, unique-key
-   rejection). This is the one piece of real work in a move.
+1. **The database, in the default deployment.** The Worker uses D1: `apps/api/src/db/schema.ts`,
+   the repositories under `apps/api/src/repositories/` and the migrations under
+   `apps/api/migrations/`. A Postgres implementation of the same ports now exists beside it
+   (step 3 below); no host entry composes it yet.
 2. **The entry.** `apps/api/src/cloudflare/worker.ts` is the only entry. A container needs a Node
    entry that reads `process.env`, builds `StorageDeps` and serves `createApp` with
    `@hono/node-server`.
@@ -68,16 +67,23 @@ Still to do: run the contract suite against an S3-compatible server in CI, and o
 S3 (virtual-hosted URLs) and R2's S3 API. MinIO's public images could not be pulled on that date
 and LocalStack asked for a licence, so the CI job needs a server chosen with that in mind.
 
-### 3. Postgres repositories
+### 3. Postgres repositories: done
 
-- A Postgres drizzle schema beside the SQLite one, generated migrations for Postgres, and a
-  repository implementation per interface using `drizzle-orm/node-postgres` (or `postgres-js`).
-- The batched writes of ADR 0013 become transactions.
-- The contract suites in `apps/api/test/support/contracts/` run unchanged against Postgres. Two
-  assertions will show dialect differences and must be decided, not patched around: text
-  ordering (SQLite's binary order versus Postgres collation; use the `C` collation or sort in the
-  repository) and timestamp formats.
-- Tests run against a real Postgres (a container in CI), not a double.
+`apps/api/src/postgres/` holds a Postgres drizzle schema, and one repository per port over any
+drizzle Postgres client (ADR 0044). `createPostgresRepositories(db)` returns everything in
+`StorageDeps` except the image store. The migrations are in `apps/api/migrations-postgres/`.
+
+- The batched writes of ADR 0013 are transactions that lock the build's row, and opening a build
+  locks its project's row so two builds never take one number.
+- The contract suites in `apps/api/test/support/contracts/` run unchanged against Postgres
+  (`apps/api/test/postgres/`, ADR 0045): on PGlite in `yarn check`, and on a real server with
+  `TARGUS_TEST_POSTGRES_URL=postgres://... yarn workspace @targus/api test:postgres`.
+- The dialect differences they showed are decided in ADR 0044: text is ordered with
+  `COLLATE "C"`, a foreign-key rejection is recognised by SQLSTATE `23503`, times are
+  `timestamptz(3)`, ratios `double precision`, GitHub ids `bigint`.
+
+Still open: a CI job that runs the suites against a Postgres service, and a tool to copy a D1
+database into Postgres.
 
 ### 4. A Node entry, a container and an e2e run against it (E4)
 
