@@ -1,10 +1,12 @@
-import type {
-  CaptureMode,
-  Clock,
-  DeviceDriver,
-  StoryCaptureParameters,
-  StoryIndexEntry,
-  StorybookChannel,
+import {
+  defaultContentSize,
+  type CaptureMode,
+  type Clock,
+  type ContentSize,
+  type DeviceDriver,
+  type StoryCaptureParameters,
+  type StoryIndexEntry,
+  type StorybookChannel,
 } from '@targus/core';
 
 import { readPngSize } from './png.ts';
@@ -73,8 +75,11 @@ export interface CaptureProgress {
 
 export interface CaptureStoriesInput {
   readonly channel: StorybookChannel;
-  /** Takes the screenshots; the capture needs nothing else from the device (ADR 0037). */
-  readonly driver: Pick<DeviceDriver, 'screenshot'>;
+  /**
+   * Takes the screenshots (ADR 0037). A driver that can also set the content size, a device's,
+   * gets a story's `contentSize` modes captured (ADR 0042); a web page has no such setting.
+   */
+  readonly driver: Pick<DeviceDriver, 'screenshot'> & Partial<Pick<DeviceDriver, 'setContentSize'>>;
   /** Stories to capture; defaults to the index the app reports. */
   readonly stories?: readonly StoryIndexEntry[];
   readonly options: CaptureOptions;
@@ -151,18 +156,93 @@ export async function captureStories(input: CaptureStoriesInput): Promise<Captur
   };
 }
 
-/** The modes to capture a story in, or `null` for one default capture. */
+/** A mode that only asks for a content size: a device's, with nothing for a web page to apply. */
+function isDeviceOnly(mode: CaptureMode): boolean {
+  return (
+    mode.contentSize !== undefined &&
+    mode.viewport === null &&
+    Object.keys(mode.globals).length === 0
+  );
+}
+
+/**
+ * The modes to capture a story in on a channel that applies them, or `null` for one default
+ * capture. Device-only modes are left out; a story with no other mode keeps its default capture.
+ */
 function modesOf(
   input: CaptureStoriesInput,
   parameters: StoryCaptureParameters | undefined,
 ): readonly CaptureMode[] | null {
-  return input.channel.supportsModes === true ? (parameters?.modes ?? null) : null;
+  const modes = parameters?.modes;
+  if (input.channel.supportsModes !== true || modes === undefined) return null;
+  const applicable = modes.filter((mode) => !isDeviceOnly(mode));
+  return applicable.length === 0 && modes.length > 0 ? null : applicable;
+}
+
+/** A mode a device captures: one that asks for a content size. */
+type SizedMode = CaptureMode & { readonly contentSize: ContentSize };
+
+type SetContentSize = DeviceDriver['setContentSize'];
+
+/**
+ * The modes a device captures beside the default capture: those that set `contentSize`
+ * (ADR 0042). A mode named `default` is left out, since that is the default capture's variant.
+ */
+function sizedModes(parameters: StoryCaptureParameters | undefined): readonly SizedMode[] {
+  return (parameters?.modes ?? []).filter(
+    (mode): mode is SizedMode => mode.contentSize !== undefined && mode.name !== defaultVariant,
+  );
+}
+
+/**
+ * Capture the story on screen once per sized mode: set the device's content size, let the app
+ * lay out again, and screenshot, with no new selection. The size is put back to the default
+ * afterwards, whatever happened, and the app is given the settle time to follow.
+ */
+async function captureSizedModes(
+  input: CaptureStoriesInput,
+  story: StoryIndexEntry,
+  parameters: StoryCaptureParameters | undefined,
+  setContentSize: SetContentSize,
+): Promise<CaptureResult[]> {
+  const results: CaptureResult[] = [];
+  try {
+    for (const mode of sizedModes(parameters)) {
+      const at = selecting(input, story, mode);
+      try {
+        await setContentSize(mode.contentSize);
+        results.push(await shoot(input, at, parameters, 0));
+      } catch (error) {
+        results.push(failedCapture(input, at, errorMessage(error), 0).result);
+      }
+    }
+  } finally {
+    await setContentSize(defaultContentSize);
+    await input.sleep(input.options.settleMs);
+  }
+  return results;
+}
+
+/** The default capture, then one per sized mode when the driver can set the content size. */
+async function captureOnDevice(
+  input: CaptureStoriesInput,
+  story: StoryIndexEntry,
+  first: Captured,
+): Promise<CaptureResult[]> {
+  const setContentSize = input.driver.setContentSize?.bind(input.driver);
+  const failed = first.result.error !== null;
+  if (setContentSize === undefined || failed || sizedModes(first.parameters).length === 0) {
+    return [first.result];
+  }
+  const sized = await captureSizedModes(input, story, first.parameters, setContentSize);
+  return [first.result, ...sized];
 }
 
 /**
  * Capture one story, or `skipped` when its `parameters.targus.skip` is set. Its
  * `parameters.targus.delay` replaces `settleMs` as the wait before the first screenshot. A story
  * with modes, on a channel that supports them, is captured once per mode, each its own variant.
+ * On a device it is captured once as `default`, then once per mode that sets a content size.
  */
 async function captureStory(
   input: CaptureStoriesInput,
@@ -171,7 +251,7 @@ async function captureStory(
   const first = await captureSelection(input, story, null);
   if (first === 'skipped') return 'skipped';
   const modes = modesOf(input, first.parameters);
-  if (modes === null) return [first.result];
+  if (modes === null) return captureOnDevice(input, story, first);
   if (modes.length === 0) return 'skipped';
   const results: CaptureResult[] = [];
   for (const mode of modes) {

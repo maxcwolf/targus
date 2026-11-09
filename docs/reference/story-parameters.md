@@ -31,7 +31,7 @@ const targus: TargusParameters = { delay: 500 };
 | --------- | ---------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | `skip`    | boolean                      | `false`            | The story is selected but never screenshotted or submitted. It is listed as `skipped` in the capture and run summaries.         |
 | `delay`   | milliseconds, 0 to 10000     | `--settle` (300)   | Replaces the settle wait for this story. A stability retry doubles it, as it doubles `--settle`.                               |
-| `modes`   | object of named modes        | none               | Web only: the story is captured once per mode, each its own snapshot. Native captures ignore it for now. See [Modes](#modes). |
+| `modes`   | object of named modes        | none               | The story is captured once per mode, each its own snapshot: every mode on the web, and on a device the modes that set `contentSize`. See [Modes](#modes). |
 
 A value of the wrong type or out of range makes the story an `error` that names the field, so a
 typo cannot silently change what is captured.
@@ -74,6 +74,40 @@ export default {
   name the snapshot `<story id>@<mode>`.
 
 A story without modes is captured once, as before, with the default globals.
+
+### On a device: the system text size
+
+A device capture applies one thing from a mode: `contentSize`, the system text size a user picks
+under Settings > Accessibility > Larger Text. targus sets it on the simulator, screenshots the
+story again, and puts it back, so the capture shows how the app itself answers larger text.
+
+```tsx
+export default {
+  component: TodoList,
+  parameters: {
+    targus: {
+      modes: {
+        'largest text': { contentSize: 'accessibility-extra-extra-extra-large' },
+      },
+    },
+  },
+};
+```
+
+- The values are the content size categories: `extra-small`, `small`, `medium`, `large` (the
+  default, which every run pins), `extra-large`, `extra-extra-large`,
+  `extra-extra-extra-large`, then `accessibility-medium`, `accessibility-large`,
+  `accessibility-extra-large`, `accessibility-extra-extra-large` and
+  `accessibility-extra-extra-extra-large`.
+- On a device the story is still captured as before, at the default size. Each mode with a
+  `contentSize` adds a snapshot named `<story id>@<mode>`, reviewed and approved on its own. A
+  mode without one adds nothing on a device, and neither does a mode named `default`.
+- On the web `contentSize` is not a global. A mode that sets only a `contentSize` is left out
+  there; one that also sets globals or a viewport is captured on both platforms.
+- A component that caps its own scaling (`maxFontSizeMultiplier`) shows that cap in the
+  capture.
+- `parameters.chromatic.modes` is not read on a device. Name the content size in
+  `parameters.targus.modes`.
 
 ## When to use which
 

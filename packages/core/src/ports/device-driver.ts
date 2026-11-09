@@ -1,4 +1,5 @@
 import type { Appearance } from '../contracts/build.ts';
+import type { ContentSize } from '../contracts/content-size.ts';
 
 /** Status bar values pinned before capture so the clock and signal never cause a diff. */
 export interface StatusBarOverrides {
@@ -35,6 +36,12 @@ export interface DeviceDriver {
    * launched app starts in the new mode, while a running one cross-fades into it.
    */
   setAppearance(appearance: Appearance): Promise<void>;
+  /**
+   * Set the system text size, the preferred content size category (ADR 0042). Called after
+   * `boot` to pin the default, and during a capture for a mode that asks for another size: a
+   * running app lays its text out again at once, with no relaunch.
+   */
+  setContentSize(contentSize: ContentSize): Promise<void>;
   /** Override the status bar so captures are deterministic. */
   setStatusBar(overrides: StatusBarOverrides): Promise<void>;
   /** Capture the full screen as PNG bytes at device resolution. */

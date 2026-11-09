@@ -15,7 +15,8 @@ export interface TargusParameters {
   readonly skip?: boolean | undefined;
   /**
    * Named modes, each captured as its own variant, as Chromatic writes them: globals to set,
-   * an optional `viewport`, and `disable`. Web captures only for now; native ignores them.
+   * an optional `viewport`, and `disable`. A web capture takes every mode. A device capture
+   * takes the modes that set `contentSize`, beside its default capture.
    */
   readonly modes?: Record<string, TargusMode> | undefined;
 }
@@ -23,11 +24,33 @@ export interface TargusParameters {
 /** A mode viewport: a width in CSS pixels (`390` or `'390px'`) or `{ width, height }`. */
 export type TargusModeViewport = string | number | { width: number; height: number };
 
-/** One mode: the globals it sets (`theme: 'dark'`), plus `viewport` and `disable`. */
+/**
+ * A device's system text size, as Settings > Accessibility > Larger Text sets it: the preferred
+ * content size category. `large` is the default.
+ */
+export type TargusContentSize =
+  | 'extra-small'
+  | 'small'
+  | 'medium'
+  | 'large'
+  | 'extra-large'
+  | 'extra-extra-large'
+  | 'extra-extra-extra-large'
+  | 'accessibility-medium'
+  | 'accessibility-large'
+  | 'accessibility-extra-large'
+  | 'accessibility-extra-extra-large'
+  | 'accessibility-extra-extra-extra-large';
+
+/**
+ * One mode: the globals it sets (`theme: 'dark'`), plus `viewport`, `disable` and, for a device
+ * capture, `contentSize`.
+ */
 export type TargusMode = Flatten<
   Record<string, string | number | boolean> & {
     disable?: boolean | undefined;
     viewport?: TargusModeViewport | undefined;
+    contentSize?: TargusContentSize | undefined;
   }
 >;
 

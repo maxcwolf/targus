@@ -1,3 +1,5 @@
+import type { ContentSize } from '../contracts/content-size.ts';
+
 /** One entry of the story index the app reports over `RN_GET_INDEX`. */
 export interface StoryIndexEntry {
   readonly id: string;
@@ -14,11 +16,14 @@ export interface ModeViewport {
 /**
  * A named set of Storybook globals, and optionally a viewport, that a story is captured in
  * (web-plan.md step W5). Each mode is its own snapshot variant, named after the mode.
+ * `contentSize` is for a device: the system text size the story is captured at (ADR 0042). A
+ * web capture ignores it.
  */
 export interface CaptureMode {
   readonly name: string;
   readonly globals: Readonly<Record<string, string | number | boolean>>;
   readonly viewport: ModeViewport | null;
+  readonly contentSize?: ContentSize;
 }
 
 /**

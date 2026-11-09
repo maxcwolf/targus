@@ -16,7 +16,10 @@ export const storyParametersEvent = 'targus/storyParameters';
 export const StoryParameters = z.object({
   delay: z.number().min(0).max(maxStoryDelayMs).optional(),
   skip: z.boolean().optional(),
-  /** Web only for now: a channel without `supportsModes` captures the default globals once. */
+  /**
+   * On the web each mode is a capture. On a device only the modes that set `contentSize` are,
+   * beside the default capture (ADR 0042).
+   */
   modes: Modes.optional(),
 });
 export type StoryParameters = z.infer<typeof StoryParameters>;

@@ -48,6 +48,7 @@ export {
   ReviewSnapshotResponse,
 } from './review.ts';
 export { Modes, toCaptureModes } from './capture-modes.ts';
+export { ContentSize, defaultContentSize } from './content-size.ts';
 export {
   ChromaticParameters,
   parseCaptureParameters,

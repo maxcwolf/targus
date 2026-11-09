@@ -1,6 +1,7 @@
 import {
   TargusError,
   type Appearance,
+  type ContentSize,
   type DeviceDriver,
   type StatusBarOverrides,
 } from '@targus/core';
@@ -192,6 +193,14 @@ export class SimctlDriver implements DeviceDriver {
    */
   async setAppearance(appearance: Appearance): Promise<void> {
     await this.simctl(['ui', this.udid, 'appearance', appearance]);
+  }
+
+  /**
+   * `simctl ui content_size` (ADR 0042): the setting under Accessibility > Larger Text. Like the
+   * appearance it persists across reboots, so a run pins it and never trusts the last one.
+   */
+  async setContentSize(contentSize: ContentSize): Promise<void> {
+    await this.simctl(['ui', this.udid, 'content_size', contentSize]);
   }
 
   async setStatusBar({ time, batteryLevel, cellularBars }: StatusBarOverrides): Promise<void> {

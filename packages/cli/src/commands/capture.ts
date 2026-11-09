@@ -2,6 +2,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import {
+  defaultContentSize,
   isBlankPng,
   type Appearance,
   type Clock,
@@ -100,8 +101,9 @@ interface DeviceSetup {
 }
 
 /**
- * Boot, then pin everything the system draws or decides for the app: notices, appearance and
- * status bar. The appearance is set before launch, so the app starts in it with no cross-fade.
+ * Boot, then pin everything the system draws or decides for the app: notices, appearance, text
+ * size and status bar. The appearance is set before launch, so the app starts in it with no
+ * cross-fade.
  */
 async function prepareDevice(
   driver: DeviceDriver,
@@ -110,6 +112,7 @@ async function prepareDevice(
   await driver.boot();
   await driver.silenceSystemNotices();
   await driver.setAppearance(appearance);
+  await driver.setContentSize(defaultContentSize);
   await driver.setStatusBar({ time: '9:41', batteryLevel: 100, cellularBars: 4 });
   await driver.install(appPath);
   // The app's bundle already enables the channel (EXPO_PUBLIC_TARGUS at bundle time).
