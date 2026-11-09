@@ -1,7 +1,7 @@
 # Review changes
 
 When a pull request changes how a story looks, its `targus/ios` check says how many changes
-await review. The check's **Details** link opens the build in the targus review UI. Each platform
+await review. Clicking the check on the pull request opens the build in the targus review UI. Each platform
 reports its own check, named after it (`targus/ios`, and `targus/web` or `targus/android` once
 those are captured), and has its own baselines; branch protection requires each one separately.
 
@@ -48,11 +48,11 @@ Open a story to compare it with its baseline:
 In the **Unreviewed** filter, a decision moves straight on to the next snapshot that is still
 pending, so `a`, `a`, `d`, `a` walks through a build.
 
-Every decision updates the check run at once:
+Every decision updates the check at once:
 
-| Build                                         | Check run                                |
+| Build                                         | Check                                    |
 | --------------------------------------------- | ---------------------------------------- |
-| changes still pending                         | in progress: "N changes awaiting review" |
+| changes still pending                         | pending: "N changes awaiting review"     |
 | every change approved                         | success: "All visual changes approved"   |
 | nothing changed                               | success: "No visual changes"             |
 | at least one change denied                    | failure: "N changes denied"              |

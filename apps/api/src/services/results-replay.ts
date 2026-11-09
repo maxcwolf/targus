@@ -52,7 +52,7 @@ async function replayCheckRun(
   if (stored !== null) return stored;
   const outcome = await createCheckRun(deps, project, build, reviewed.summary);
   if ('id' in outcome) {
-    await followNewerReviews(deps, project, build, outcome.id, reviewed);
+    await followNewerReviews(deps, project, build, reviewed);
     return { checkRun: { id: outcome.id }, checkRunMissing: null };
   }
   if (outcome.missing !== 'pending') return { checkRun: null, checkRunMissing: outcome.missing };

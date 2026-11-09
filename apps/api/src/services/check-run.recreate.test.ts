@@ -59,8 +59,8 @@ describe('a check run missing after the results', () => {
     await reviewSnapshot(deps, reviewer, second, 'approve');
 
     expect(github.creates).toHaveLength(1);
-    expect(github.updates.map(({ checkRunId, state }) => [checkRunId, state.status])).toEqual([
-      [901, 'completed'],
+    expect(github.updates.map(({ name, state }) => [name, state.status])).toEqual([
+      ['targus/ios', 'completed'],
     ]);
   });
 

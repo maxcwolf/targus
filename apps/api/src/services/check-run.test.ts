@@ -67,8 +67,9 @@ describe('syncCheckRun', () => {
     expect(github.updates).toEqual([
       {
         target: { installationId: 42, repo: 'org-sync/app', headSha: build.sha },
-        checkRunId: 901,
+        name: 'targus/ios',
         state: denied,
+        detailsUrl: `https://targus.test/builds/${build.id}`,
       },
     ]);
   });
@@ -157,9 +158,9 @@ describe('syncCheckRun after a newer review', () => {
     await syncCheckRun(deps, project, build, { version: 1, summary: failed });
 
     expect(github.creates).toEqual([]);
-    expect(github.updates.map((update) => [update.checkRunId, update.state.summary])).toEqual([
-      [902, '1 change denied'],
-      [902, '1 change awaiting review'],
+    expect(github.updates.map((update) => [update.name, update.state.summary])).toEqual([
+      ['targus/ios', '1 change denied'],
+      ['targus/ios', '1 change awaiting review'],
     ]);
   });
 });
@@ -193,7 +194,7 @@ describe('syncCheckRun under constant review', () => {
 });
 
 describe('syncCheckRun names', () => {
-  it("names a created check run after the build's platform, and updates by id alone", async () => {
+  it("names a check after the build's platform, and sends its name and link again on an update", async () => {
     const { deps, github, project } = await syncSetup(42);
     const web = await deps.builds.create(newBuild('w1', project.id, { platform: 'web' }));
 
@@ -201,6 +202,8 @@ describe('syncCheckRun names', () => {
     await syncCheckRun(deps, project, { ...web, checkRunId: 901 }, atVersion0);
 
     expect(github.creates.map((create) => create.name)).toEqual(['targus/web']);
-    expect(github.updates.map((update) => update.checkRunId)).toEqual([901]);
+    expect(github.updates.map(({ name, detailsUrl }) => [name, detailsUrl])).toEqual([
+      ['targus/web', github.creates[0]?.detailsUrl],
+    ]);
   });
 });

@@ -49,7 +49,7 @@ type CheckRunDeps = Pick<ServiceDeps, 'builds' | 'clock' | 'config' | 'github' |
 /** How long a claim on creating a check run holds before another request may take it over. */
 const claimLifetimeMs = 5 * 60_000;
 
-/** Where a build is reviewed, which is also its check run's details link. */
+/** Where a build is reviewed, which is also where its check on a pull request links. */
 export function reviewUrlOf(deps: Pick<ServiceDeps, 'config'>, buildId: string): string {
   return `${deps.config.publicUrl}/builds/${buildId}`;
 }
@@ -135,15 +135,16 @@ export interface ReviewedSummary {
 /** How many updates one sync sends at most, the first included, while newer reviews commit. */
 const syncAttempts = 5;
 
-/** Send `state`; false, with a warning, when GitHub fails. */
+/** Send `state` for the build's check; false, with a warning, when GitHub fails. */
 async function sendUpdate(
   deps: CheckRunDeps,
   target: CheckRunTarget,
-  checkRunId: number,
+  build: Build,
   state: CheckRunState,
 ): Promise<boolean> {
   const sent = await bestEffort(deps, 'check_run_update_failed', async () => {
-    await deps.github.updateCheckRun(target, checkRunId, state);
+    const name = checkRunName(build.platform);
+    await deps.github.updateCheckRun(target, name, state, reviewUrlOf(deps, build.id));
     return true;
   });
   return sent === true;
@@ -170,7 +171,7 @@ async function ensureCheckRun(
   );
   const checkRunId = stored?.checkRunId ?? null;
   if (checkRunId === null) return null;
-  return (await sendUpdate(deps, target, checkRunId, checkRunState(summary))) ? checkRunId : null;
+  return (await sendUpdate(deps, target, build, checkRunState(summary))) ? checkRunId : null;
 }
 
 /**
@@ -183,7 +184,6 @@ export async function followNewerReviews(
   deps: CheckRunDeps,
   project: Project,
   build: Build,
-  checkRunId: number,
   sent: ReviewedSummary,
 ): Promise<void> {
   const installationId = project.org.installationId;
@@ -196,7 +196,7 @@ export async function followNewerReviews(
     if (sends === syncAttempts) break;
     const summary = buildStatusFromTally(tallySnapshots(latest.snapshots));
     current = { version: latest.version, summary };
-    if (!(await sendUpdate(deps, target, checkRunId, checkRunState(summary)))) return;
+    if (!(await sendUpdate(deps, target, build, checkRunState(summary)))) return;
   }
   deps.log.warn('check_run_update_superseded', { attempts: syncAttempts });
 }
@@ -211,7 +211,7 @@ async function setCheckRun(
 ): Promise<number | null> {
   const { checkRunId } = build;
   if (checkRunId === null) return ensureCheckRun(deps, target, project, build, summary);
-  return (await sendUpdate(deps, target, checkRunId, checkRunState(summary))) ? checkRunId : null;
+  return (await sendUpdate(deps, target, build, checkRunState(summary))) ? checkRunId : null;
 }
 
 /**
@@ -232,5 +232,5 @@ export async function syncCheckRun(
   const target = targetOf(installationId, project, build);
   const checkRunId = await setCheckRun(deps, target, project, build, reviewed.summary);
   if (checkRunId === null) return;
-  await followNewerReviews(deps, project, build, checkRunId, reviewed);
+  await followNewerReviews(deps, project, build, reviewed);
 }

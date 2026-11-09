@@ -216,10 +216,12 @@ GitHub integration uses one GitHub App (ADR 0011):
   hour in `org_memberships`. An org row without an installation can be reviewed by nobody.
 - **Check runs** (built): an installation access token is minted from the App's private key,
   which is stored as a Worker secret, and cached in memory per installation until shortly
-  before it expires. The check run is named `targus/ios`. Its
+  before it expires. The check is named `targus/ios`. Its
   states: `in_progress` with "N changes awaiting review" while pending; `completed/success` when
   no change is pending or denied; `completed/failure` when any change is denied or a story
-  errored. Without the App secrets the client is a no-op.
+  errored. Without the App secrets the client is a no-op. Since ADR 0040 it is sent to GitHub
+  as a commit status (`pending`, `success`, `failure`) whose link is the build's review page,
+  so the check on a pull request opens the review directly.
 
 ### 5.3 Web app (`apps/web`)
 

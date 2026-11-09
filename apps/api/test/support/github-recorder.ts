@@ -11,7 +11,7 @@ export interface RecordingGitHub extends GitHubClient {
   readonly membershipChecks: { readonly org: string; readonly login: string }[];
   /** The installation ids whose account was asked for, in order. */
   readonly accountLookups: number[];
-  /** The check runs created, in order; each gets id 901, 902, ... */
+  /** The checks (commit statuses) created, in order; each gets id 901, 902, ... */
   readonly creates: {
     readonly target: CheckRunTarget;
     readonly name: string;
@@ -20,8 +20,9 @@ export interface RecordingGitHub extends GitHubClient {
   }[];
   readonly updates: {
     readonly target: CheckRunTarget;
-    readonly checkRunId: number;
+    readonly name: string;
     readonly state: CheckRunState;
+    readonly detailsUrl: string;
   }[];
 }
 
@@ -67,9 +68,9 @@ export function createRecordingGitHub(
       creates.push({ target, name, state, detailsUrl });
       return Promise.resolve({ id: 900 + creates.length });
     },
-    updateCheckRun(target, checkRunId, state) {
+    updateCheckRun(target, name, state, detailsUrl) {
       if (options.failUpdates === true) return Promise.reject(new Error('GitHub is down'));
-      updates.push({ target, checkRunId, state });
+      updates.push({ target, name, state, detailsUrl });
       return Promise.resolve();
     },
     isOrgMember(installationId, org, login) {

@@ -69,9 +69,9 @@ test('a reviewer approves a baseline, then denies and approves a changed story',
   const published = await publishBuilds(request, dir);
   const { repo, token, mainBuildId } = published;
 
-  // The CLI created the check run as in progress: three new stories await review.
+  // Submitting the results reported the check as pending: three new stories await review.
   expect(await checkRunsFor(request, repo)).toMatchObject([
-    { method: 'POST', body: { status: 'in_progress', head_sha: await mergeBaseSha() } },
+    { sha: await mergeBaseSha(), body: { context: 'targus/ios', state: 'pending' } },
   ]);
 
   await signInOn(page, `/builds/${mainBuildId}`);
@@ -82,8 +82,7 @@ test('a reviewer approves a baseline, then denies and approves a changed story',
   await page.getByRole('button', { name: /^Confirm/ }).click();
   await expect(page.getByRole('status', { name: 'Build status' })).toHaveText('Accepted');
   expect((await checkRunsFor(request, repo)).at(-1)).toMatchObject({
-    method: 'PATCH',
-    body: { status: 'completed', conclusion: 'success' },
+    body: { state: 'success' },
   });
 
   await expectLibraryOfThreeStories(page);
@@ -108,15 +107,13 @@ test('a reviewer approves a baseline, then denies and approves a changed story',
   await page.getByRole('button', { name: 'Deny' }).click();
   await expect(page.getByRole('status', { name: 'Review' })).toHaveText('Denied');
   expect((await checkRunsFor(request, repo)).at(-1)).toMatchObject({
-    method: 'PATCH',
-    body: { status: 'completed', conclusion: 'failure' },
+    body: { state: 'failure' },
   });
 
   await page.getByRole('button', { name: 'Approve' }).click();
   await expect(page.getByRole('status', { name: 'Review' })).toHaveText('Approved');
   expect((await checkRunsFor(request, repo)).at(-1)).toMatchObject({
-    method: 'PATCH',
-    body: { status: 'completed', conclusion: 'success' },
+    body: { state: 'success' },
   });
   expect((await getBuild(request, token, prBuildId)).summary.status).toBe('accepted');
 });

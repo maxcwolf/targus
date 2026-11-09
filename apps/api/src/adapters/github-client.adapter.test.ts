@@ -16,7 +16,7 @@ beforeAll(async () => {
 });
 
 describe('OctokitGitHubClient (stubbed fetch)', () => {
-  it('creates a check run under the name it is given, with an installation token', async () => {
+  it('reports a commit status under the name it is given, with an installation token', async () => {
     const stub = createGitHubStub();
     const client = new OctokitGitHubClient({ appId: '123', privateKey }, stub.fetch, freshTokens());
 
@@ -33,39 +33,38 @@ describe('OctokitGitHubClient (stubbed fetch)', () => {
     expect(mint?.authorization).toMatch(/^bearer /i);
     expect(create).toEqual({
       method: 'POST',
-      path: '/repos/example-org/example-app/check-runs',
+      path: `/repos/example-org/example-app/statuses/${target.headSha}`,
       authorization: 'token installation-token',
       body: {
-        name: 'targus/web',
-        head_sha: target.headSha,
-        details_url: 'https://targus.example/builds/b1',
-        status: 'in_progress',
-        output: { title: 'Visual changes awaiting review', summary: '2 changes awaiting review' },
+        context: 'targus/web',
+        target_url: 'https://targus.example/builds/b1',
+        state: 'pending',
+        description: '2 changes awaiting review',
       },
     });
   });
 
-  it('updates a check run to completed with its conclusion', async () => {
+  it('updates a status by posting it again, with its conclusion, name and link', async () => {
     const stub = createGitHubStub();
     const client = new OctokitGitHubClient({ appId: '123', privateKey }, stub.fetch, freshTokens());
 
-    await client.updateCheckRun(target, 901, {
-      status: 'completed',
-      conclusion: 'failure',
-      summary: '1 change denied',
-    });
+    await client.updateCheckRun(
+      target,
+      'targus/ios',
+      { status: 'completed', conclusion: 'failure', summary: '1 change denied' },
+      'https://targus.example/builds/b1',
+    );
 
     expect(stub.requests.at(-1)).toMatchObject({
-      method: 'PATCH',
-      path: '/repos/example-org/example-app/check-runs/901',
+      method: 'POST',
+      path: `/repos/example-org/example-app/statuses/${target.headSha}`,
       body: {
-        status: 'completed',
-        conclusion: 'failure',
-        output: { title: 'Visual review failed', summary: '1 change denied' },
+        context: 'targus/ios',
+        target_url: 'https://targus.example/builds/b1',
+        state: 'failure',
+        description: '1 change denied',
       },
     });
-    // The name is set once, at creation; an update never renames the check run.
-    expect(stub.requests.at(-1)?.body).not.toHaveProperty('name');
   });
 });
 
@@ -89,6 +88,22 @@ describe('OctokitGitHubClient.isOrgMember (stubbed fetch)', () => {
     const client = new OctokitGitHubClient({ appId: '123', privateKey }, failing, freshTokens());
 
     await expect(client.isOrgMember(42, 'example-org', 'member')).rejects.toThrow();
+  });
+});
+
+describe('OctokitGitHubClient status descriptions (stubbed fetch)', () => {
+  it('cuts a description to the 140 characters GitHub accepts', async () => {
+    const stub = createGitHubStub();
+    const client = new OctokitGitHubClient({ appId: '123', privateKey }, stub.fetch, freshTokens());
+
+    await client.updateCheckRun(
+      target,
+      'targus/ios',
+      { status: 'completed', conclusion: 'success', summary: 'x'.repeat(200) },
+      'https://targus.example/builds/b1',
+    );
+
+    expect(stub.requests.at(-1)?.body).toMatchObject({ description: 'x'.repeat(140) });
   });
 });
 
@@ -158,7 +173,9 @@ describe('NoopGitHubClient', () => {
     expect(await client.createCheckRun(target, 'targus/ios', state, 'https://x.test')).toEqual({
       id: 0,
     });
-    await expect(client.updateCheckRun(target, 1, state)).resolves.toBeUndefined();
+    await expect(
+      client.updateCheckRun(target, 'targus/ios', state, 'https://x.test'),
+    ).resolves.toBeUndefined();
     expect(await client.isOrgMember(42, 'example-org', 'member')).toBe(false);
     await expect(client.installationAccountId(42)).rejects.toThrow('not configured');
   });

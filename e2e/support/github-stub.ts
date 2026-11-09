@@ -1,15 +1,14 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
 // A stand-in for github.com and api.github.com, just enough for the review flow: the OAuth
-// login round trip, installation tokens and accounts, org membership and check runs. The Worker under test
+// login round trip, installation tokens and accounts, org membership and commit statuses. The Worker under test
 // is pointed at it through GITHUB_OAUTH_ORIGIN and GITHUB_API_ORIGIN (playwright.config.ts).
 // Control routes under /__ let a spec choose who signs in next and read the calls GitHub saw.
 
-/** A check-run request the stub received, as a spec asserts on it. */
+/** A commit status the stub received, as a spec asserts on it. */
 export interface RecordedCheckRun {
-  readonly method: 'POST' | 'PATCH';
   readonly repo: string;
-  readonly checkRunId: number | null;
+  readonly sha: string;
   readonly body: Record<string, unknown>;
 }
 
@@ -75,16 +74,9 @@ function user({ authorization }: Call): Reply {
   return { status: 200, body: { id: known.id, login, avatar_url: avatar } };
 }
 
-function checkRun({ method, match, body, state }: Call): Reply {
-  const existing = match[2];
-  const id = existing === undefined ? state.nextCheckRunId++ : Number(existing);
-  state.checkRuns.push({
-    method: method === 'POST' ? 'POST' : 'PATCH',
-    repo: match[1] ?? '',
-    checkRunId: existing === undefined ? null : id,
-    body,
-  });
-  return { status: method === 'POST' ? 201 : 200, body: { id } };
+function checkRun({ match, body, state }: Call): Reply {
+  state.checkRuns.push({ repo: match[1] ?? '', sha: match[2] ?? '', body });
+  return { status: 201, body: { id: state.nextCheckRunId++ } };
 }
 
 const routes: readonly Route[] = [
@@ -113,8 +105,7 @@ const routes: readonly Route[] = [
     path: /^\/orgs\/[^/]+\/members\/([^/]+)$/,
     reply: ({ match }) => ({ status: users[match[1] ?? '']?.member === true ? 204 : 404 }),
   },
-  { method: 'POST', path: /^\/repos\/([^/]+\/[^/]+)\/check-runs$/, reply: checkRun },
-  { method: 'PATCH', path: /^\/repos\/([^/]+\/[^/]+)\/check-runs\/(\d+)$/, reply: checkRun },
+  { method: 'POST', path: /^\/repos\/([^/]+\/[^/]+)\/statuses\/([0-9a-f]+)$/, reply: checkRun },
   {
     method: 'POST',
     path: /^\/__next-login$/,
