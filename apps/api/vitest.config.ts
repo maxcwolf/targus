@@ -32,7 +32,9 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       // schema.ts is declarative; its foreign-key and index callbacks run only in drizzle-kit.
       // The repository tests exercise the tables through the generated migration.
-      exclude: ['src/**/*.test.ts', 'src/db/schema.ts'],
+      // src/postgres/ runs in Node, not workerd: vitest.postgres.config.ts tests it and holds it
+      // to these same thresholds (ADR 0045).
+      exclude: ['src/**/*.test.ts', 'src/db/schema.ts', 'src/postgres/**'],
       thresholds: {
         lines: 97,
         branches: 94,
