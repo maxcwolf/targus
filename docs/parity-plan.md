@@ -1,6 +1,6 @@
 # Closing the gaps with Chromatic
 
-Status: plan, written 2026-11-09. Nothing on this page is built unless it says so.
+Status: plan, written 2026-11-09. Nothing on this page is built unless it says so; N1 is.
 
 targus has two jobs. On native it does what no hosted service does: visual review of the
 on-device Storybook. On the web it aims to replace Chromatic once it matches what a team uses
@@ -22,7 +22,7 @@ workflow on 2026-11-09:
 
 | #   | Item                                                          | Why it is here                                                                    |
 | --- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| N1  | Capture at a system font scale (below)                        | The mode the pilot app uses most on the web has no native equivalent              |
+| N1  | Capture at a system font scale (built; below)                 | The mode the pilot app uses most on the web had no native equivalent              |
 | N2  | Dark mode and a second device size as modes                   | Appearance is per build today (ADR 0035), not per story                           |
 | N3  | First real CircleCI run, with run time on a full story set    | The recipe has only run on GitHub Actions; the time decides whether N5 is needed  |
 | N4  | Baselines partitioned by device and iOS runtime               | A new runner image shows every story as changed today (plan.md section 6)         |
@@ -31,36 +31,33 @@ workflow on 2026-11-09:
 
 ### N1. Capture at a system font scale
 
-The next native feature. A story is captured with the simulator's own accessibility text size
-changed, so the screenshot shows what a user with larger text sees: the system setting, not a
-mocked scale inside the app.
+Built (ADR [0042](adr/0042-content-sizes-on-a-device.md)). A story is captured with the
+simulator's own accessibility text size changed, so the screenshot shows what a user with larger
+text sees: the system setting, not a mocked scale inside the app.
 
-- **How the size is set.** `xcrun simctl ui <udid> content_size <category>` sets the preferred
-  content size category of a booted simulator, the same setting as Settings > Accessibility >
-  Larger Text. The categories are `extra-small` to `extra-extra-extra-large`, then
-  `accessibility-medium` to `accessibility-extra-extra-extra-large`. Like the appearance, it
-  persists across reboots, so the CLI sets it on every run and never assumes it.
-- **How a story asks for it.** As a mode, like the web's
-  ([story parameters](reference/story-parameters.md#modes)): `parameters.targus.modes` gains a
-  native key, `contentSize`, whose value is one of the categories. A story without modes is
-  captured once at the default size (`large`), which the CLI pins as it pins light mode.
-- **How a run captures it.** Changing the setting between every two stories would be slow and
-  would race the app's re-layout. A run is a pass per content size: set the size, relaunch the
-  app, capture every story that has a mode with that size, then the next size. The default pass
-  comes first.
-- **What a snapshot is.** As on the web, each mode is its own snapshot with its own baseline,
-  named `<story id>@<mode>`. The data model already carries a `variant` key for this.
-- **What has to be found out first** (a spike, like the two capture spikes):
-  whether React Native applies a new content size to a running app reliably or only after a
-  relaunch; how long a pass adds; whether the app's maximum font scale (an app that caps
-  `maxFontSizeMultiplier`) shows in the capture as it does on a phone.
+- **How a story asks for it.** `parameters.targus.contentSizes` is a list of short size names,
+  `xs` to `xxxl` and `ax1` to `ax5`
+  ([story parameters](reference/story-parameters.md#content-sizes)). A story without it is
+  captured once at the default size (`l`), which the CLI pins as it pins light mode.
+- **How the size is set.** `xcrun simctl ui <udid> content_size <category>`, the same setting as
+  Settings > Accessibility > Larger Text. It persists across reboots, so the CLI sets it on every
+  run and never assumes it.
+- **How a run captures it.** The spike showed that a running React Native app lays out again
+  within a fraction of a second when the setting changes, with no relaunch. So a story is
+  captured at the default size, then at each size it lists while it is still on screen, and the
+  size is put back before the next story.
+- **What a snapshot is.** Each size is its own snapshot with its own baseline, named
+  `<story id>@<size>`, for example `button--primary@ax5`.
+
+Still to do:
+
+- A full `targus run` with sized captures published and reviewed, on the CI runner as well as
+  locally.
+- Whether an app that caps `maxFontSizeMultiplier` shows in the capture as it does on a phone.
 - **Reading Chromatic's modes.** A web story's `parameters.chromatic.modes` sets Storybook
   globals, and a global named for font scale means whatever the project's decorator makes of
-  it. targus does not guess: a project maps a global's values to content sizes in
-  `targus.config.ts`, or sets `parameters.targus.modes` on the story.
-
-An ADR records the decision when the spike is done: modes on native, a pass per content size,
-and the pinned default.
+  it. targus does not guess: a project would map a global's values to content sizes in
+  `targus.config.ts`, or set `contentSizes` on the story. The mapping is not built.
 
 ## Web
 
@@ -86,5 +83,5 @@ The switch is a decision for after W1 to W4, when the two have agreed on real pu
 
 ## What comes first
 
-N1 and W1, side by side. N1 is the gap the pilot app's stories would meet first on native, and W1
-unblocks every decision about the web.
+N1 is built. W1 is next, because it unblocks every decision about the web; on native, N2 and N3
+follow.
