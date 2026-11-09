@@ -166,6 +166,28 @@ async function latestBaselineOnBranch({ repository, seedProject }: BuildHarness)
   expect(await latest(projectId, 'ios', 'none')).toBeNull();
 }
 
+async function newestCompletedForSha({ repository, seedProject }: BuildHarness): Promise<void> {
+  const projectId = await seedProject('bc-new-a');
+  const otherId = await seedProject('bc-new-b');
+  const again = { sha: sha('7') };
+  await repository.create(newBuild('bc-new-1', projectId, { ...again, status: 'accepted' }));
+  await repository.create(newBuild('bc-new-2', projectId, { ...again, status: 'pending' }));
+  await repository.create(newBuild('bc-new-3', projectId, { ...again, status: 'in_progress' }));
+  await repository.create(newBuild('bc-new-4', projectId, { sha: sha('8'), status: 'passed' }));
+  await repository.create(
+    newBuild('bc-new-5', projectId, { ...again, status: 'failed', platform: 'web' }),
+  );
+  await repository.create(newBuild('bc-new-6', otherId, { ...again, status: 'passed' }));
+  const newest = (projectOf: string, platform: Platform, onSha: string) =>
+    repository.findNewestCompletedForSha(projectOf, platform, onSha).then((b) => b?.id ?? null);
+
+  expect(await newest(projectId, 'ios', again.sha)).toBe('bc-new-2');
+  expect(await newest(projectId, 'web', again.sha)).toBe('bc-new-5');
+  expect(await newest(projectId, 'ios', sha('8'))).toBe('bc-new-4');
+  expect(await newest(projectId, 'android', again.sha)).toBeNull();
+  expect(await newest(projectId, 'ios', sha('6'))).toBeNull();
+}
+
 async function baselinePlatformsOnBranch({ repository, seedProject }: BuildHarness): Promise<void> {
   const projectId = await seedProject('bc-plat-a');
   const otherId = await seedProject('bc-plat-b');
@@ -253,6 +275,8 @@ export function describeBuildContract(name: string, harness: Harness): void {
       claimsCheckRunCreation(harness()));
     it('finds the newest signed-off build of a platform and branch within the project', () =>
       latestBaselineOnBranch(harness()));
+    it('finds the newest build with results of a platform and commit within the project', () =>
+      newestCompletedForSha(harness()));
     it('lists the platforms with a signed-off build of a branch within the project', () =>
       baselinePlatformsOnBranch(harness()));
   });

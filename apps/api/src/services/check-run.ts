@@ -10,6 +10,7 @@ import {
 } from '@targus/core';
 
 import { failureReason } from '../logging/request-log.ts';
+import type { BuildRecord } from '../ports/build-repository.ts';
 import type { Project } from '../ports/project-repository.ts';
 import type { ServiceDeps } from './deps.ts';
 
@@ -72,20 +73,65 @@ function targetOf(installationId: number, project: Project, build: Build): Check
   return { installationId, repo: project.repo, headSha: build.sha };
 }
 
-/** Ask GitHub for the check run: its id, 0 from the no-op client, or null when GitHub failed. */
+/** The newest build with results of `build`'s platform on its commit, when that is a later one. */
+async function newerBuildOf(deps: CheckRunDeps, build: Build): Promise<BuildRecord | null> {
+  const { projectId, platform, sha } = build;
+  const newest = await deps.builds.findNewestCompletedForSha(projectId, platform, sha);
+  return newest !== null && newest.number > build.number ? newest : null;
+}
+
+/** `send` was not run: a newer build of the commit has the check. */
+const superseded = Symbol('superseded');
+
+/**
+ * Run `send`, which sets the check of `build`'s commit, only while `build` is the newest build
+ * with results of its platform on that commit. The check is a commit status, which belongs to
+ * the commit and not to a build (ADR 0040), so a review of an older build of a commit that was
+ * built again must not write over the newer build's state (ADR 0046). A newer build can get its
+ * results while `send` runs and be written over all the same, so its state is sent again after.
+ */
+async function sendWhileNewest<T>(
+  deps: CheckRunDeps,
+  target: CheckRunTarget,
+  build: Build,
+  send: () => Promise<T>,
+): Promise<T | typeof superseded> {
+  if ((await newerBuildOf(deps, build)) !== null) return superseded;
+  const sent = await send();
+  const newer = await newerBuildOf(deps, build);
+  if (newer !== null) {
+    const state = checkRunState(buildStatusFromTally(newer.tally));
+    const name = checkRunName(newer.platform);
+    await deps.github.updateCheckRun(target, name, state, reviewUrlOf(deps, newer.id));
+  }
+  return sent;
+}
+
+/**
+ * Ask GitHub for the check run: its id, 0 from the no-op client, null when GitHub failed, or
+ * `superseded` when a newer build has the check.
+ */
 function requestCheckRun(
   deps: CheckRunDeps,
   installationId: number,
   project: Project,
   build: Build,
   summary: BuildStatusSummary,
-): Promise<number | null> {
-  return bestEffort(deps, 'check_run_create_failed', async () => {
+): Promise<number | typeof superseded | null> {
+  return bestEffort(deps, 'check_run_create_failed', () => {
     const target = targetOf(installationId, project, build);
     const name = checkRunName(build.platform);
     const url = reviewUrlOf(deps, build.id);
-    return (await deps.github.createCheckRun(target, name, checkRunState(summary), url)).id;
+    return sendWhileNewest(deps, target, build, async () => {
+      return (await deps.github.createCheckRun(target, name, checkRunState(summary), url)).id;
+    });
   });
+}
+
+/** Why no check run was stored: the newer build has it (`pending`), GitHub failed, or no App. */
+function missingAfter(id: number | typeof superseded | null): CheckRunMissing {
+  if (id === superseded) return 'pending';
+  return id === null ? 'failed' : 'no_github_app';
 }
 
 /**
@@ -113,7 +159,7 @@ export async function createCheckRun(
   if (claimed === null) return { missing: 'failed' };
   if (!claimed) return { missing: 'pending' };
   const id = await requestCheckRun(deps, installationId, project, build, summary);
-  if (id !== null && id > 0) {
+  if (typeof id === 'number' && id > 0) {
     await bestEffort(deps, 'check_run_id_not_stored', () =>
       deps.builds.setCheckRunId(build.id, id),
     );
@@ -122,7 +168,7 @@ export async function createCheckRun(
   await bestEffort(deps, 'check_run_claim_not_released', () =>
     deps.builds.releaseCheckRunClaim(build.id, claimedAt),
   );
-  return { missing: id === null ? 'failed' : 'no_github_app' };
+  return { missing: missingAfter(id) };
 }
 
 /** A build's summary as of one review version. */
@@ -135,18 +181,23 @@ export interface ReviewedSummary {
 /** How many updates one sync sends at most, the first included, while newer reviews commit. */
 const syncAttempts = 5;
 
-/** Send `state` for the build's check; false, with a warning, when GitHub fails. */
+/**
+ * Send `state` for the build's check. False when a newer build of the commit has the check, or,
+ * with a warning, when GitHub fails.
+ */
 async function sendUpdate(
   deps: CheckRunDeps,
   target: CheckRunTarget,
   build: Build,
   state: CheckRunState,
 ): Promise<boolean> {
-  const sent = await bestEffort(deps, 'check_run_update_failed', async () => {
-    const name = checkRunName(build.platform);
-    await deps.github.updateCheckRun(target, name, state, reviewUrlOf(deps, build.id));
-    return true;
-  });
+  const sent = await bestEffort(deps, 'check_run_update_failed', () =>
+    sendWhileNewest(deps, target, build, async () => {
+      const name = checkRunName(build.platform);
+      await deps.github.updateCheckRun(target, name, state, reviewUrlOf(deps, build.id));
+      return true;
+    }),
+  );
   return sent === true;
 }
 

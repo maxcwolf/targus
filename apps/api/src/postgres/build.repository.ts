@@ -1,5 +1,5 @@
 import { baselineBuildStatuses, emptyTally, type Platform, type SnapshotTally } from '@targus/core';
-import { and, desc, eq, gt, inArray, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
 
 import { checkBuildPageLimit, decodeBuildCursor, toBuildPage } from '../ports/build-page.ts';
 import type {
@@ -112,6 +112,27 @@ export class PostgresBuildRepository implements ApiBuildRepository {
           eq(builds.platform, platform),
           eq(builds.branch, branch),
           inArray(builds.status, [...baselineBuildStatuses]),
+        ),
+      )
+      .orderBy(desc(builds.number))
+      .limit(1);
+    return row === undefined ? null : toBuildRecord(row);
+  }
+
+  async findNewestCompletedForSha(
+    projectId: string,
+    platform: Platform,
+    sha: string,
+  ): Promise<BuildRecord | null> {
+    const [row] = await this.db
+      .select()
+      .from(builds)
+      .where(
+        and(
+          eq(builds.projectId, projectId),
+          eq(builds.platform, platform),
+          eq(builds.sha, sha),
+          ne(builds.status, 'in_progress'),
         ),
       )
       .orderBy(desc(builds.number))

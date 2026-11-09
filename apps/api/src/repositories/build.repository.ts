@@ -1,5 +1,5 @@
 import { baselineBuildStatuses, emptyTally, type Platform, type SnapshotTally } from '@targus/core';
-import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
 import { builds, snapshots } from '../db/schema.ts';
@@ -107,6 +107,28 @@ export class D1BuildRepository implements ApiBuildRepository {
           eq(builds.platform, platform),
           eq(builds.branch, branch),
           inArray(builds.status, [...baselineBuildStatuses]),
+        ),
+      )
+      .orderBy(desc(builds.number))
+      .limit(1)
+      .get();
+    return row === undefined ? null : toBuildRecord(row);
+  }
+
+  async findNewestCompletedForSha(
+    projectId: string,
+    platform: Platform,
+    sha: string,
+  ): Promise<BuildRecord | null> {
+    const row = await this.db
+      .select()
+      .from(builds)
+      .where(
+        and(
+          eq(builds.projectId, projectId),
+          eq(builds.platform, platform),
+          eq(builds.sha, sha),
+          ne(builds.status, 'in_progress'),
         ),
       )
       .orderBy(desc(builds.number))

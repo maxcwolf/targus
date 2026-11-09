@@ -29,6 +29,7 @@ function buildQueries(
   ApiBuildRepository,
   | 'listForProject'
   | 'findLatestBaselineOnBranch'
+  | 'findNewestCompletedForSha'
   | 'listBaselinePlatformsOnBranch'
   | 'findLatestSuccessfulForShas'
 > {
@@ -50,6 +51,12 @@ function buildQueries(
       }),
     findLatestBaselineOnBranch: (projectId, platform, branch) =>
       Promise.resolve(signedOffOn(projectId, branch).find((b) => b.platform === platform) ?? null),
+    findNewestCompletedForSha: (projectId, platform, sha) =>
+      Promise.resolve(
+        newestFirst(projectId).find(
+          (b) => b.platform === platform && b.sha === sha && b.status !== 'in_progress',
+        ) ?? null,
+      ),
     listBaselinePlatformsOnBranch: (projectId, branch) =>
       Promise.resolve([...new Set(signedOffOn(projectId, branch).map((b) => b.platform))]),
     findLatestSuccessfulForShas: (projectId, platform, shas) =>
