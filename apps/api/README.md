@@ -12,12 +12,13 @@ src/logging/       the request log line: its fields, and the ServiceLog services
 src/services/      use-cases; the only place rules live outside packages/core
 src/repositories/  D1 via Drizzle (projects, builds + snapshots, approvals, images, users,
                    sessions, org membership cache)
-src/storage/       R2ImageStore (bytes in R2, "missing" answered by the images table)
+src/storage/       R2ImageStore and S3ImageStore (bytes in R2 or an S3 bucket, "missing" answered
+                   by the images table)
 src/adapters/      Clock, IdGenerator, tokens, GitHub App client (Octokit or no-op), GitHub OAuth,
                    console Logger
 src/app.ts         createApp(deps): the Hono app from plain dependencies (ADR 0023)
 src/composition.ts AppDeps, and the platform-free adapters (clock, ids, GitHub) for a config
-src/cloudflare/    the Worker edge: bindings, env -> deps (D1, R2), and the Worker entry
+src/cloudflare/    the Worker edge: bindings, env -> deps (D1, R2 or S3), and the Worker entry
 ```
 
 ## Routes
@@ -183,11 +184,21 @@ Vars live in `wrangler.jsonc` and are validated by `src/config.ts`:
 | `GITHUB_CLIENT_SECRET`   | secret | unset                    | The GitHub App's OAuth client secret                                                            |
 | `GITHUB_OAUTH_ORIGIN`    | var    | `https://github.com`     | Where login happens (`/login/oauth/*`)                                                          |
 | `GITHUB_API_ORIGIN`      | var    | `https://api.github.com` | GitHub REST API, for the user lookup and every App call                                         |
+| `S3_ENDPOINT`            | var    | unset                    | Origin of an S3-compatible service; images go to S3 instead of R2 when all five S3 vars are set |
+| `S3_REGION`              | var    | unset                    | The bucket's region (`auto` for R2's S3 API)                                                    |
+| `S3_BUCKET`              | var    | unset                    | The bucket that holds the images (`images/<hash>.png`)                                          |
+| `S3_ACCESS_KEY_ID`       | secret | unset                    | S3 access key id                                                                                |
+| `S3_SECRET_ACCESS_KEY`   | secret | unset                    | S3 secret access key                                                                            |
+| `S3_FORCE_PATH_STYLE`    | var    | `false`                  | `true` for path-style URLs (`endpoint/bucket/key`, MinIO); else virtual-hosted                  |
 
 `GITHUB_OAUTH_ORIGIN` and `GITHUB_API_ORIGIN` exist so the e2e suite and local dev can point
 login, membership checks and check runs at a stub GitHub instead of the real one.
 
 Set the two GitHub App secrets together or not at all, and likewise the two OAuth secrets.
+Set the five S3 variables (all but `S3_FORCE_PATH_STYLE`) together or not at all: with them the
+API keeps images in that bucket with SigV4-signed requests, without them in the `IMAGES` R2
+binding (ADR 0041). The `images` table in D1 still answers which hashes are missing, so moving
+from one store to the other means copying the objects; their keys are the same.
 Without the OAuth pair (or without `SESSION_SECRET`), `GET /api/auth/github` answers 501
 `not_implemented`. Without them the no-op GitHub client is
 used and no check runs are created. A project's org also needs an `installationId` for its

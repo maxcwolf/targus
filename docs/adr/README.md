@@ -55,3 +55,4 @@ the same change.
 | [0038](0038-a-config-file-chooses-the-platforms.md) | A config file chooses the platforms a run captures | accepted, amended by [0039](0039-a-typed-typescript-config-file.md) |
 | [0039](0039-a-typed-typescript-config-file.md) | A typed TypeScript config file | accepted |
 | [0040](0040-the-build-check-is-a-commit-status.md) | The build's check is a commit status | accepted |
+| [0041](0041-the-image-store-is-chosen-by-config.md) | The image store is chosen by config | accepted |
