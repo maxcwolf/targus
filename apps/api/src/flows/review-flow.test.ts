@@ -116,12 +116,12 @@ async function review(flow: Flow, story: string, decision: 'approve' | 'deny') {
   return ReviewSnapshotResponse.parse(await response.json());
 }
 
-/** The body of the last PATCH of check run 901. */
+/** The body of the last commit status GitHub was sent. */
 function lastCheckRunUpdate(flow: Flow): unknown {
-  const patches = flow.stub.requests.filter(
-    (request) => request.method === 'PATCH' && request.path.endsWith('/check-runs/901'),
+  const statuses = flow.stub.requests.filter(
+    (request) => request.method === 'POST' && request.path.includes('/statuses/'),
   );
-  return patches.at(-1)?.body;
+  return statuses.at(-1)?.body;
 }
 
 async function approveAll(flow: Flow) {
@@ -141,9 +141,9 @@ async function denialFailsTheCheck(flow: Flow): Promise<void> {
     deniedCount: 1,
   });
   expect(lastCheckRunUpdate(flow)).toMatchObject({
-    status: 'completed',
-    conclusion: 'failure',
-    output: { summary: '1 change denied' },
+    context: 'targus/ios',
+    state: 'failure',
+    description: '1 change denied',
   });
 
   const all = await approveAll(flow);
@@ -156,9 +156,9 @@ async function approvalAcceptsTheBuild(flow: Flow): Promise<void> {
   expect(accepted.summary).toMatchObject({ status: 'accepted', conclusion: 'success' });
   expect(accepted.counts).toMatchObject({ new: 3 });
   expect(lastCheckRunUpdate(flow)).toMatchObject({
-    status: 'completed',
-    conclusion: 'success',
-    output: { summary: 'All visual changes approved' },
+    context: 'targus/ios',
+    state: 'success',
+    description: 'All visual changes approved',
   });
   const read = await call(
     `/api/builds/${flow.buildId}`,

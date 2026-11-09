@@ -257,8 +257,7 @@ export async function submitResults(
 
   const outcome = await createCheckRun(deps, project, build, summary);
   // A review may have committed while the check run was being created (ADR 0026).
-  if ('id' in outcome)
-    await followNewerReviews(deps, project, build, outcome.id, { version: 0, summary });
+  if ('id' in outcome) await followNewerReviews(deps, project, build, { version: 0, summary });
   return {
     build: { id: build.id, number: build.number },
     summary,

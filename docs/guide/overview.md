@@ -43,9 +43,9 @@ sequenceDiagram
     API-->>CI: the baseline's hashes, images it still needs
     CI->>CI: diff against the baselines
     CI->>API: upload images and diffs, submit results
-    API->>GH: check run "targus/ios": 3 changes awaiting review
+    API->>GH: check "targus/ios": 3 changes awaiting review
     You->>API: approve or deny each change in the review UI
-    API->>GH: check run passes (or fails on a denial)
+    API->>GH: check passes (or fails on a denial)
 ```
 
 1. **Capture.** `targus run` boots a simulator, installs your app built with Storybook on, and
@@ -54,7 +54,7 @@ sequenceDiagram
 2. **Compare.** It asks the targus service for the baseline (the accepted screenshots on the
    commit your branch started from), downloads only the ones whose hash differs, and diffs them
    on the CI machine. Only images the service does not already have are uploaded.
-3. **Review.** The service records each story's result and creates the `targus/ios` check run.
+3. **Review.** The service records each story's result and creates the `targus/ios` check.
    Reviewers open the build from the check, compare old and new side by side, and approve or deny
    each change. Every decision updates the check.
 4. **Accept.** When the PR merges, the build on `main` picks up the approvals automatically and
@@ -74,7 +74,7 @@ sequenceDiagram
 | `unstable`    | the story never held still between two screenshots: shown, never blocks the check, never becomes the baseline |
 | `error`       | the story threw while rendering: fails the build until a later build renders it                            |
 | `skipped`     | the story asked to be left out with [`parameters.targus.skip`](../reference/story-parameters.md); never sent to the service |
-| **check run** | `targus/ios` on the commit: pending while changes await review, green when all are approved, red on a denial or an error |
+| **check**     | `targus/ios` on the commit, a commit status that links to the build: pending while changes await review, green when all are approved, red on a denial or an error |
 
 ## Next
 

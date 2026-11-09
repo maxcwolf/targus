@@ -21,18 +21,15 @@ function splitRepo(repo: string): { owner: string; repo: string } {
   return { owner, repo: name };
 }
 
-/** The check-run fields that change with the build state. */
+/** GitHub rejects a status description longer than this. */
+const descriptionLimit = 140;
+
+/** The commit-status fields that change with the build state. */
 function stateFields(state: CheckRunState) {
-  const title =
-    state.status === 'in_progress'
-      ? 'Visual changes awaiting review'
-      : state.conclusion === 'success'
-        ? 'No unreviewed visual changes'
-        : 'Visual review failed';
-  const output = { title, summary: state.summary };
-  return state.status === 'in_progress'
-    ? { status: state.status, output }
-    : { status: state.status, conclusion: state.conclusion, output };
+  return {
+    state: state.status === 'in_progress' ? ('pending' as const) : state.conclusion,
+    description: state.summary.slice(0, descriptionLimit),
+  };
 }
 
 function hasStatus(error: unknown, status: number): boolean {
@@ -102,6 +99,11 @@ export class OctokitGitHubClient implements GitHubClient {
     }
   }
 
+  /**
+   * The build's check is a commit status, not a check run: on a pull request GitHub links a
+   * status straight to its `target_url`, the review UI, where a check run opens GitHub's own
+   * page first (ADR 0040). The newest status of a context is the one GitHub shows.
+   */
   async createCheckRun(
     target: CheckRunTarget,
     name: string,
@@ -109,31 +111,25 @@ export class OctokitGitHubClient implements GitHubClient {
     detailsUrl: string,
   ): Promise<{ id: number }> {
     const response = await this.withToken(target.installationId, (headers) =>
-      this.request('POST /repos/{owner}/{repo}/check-runs', {
+      this.request('POST /repos/{owner}/{repo}/statuses/{sha}', {
         ...splitRepo(target.repo),
+        sha: target.headSha,
         headers,
-        name,
-        head_sha: target.headSha,
-        details_url: detailsUrl,
+        context: name,
+        target_url: detailsUrl,
         ...stateFields(state),
       }),
     );
-    return { id: Number(response.data.id) };
+    return { id: response.data.id };
   }
 
   async updateCheckRun(
     target: CheckRunTarget,
-    checkRunId: number,
+    name: string,
     state: CheckRunState,
+    detailsUrl: string,
   ): Promise<void> {
-    await this.withToken(target.installationId, (headers) =>
-      this.request('PATCH /repos/{owner}/{repo}/check-runs/{check_run_id}', {
-        ...splitRepo(target.repo),
-        check_run_id: checkRunId,
-        headers,
-        ...stateFields(state),
-      }),
-    );
+    await this.createCheckRun(target, name, state, detailsUrl);
   }
 
   /**
@@ -175,7 +171,7 @@ export class OctokitGitHubClient implements GitHubClient {
 
 /**
  * `GitHubClient` used when the GitHub App is not configured. `createCheckRun` answers id 0,
- * which the results use-case treats as "no check run".
+ * which the results use-case treats as "no check".
  */
 export class NoopGitHubClient implements GitHubClient {
   createCheckRun(): Promise<{ id: number }> {

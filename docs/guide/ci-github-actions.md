@@ -172,7 +172,7 @@ the CLI with the app's own script runner, for example `yarn workspace <app packa
    baseline, and every story in it is `new`.
 2. Open a pull request that changes a component. The job's log ends with a count per state and a
    review URL, and the PR shows the `targus/ios` check: "3 changes awaiting review".
-3. Follow the check's **Details** link, sign in with GitHub and [review the changes](review.md).
+3. Click the check on the PR, sign in with GitHub and [review the changes](review.md).
    The check turns green when every change is approved.
 
 ## 4. Make the check required

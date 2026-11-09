@@ -10,9 +10,8 @@ const stubUrl = `http://127.0.0.1:${e2eConfig.githubStubPort}`;
 
 const CheckRuns = z.array(
   z.object({
-    method: z.enum(['POST', 'PATCH']),
     repo: z.string(),
-    checkRunId: z.number().nullable(),
+    sha: z.string(),
     body: z.record(z.string(), z.unknown()),
   }),
 );
@@ -26,7 +25,7 @@ export async function signInNextAs(
   if (!response.ok()) throw new Error(`stub answered ${response.status()}`);
 }
 
-/** Every check-run request the stub received for `repo`, oldest first. */
+/** Every commit status the stub received for `repo`, oldest first. */
 export async function checkRunsFor(
   request: APIRequestContext,
   repo: string,

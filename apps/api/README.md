@@ -208,13 +208,14 @@ once.
 
 ### GitHub App setup
 
-One GitHub App provides login, org membership and check runs (ADR 0007). The production one is
+One GitHub App provides login, org membership and the build's check, a commit status
+(ADR 0007, ADR 0040). The production one is
 `targus-review` (App ID 5630481, owned by @maxcwolf, installable on any account; registered
 2026-11-05 with every secret below set on the Worker). To register another:
 
 - **Callback URL**: `${PUBLIC_URL}/api/auth/github/callback`, for example
   `http://localhost:8787/api/auth/github/callback` locally.
-- **Permissions**: Repository: Checks (read and write), Metadata (read). Organization: Members
+- **Permissions**: Repository: Commit statuses (read and write), Metadata (read). Organization: Members
   (read), for the membership check.
 - "Request user authorization (OAuth) during installation" can stay off; users sign in from
   the review UI.

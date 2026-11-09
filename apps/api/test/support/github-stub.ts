@@ -65,8 +65,7 @@ function replyTo(path: string, { members, accounts }: StubWorld): Response {
   }
   const installation = installationReply(path, accounts);
   if (installation !== null) return installation;
-  if (path.endsWith('/check-runs')) return json({ id: 901 }, 201);
-  if (path.includes('/check-runs/')) return json({ id: 901 }, 200);
+  if (path.includes('/statuses/')) return json({ id: 901 }, 201);
   const [, org, login] = /\/orgs\/([^/]+)\/members\/([^/]+)$/.exec(path) ?? [];
   if (org !== undefined && login !== undefined) {
     return isMemberOf(members, decodeURIComponent(org), decodeURIComponent(login))

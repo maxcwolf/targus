@@ -1,11 +1,14 @@
-/** The commit and repository a check run belongs to. */
+/** The commit and repository a check belongs to. */
 export interface CheckRunTarget {
   readonly installationId: number;
   readonly repo: string;
   readonly headSha: string;
 }
 
-/** The mutable part of a check run (plan.md section 5.2). */
+/**
+ * The state of a build's check (plan.md section 5.2). The check is a commit status (ADR 0040):
+ * `in_progress` is reported as `pending`, and `summary` is its description.
+ */
 export type CheckRunState =
   | { readonly status: 'in_progress'; readonly summary: string }
   | {
@@ -19,15 +22,27 @@ export type CheckRunState =
  * installation token per request from the App's private key.
  */
 export interface GitHubClient {
-  /** Create the check run named `name` (`checkRunName`) and return its id. */
+  /**
+   * Report the commit status named `name` (`checkRunName`) on the commit for the first time, and
+   * return the id GitHub gave it. `detailsUrl` is where GitHub sends whoever clicks the check
+   * on a pull request (ADR 0040).
+   */
   createCheckRun(
     target: CheckRunTarget,
     name: string,
     state: CheckRunState,
     detailsUrl: string,
   ): Promise<{ id: number }>;
-  /** Move an existing check run to a new state. */
-  updateCheckRun(target: CheckRunTarget, checkRunId: number, state: CheckRunState): Promise<void>;
+  /**
+   * Move the commit status named `name` to a new state. A status is replaced, not edited, so
+   * the name and the link are sent again.
+   */
+  updateCheckRun(
+    target: CheckRunTarget,
+    name: string,
+    state: CheckRunState,
+    detailsUrl: string,
+  ): Promise<void>;
   /** Whether `login` is a member of `org`; used to authorize review sessions. */
   isOrgMember(installationId: number, org: string, login: string): Promise<boolean>;
   /**

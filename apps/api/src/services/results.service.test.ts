@@ -248,7 +248,7 @@ describe('submitResults image ownership', () => {
 });
 
 describe('submitResults check runs', () => {
-  it('creates the targus/ios check run through Octokit when the org has an installation', async () => {
+  it('reports the targus/ios commit status through Octokit when the org has an installation', async () => {
     const stub = createGitHubStub();
     const github = new OctokitGitHubClient(
       { appId: '123', privateKey: await generatePrivateKeyPem() },
@@ -267,14 +267,13 @@ describe('submitResults check runs', () => {
     expect((await getBuild(deps, asProject(project), buildId)).build.checkRunId).toBe(901);
     expect(stub.requests.map((request) => request.path)).toEqual([
       '/app/installations/42/access_tokens',
-      '/repos/org-res/app/check-runs',
+      `/repos/org-res/app/statuses/${sha('c')}`,
     ]);
     expect(stub.requests[1]?.body).toEqual({
-      name: 'targus/ios',
-      head_sha: sha('c'),
-      details_url: `https://targus.test/builds/${buildId}`,
-      status: 'in_progress',
-      output: { title: 'Visual changes awaiting review', summary: '1 change awaiting review' },
+      context: 'targus/ios',
+      target_url: `https://targus.test/builds/${buildId}`,
+      state: 'pending',
+      description: '1 change awaiting review',
     });
   });
 });
