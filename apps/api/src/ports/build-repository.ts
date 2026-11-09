@@ -106,6 +106,15 @@ export interface ApiBuildRepository extends BuildRepository {
     platform: Platform,
     branch: string,
   ): Promise<BuildRecord | null>;
+  /**
+   * The newest build of a project's `platform` on the commit `sha` that has its results (any
+   * status but `in_progress`), or null. It is the build the commit's check shows (ADR 0046).
+   */
+  findNewestCompletedForSha(
+    projectId: string,
+    platform: Platform,
+    sha: string,
+  ): Promise<BuildRecord | null>;
   /** Every platform with a signed-off build of the project on `branch`, in no set order. */
   listBaselinePlatformsOnBranch(projectId: string, branch: string): Promise<Platform[]>;
   /**
