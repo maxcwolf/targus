@@ -7,7 +7,7 @@ import {
   type ProjectSummary,
 } from '@targus/core';
 
-import type { Project } from '../repositories/project.repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 
 import {
   canAccessProject,

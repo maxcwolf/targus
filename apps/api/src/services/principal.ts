@@ -1,6 +1,6 @@
 import type { ReviewerUser } from '@targus/core';
 
-import type { Project } from '../repositories/project.repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 
 /** A signed-in user of the review UI. */
 export interface Reviewer {

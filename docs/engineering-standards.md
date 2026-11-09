@@ -58,7 +58,8 @@ depends on no other workspace and on no I/O library; nothing depends on an app.
   (`apps/api/src/adapters/`). **Review only:** that an adapter is thin and holds no business rule.
 - `api` layering: `routes/` (HTTP only: parse, call a service, map the result) →
   `services/` (use-cases, the only place rules live outside `core`) → `repositories/` and
-  `storage/` (D1 and R2 adapters).
+  `storage/` (D1 and R2 adapters). A service names a repository only by its interface in
+  `apps/api/src/ports/`; the D1 files import those interfaces and implement them.
 - `api` composition (ADR 0023): `createApp(deps)` builds the Hono app from plain dependencies
   (`AppDeps`: repositories, image store, GitHub, clock, ids, validated config); per request it
   makes only the request log and binds the services to it. `composition.ts` adds the

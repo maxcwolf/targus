@@ -1,7 +1,7 @@
 import type { GitHubClient, SubmitResultsRequest } from '@targus/core';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ApiBuildRepository } from '../repositories/build.repository.ts';
+import type { ApiBuildRepository } from '../ports/build-repository.ts';
 import { createBuildRequest, newProject, sha, storyResult } from '../../test/support/fixtures.ts';
 import { markUploaded } from '../../test/support/in-memory-images.ts';
 import {

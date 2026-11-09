@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ImageRecord, ImageRepository } from '../../../src/repositories/image.repository.ts';
-import type { MembershipRepository } from '../../../src/repositories/membership.repository.ts';
-import type { ProjectRepository } from '../../../src/repositories/project.repository.ts';
-import type { UserRepository } from '../../../src/repositories/user.repository.ts';
+import type { ImageRecord, ImageRepository } from '../../../src/ports/image-repository.ts';
+import type { MembershipRepository } from '../../../src/ports/membership-repository.ts';
+import type { ProjectRepository } from '../../../src/ports/project-repository.ts';
+import type { UserRepository } from '../../../src/ports/user-repository.ts';
 import { isForeignKeyViolation } from '../d1-semantics.ts';
 import { newProject } from '../fixtures.ts';
 

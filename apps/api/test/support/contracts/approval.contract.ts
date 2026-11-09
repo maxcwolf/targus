@@ -1,7 +1,7 @@
 import type { Approval } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import type { ApprovalRepository } from '../../../src/repositories/approval.repository.ts';
+import type { ApprovalRepository } from '../../../src/ports/approval-repository.ts';
 import { isForeignKeyViolation } from '../d1-semantics.ts';
 import { imageHash } from '../fixtures.ts';
 

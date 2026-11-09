@@ -4,13 +4,9 @@ import type {
   ApiBuildRepository,
   BuildRecord,
   SnapshotRecord,
-} from '../../src/repositories/build.repository.ts';
-import {
-  checkBuildPageLimit,
-  decodeBuildCursor,
-  toBuildPage,
-} from '../../src/repositories/build-page.ts';
-import type { ProjectRepository } from '../../src/repositories/project.repository.ts';
+} from '../../src/ports/build-repository.ts';
+import { checkBuildPageLimit, decodeBuildCursor, toBuildPage } from '../../src/ports/build-page.ts';
+import type { ProjectRepository } from '../../src/ports/project-repository.ts';
 import { compareText, foreignKeyViolation, uniqueViolation } from './d1-semantics.ts';
 import { createInMemoryApprovals, type InMemoryApprovals } from './in-memory-approvals.ts';
 

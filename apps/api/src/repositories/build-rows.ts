@@ -1,23 +1,12 @@
-import type { Build, Snapshot, SnapshotTally } from '@targus/core';
+import type { SnapshotTally } from '@targus/core';
 import { getTableColumns, sql, type Query, type SQL } from 'drizzle-orm';
 import { SQLiteAsyncDialect } from 'drizzle-orm/sqlite-core';
 
 import { builds, snapshots } from '../db/schema.ts';
+import type { BuildRecord, SnapshotRecord } from '../ports/build-repository.ts';
 import { chunkForD1 } from './d1-limits.ts';
 
 // Row mappings of `builds` and `snapshots`, and the guarded statements their writes share.
-
-/** A stored snapshot: the wire `Snapshot` plus the capture-hygiene fields only D1 keeps. */
-export interface SnapshotRecord extends Snapshot {
-  readonly blank: boolean;
-  /** The render error of an `error` snapshot, else null. */
-  readonly error: string | null;
-}
-
-/** A stored build: the wire `Build` plus its persisted snapshot tally. */
-export interface BuildRecord extends Build {
-  readonly tally: SnapshotTally;
-}
 
 type SnapshotRow = typeof snapshots.$inferSelect;
 type BuildRow = typeof builds.$inferSelect;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ApiBuildRepository, BuildPage } from '../../../src/repositories/build.repository.ts';
+import type { ApiBuildRepository, BuildPage } from '../../../src/ports/build-repository.ts';
 import { newBuild } from '../fixtures.ts';
 import type { BuildHarness } from './build-harness.ts';
 

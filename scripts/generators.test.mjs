@@ -160,7 +160,10 @@ describe('yarn new:adapter', () => {
 
     assert.equal(result.status, 0, result.stderr);
     const source = read('apps/api/src/repositories/d1-build.repository.ts');
-    assert.match(source, /import type \{ ApiBuildRepository \} from '\.\/build\.repository\.ts'/);
+    assert.match(
+      source,
+      /import type \{ ApiBuildRepository \} from '\.\.\/ports\/build-repository\.ts'/,
+    );
     assert.match(source, /export class D1BuildRepository implements ApiBuildRepository/);
     assert.match(source, /\n {2}commitReview\(\) \{/);
   });

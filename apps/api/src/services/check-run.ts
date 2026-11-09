@@ -10,7 +10,7 @@ import {
 } from '@targus/core';
 
 import { failureReason } from '../logging/request-log.ts';
-import type { Project } from '../repositories/project.repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 import type { ServiceDeps } from './deps.ts';
 
 function count(n: number, singular: string, plural: string): string {

@@ -2,18 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 
 import { orgMemberships } from '../db/schema.ts';
-
-/** A cached answer to "is this user a member of this org", and when GitHub gave it. */
-export interface CachedMembership {
-  readonly member: boolean;
-  readonly checkedAt: Date;
-}
-
-export interface MembershipRepository {
-  get(userId: string, orgId: string): Promise<CachedMembership | null>;
-  /** Insert or replace the cached answer. */
-  set(userId: string, orgId: string, member: boolean, checkedAt: Date): Promise<void>;
-}
+import type { MembershipRepository } from '../ports/membership-repository.ts';
 
 /** D1 adapter for `org_memberships`, the one-hour membership cache (plan.md section 5.2). */
 export function createMembershipRepository(database: D1Database): MembershipRepository {

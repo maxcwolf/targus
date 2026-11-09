@@ -5,7 +5,7 @@ import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
 import { signInReviewer } from '../../test/support/in-memory-auth.ts';
 import { createTestDeps, type TestDeps } from '../../test/support/in-memory.ts';
 import { pngFixture } from '../../test/support/png.ts';
-import type { Project } from '../repositories/project.repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 import { getImage, uploadImage } from './image.service.ts';
 import type { Principal, Reviewer } from './principal.ts';
 

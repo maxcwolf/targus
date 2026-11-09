@@ -30,7 +30,9 @@ app imports `@targus/core/browser` (`src/browser.ts`), which leaves out the Node
   mounts it in `apps/api/src/app.ts`).
   Routes parse, call one service, and map the result. They never import a repository.
 - A use-case: `apps/api/src/services/`. The only place rules live outside core.
-- D1 or R2 access: `apps/api/src/repositories/` or `apps/api/src/storage/`.
+- D1 or R2 access: `apps/api/src/repositories/` or `apps/api/src/storage/`. The interface a
+  repository implements, and its record types, live in `apps/api/src/ports/`; services and the
+  test doubles import those, never a file under `repositories/`.
 - An implementation of a port: `yarn new:adapter <port> <name>` puts it in the right layer.
 - Anything the web app fetches: `apps/web/src/api-client/`, validated with the core schema.
   UI belongs to `apps/web/src/features/<name>/`. No `fetch` anywhere else. Another feature or

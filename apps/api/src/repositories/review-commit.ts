@@ -1,39 +1,14 @@
-import type { Approval, BuildStatus, ReviewState, SnapshotTally } from '@targus/core';
 import { and, eq, getTableColumns, inArray, sql, type Query, type SQL } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import { SQLiteAsyncDialect } from 'drizzle-orm/sqlite-core';
 
 import { approvals, builds, snapshots } from '../db/schema.ts';
+import type { ApprovalChanges, ReviewCommit } from '../ports/build-repository.ts';
 import { approvalPairIs } from './approval.repository.ts';
 import { tallyColumns } from './build-rows.ts';
 import { chunkForD1 } from './d1-limits.ts';
 
 // The statements of `commitReview`'s one D1 batch (ADR 0013, ADR 0026).
-
-/** The story and hash pair an approval is of: its identity. */
-export type ApprovalIdentity = Pick<
-  Approval,
-  'projectId' | 'storyId' | 'variant' | 'fromHash' | 'toHash'
->;
-
-/** What a decision changes in `approvals`, in the same transaction as the decision itself. */
-export interface ApprovalChanges {
-  /** Approvals to record; a pair already approved keeps its approval. */
-  readonly record: readonly { readonly id: string; readonly approval: Approval }[];
-  /** Pairs whose approval is withdrawn. */
-  readonly withdraw: readonly ApprovalIdentity[];
-}
-
-/** A reviewer's decision on some snapshots of a build, and the status it folds the build to. */
-export interface ReviewCommit {
-  readonly snapshotIds: readonly string[];
-  readonly review: ReviewState;
-  readonly reviewedBy: string;
-  readonly reviewedAt: Date;
-  readonly status: BuildStatus;
-  readonly tally: SnapshotTally;
-  readonly approvals: ApprovalChanges;
-}
 
 type ApprovalRow = typeof approvals.$inferSelect;
 

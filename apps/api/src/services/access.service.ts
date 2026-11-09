@@ -1,9 +1,9 @@
 import { TargusError } from '@targus/core';
 
 import { failureReason } from '../logging/request-log.ts';
-import type { BuildRecord } from '../repositories/build.repository.ts';
-import type { CachedMembership } from '../repositories/membership.repository.ts';
-import type { Project } from '../repositories/project.repository.ts';
+import type { BuildRecord } from '../ports/build-repository.ts';
+import type { CachedMembership } from '../ports/membership-repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 import type { ServiceDeps } from './deps.ts';
 import type { Principal, Reviewer } from './principal.ts';
 

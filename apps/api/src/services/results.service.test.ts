@@ -8,7 +8,7 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 
 import { OctokitGitHubClient } from '../adapters/github-client.adapter.ts';
-import type { Project } from '../repositories/project.repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 import {
   createBuildRequest,
   imageHash,

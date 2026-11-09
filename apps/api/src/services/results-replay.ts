@@ -8,7 +8,7 @@ import {
 } from '@targus/core';
 
 import { sha256Hex } from '../lib/sha256.ts';
-import type { Project } from '../repositories/project.repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 import {
   createCheckRun,
   followNewerReviews,
