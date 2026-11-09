@@ -22,6 +22,22 @@ const alreadyShutDown = 'Unable to shutdown device in current state: Shutdown';
  * availability changes, which follows the host Mac and can happen at any point in a run.
  * `followupd` turns that post into a notification and reminds about it every day.
  */
+/** The content size category `simctl ui content_size` takes for each size (ADR 0042). */
+export const contentSizeCategories: Readonly<Record<ContentSize, string>> = {
+  xs: 'extra-small',
+  s: 'small',
+  m: 'medium',
+  l: 'large',
+  xl: 'extra-large',
+  xxl: 'extra-extra-large',
+  xxxl: 'extra-extra-extra-large',
+  ax1: 'accessibility-medium',
+  ax2: 'accessibility-large',
+  ax3: 'accessibility-extra-large',
+  ax4: 'accessibility-extra-extra-large',
+  ax5: 'accessibility-extra-extra-extra-large',
+};
+
 export const noticeServices = ['com.apple.generativeexperiencesd', 'com.apple.followupd'] as const;
 
 /**
@@ -200,7 +216,7 @@ export class SimctlDriver implements DeviceDriver {
    * appearance it persists across reboots, so a run pins it and never trusts the last one.
    */
   async setContentSize(contentSize: ContentSize): Promise<void> {
-    await this.simctl(['ui', this.udid, 'content_size', contentSize]);
+    await this.simctl(['ui', this.udid, 'content_size', contentSizeCategories[contentSize]]);
   }
 
   async setStatusBar({ time, batteryLevel, cellularBars }: StatusBarOverrides): Promise<void> {

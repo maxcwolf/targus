@@ -11,7 +11,7 @@ describe('createFakeDeviceDriver', () => {
     await driver.boot();
     await driver.silenceSystemNotices();
     await driver.setAppearance('dark');
-    await driver.setContentSize('extra-large');
+    await driver.setContentSize('xl');
     await driver.install('/apps/ExampleApp.app');
     await driver.launch('co.example', { A: '1' });
     await driver.setStatusBar(overrides);
@@ -21,7 +21,7 @@ describe('createFakeDeviceDriver', () => {
       { method: 'boot' },
       { method: 'silenceSystemNotices' },
       { method: 'setAppearance', appearance: 'dark' },
-      { method: 'setContentSize', contentSize: 'extra-large' },
+      { method: 'setContentSize', contentSize: 'xl' },
       { method: 'install', appPath: '/apps/ExampleApp.app' },
       { method: 'launch', bundleId: 'co.example', env: { A: '1' } },
       { method: 'setStatusBar', overrides },

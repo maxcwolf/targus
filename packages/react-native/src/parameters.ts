@@ -15,44 +15,33 @@ export interface TargusParameters {
   readonly skip?: boolean | undefined;
   /**
    * Named modes, each captured as its own variant, as Chromatic writes them: globals to set,
-   * an optional `viewport`, and `disable`. A web capture takes every mode. A device capture
-   * takes the modes that set `contentSize`, beside its default capture.
+   * an optional `viewport`, and `disable`. Web captures only for now; native ignores them.
    */
   readonly modes?: Record<string, TargusMode> | undefined;
+  /**
+   * System text sizes to capture the story at on a device, beside its default capture: each is
+   * its own snapshot, named after the size (`<story id>@ax5`). A web capture ignores it.
+   */
+  readonly contentSizes?: TargusContentSize[] | undefined;
 }
 
 /** A mode viewport: a width in CSS pixels (`390` or `'390px'`) or `{ width, height }`. */
 export type TargusModeViewport = string | number | { width: number; height: number };
 
-/**
- * A device's system text size, as Settings > Accessibility > Larger Text sets it: the preferred
- * content size category. `large` is the default.
- */
-export type TargusContentSize =
-  | 'extra-small'
-  | 'small'
-  | 'medium'
-  | 'large'
-  | 'extra-large'
-  | 'extra-extra-large'
-  | 'extra-extra-extra-large'
-  | 'accessibility-medium'
-  | 'accessibility-large'
-  | 'accessibility-extra-large'
-  | 'accessibility-extra-extra-large'
-  | 'accessibility-extra-extra-extra-large';
-
-/**
- * One mode: the globals it sets (`theme: 'dark'`), plus `viewport`, `disable` and, for a device
- * capture, `contentSize`.
- */
+/** One mode: the globals it sets (`theme: 'dark'`), plus `viewport` and `disable`. */
 export type TargusMode = Flatten<
   Record<string, string | number | boolean> & {
     disable?: boolean | undefined;
     viewport?: TargusModeViewport | undefined;
-    contentSize?: TargusContentSize | undefined;
   }
 >;
+
+/**
+ * A device's system text size, as Settings > Accessibility > Larger Text sets it: the seven
+ * standard sizes, then the five accessibility sizes. `l` is the default.
+ */
+export type TargusContentSize =
+  'xs' | 's' | 'm' | 'l' | 'xl' | 'xxl' | 'xxxl' | 'ax1' | 'ax2' | 'ax3' | 'ax4' | 'ax5';
 
 /** One object type from an intersection, as zod infers a schema with a catchall. */
 type Flatten<T> = { [K in keyof T]: T[K] } & {};

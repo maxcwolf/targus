@@ -1,4 +1,4 @@
-# 0042. A device captures a story's content size modes
+# 0042. A device captures a story at the content sizes it lists
 
 ## Status
 
@@ -30,49 +30,55 @@ showed:
 
 ## Decision
 
-We will capture a story on a device once per mode that sets `contentSize`, beside its default
-capture.
+We will capture a story on a device once per size in its `parameters.targus.contentSizes`,
+beside its default capture.
 
-- A mode gains one reserved key, `contentSize`, whose value is one of the twelve categories
-  `simctl` takes. It is not a global.
-- The `DeviceDriver` port gains `setContentSize`. A run pins the default, `large`, after boot,
-  as it pins light mode (ADR 0035).
-- On a device a story is always captured as `default` first. Then, for each mode with a
-  `contentSize`, the CLI sets the size, waits the settle time, and takes the two screenshots of
-  the stability check. The story is not selected again. Afterwards the size goes back to the
-  default and the app is given the settle time to follow.
-- Each such capture is the variant named after the mode, `<story id>@<mode>`, as on the web.
-- A device does not apply a mode's globals or viewport, so a mode without a `contentSize` adds
-  no device capture. A mode named `default` is left out: that is the default capture's name.
-- On the web a mode that sets only a `contentSize` has nothing to apply and is left out; a story
-  with no other mode keeps its default capture. A mode with globals and a `contentSize` is
-  captured on both.
+- `contentSizes` is a list of short size names: `xs`, `s`, `m`, `l`, `xl`, `xxl`, `xxxl` for the
+  seven standard categories, then `ax1` to `ax5` for the five accessibility ones. The names are
+  targus's own; the simulator driver maps each to the category `simctl` takes, and an Android
+  driver will map them to a font scale.
+- The `DeviceDriver` port gains `setContentSize`. A run pins the default, `l`, after boot, as
+  it pins light mode (ADR 0035).
+- A story is always captured as `default` first. Then, for each size listed, the CLI sets the
+  size, waits the settle time, and takes the two screenshots of the stability check. The story
+  is not selected again. Afterwards the size goes back to the default and the app is given the
+  settle time to follow.
+- Each such capture is the variant named after its size, `<story id>@ax5`. The default size
+  in the list adds nothing, and a size listed twice is captured once.
+- A web capture ignores `contentSizes`. Modes stay what they were: globals and a viewport, on
+  the web only.
 
 ## Consequences
 
 ### Positive
 
 - The capture shows what a user with larger text sees, through the app's own scaling rules.
-- Adding a mode adds a snapshot and renames nothing: the `default` baseline of every existing
+- Listing a size adds a snapshot and renames nothing: the `default` baseline of every existing
   story stays.
 - No relaunch and no second pass: a sized capture cost about 1.6 s on the proof of concept.
-- One mode can serve both platforms: globals for the web, `contentSize` for the device.
+- A story says what it wants in one short line, and the snapshot's name says what it is.
 
 ### Negative
 
-- Device and web read modes differently: the web replaces the default capture with the modes, a
-  device adds to it. The reference page has to say so.
+- A project that checks a font scale on both platforms says so twice: a mode with its global
+  for the web, `contentSizes` for the device.
+- The size names are not Apple's, so the reference page carries the table.
 - The size is changed while the app runs. A story after a failed reset would be captured at the
   wrong size, so a reset that fails ends the run.
-- Only the content size is a device mode. Dark mode per story and a second device size are not
-  part of this.
+- Dark mode per story and a second device size are not part of this.
 - `parameters.chromatic.modes` is not read on a device, so a project's web font-scale modes do
-  not become device modes by themselves; a story names the content size it wants.
+  not become device captures by themselves.
 - Proven on one simulator and one React Native version. An app that reads the font scale once
   at launch would not follow a live change.
 
 ## Alternatives considered
 
+- **A `contentSize` key on a mode.** Built first: a named mode, as Chromatic writes them, with
+  the category as its value. It made a story name a mode only to set one value, with a quoted
+  key and a 37-character category, and it made the web and a device read the same modes
+  differently. Dropped on review the same day.
+- **Apple's category names as the values.** Exact, and too long to read in a list or in a
+  snapshot's name.
 - **A pass per content size, relaunching the app between passes.** Needed only if a running app
   did not follow the setting. The spike showed it does, and a pass would launch the app once
   per size and visit every story again.

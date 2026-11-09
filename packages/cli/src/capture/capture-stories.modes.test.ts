@@ -69,39 +69,7 @@ describe('captureStories with modes', () => {
     expect(report.stories.map((story) => story.variant)).toEqual(['default', 'default']);
     expect(channel.selectedModes).toEqual([null, null]);
   });
-});
 
-describe('captureStories with device-only modes', () => {
-  it("leaves out a mode that only sets a content size, which is a device's", async () => {
-    const { channel, input } = setup(true);
-    const sized: CaptureMode = {
-      name: 'large text',
-      globals: {},
-      viewport: null,
-      contentSize: 'extra-large',
-    };
-    channel.setOutcome('button--primary', {
-      kind: 'rendered',
-      parameters: { delay: null, skip: false, modes: [sized, dark] },
-    });
-    channel.setOutcome('card--plain', {
-      kind: 'rendered',
-      parameters: { delay: null, skip: false, modes: [sized] },
-    });
-
-    const report = await captureStories({
-      ...input,
-      driver: { screenshot: () => input.driver.screenshot() },
-    });
-
-    expect(report.stories.map((story) => [story.id, story.variant])).toEqual([
-      ['button--primary', 'dark mode'],
-      ['card--plain', 'default'],
-    ]);
-  });
-});
-
-describe('captureStories with disabled modes', () => {
   it('skips a story whose modes are all disabled', async () => {
     const { channel, input } = setup(true);
     channel.setOutcome('button--primary', {

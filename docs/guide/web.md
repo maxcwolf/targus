@@ -65,8 +65,7 @@ A story that renders differently each time (a clock, a random id, an endless ani
 
 A story can be captured in several sets of globals, a dark theme or a narrow viewport for
 instance, each as its own snapshot with its own baseline. See
-[Modes](../reference/story-parameters.md#modes). A device capture takes only the modes that set a
-system text size; see [On a device](../reference/story-parameters.md#on-a-device-the-system-text-size).
+[Modes](../reference/story-parameters.md#modes). Native captures ignore modes for now.
 
 ## Run it in GitHub Actions
 

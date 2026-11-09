@@ -1,3 +1,4 @@
+import { defaultContentSize } from './content-size.ts';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -64,5 +65,23 @@ describe('StoryParametersPayload', () => {
 
   it('accepts a payload without a targus key, as the decorator sends for a story with none', () => {
     expect(StoryParametersPayload.parse({ storyId: 's' })).toEqual({ storyId: 's' });
+  });
+});
+
+describe('parseStoryParameters with contentSizes', () => {
+  it('keeps each size once, in order, without the default size', () => {
+    const parsed = parseStoryParameters({ contentSizes: ['ax5', 'l', 'xs', 'ax5'] });
+
+    expect(parsed).toEqual({
+      ok: true,
+      parameters: { delay: null, skip: false, contentSizes: ['ax5', 'xs'] },
+    });
+    expect(defaultContentSize).toBe('l');
+  });
+
+  it('refuses a size it does not know, by name', () => {
+    const parsed = parseStoryParameters({ contentSizes: ['huge'] });
+
+    expect(messageOf(parsed)).toMatch(/contentSizes\.0/);
   });
 });

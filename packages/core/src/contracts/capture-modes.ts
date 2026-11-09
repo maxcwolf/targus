@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 import type { CaptureMode, ModeViewport } from '../ports/storybook-channel.ts';
-import { ContentSize } from './content-size.ts';
 
 /** A global's value as a mode sets it; Storybook carries globals in the URL as plain values. */
 const GlobalValue = z.union([z.string(), z.number(), z.boolean()]);
@@ -18,16 +17,9 @@ const Viewport = z.union([
   z.string().regex(/^\d+px$/, 'a named viewport is not supported: give { width, height }'),
 ]);
 
-/**
- * One mode as Chromatic and `parameters.targus.modes` write it: globals, a viewport, disable,
- * and `contentSize` for a device capture. Every other key is a global.
- */
+/** One mode as Chromatic and `parameters.targus.modes` write it: globals, a viewport, disable. */
 const Mode = z
-  .object({
-    disable: z.boolean().optional(),
-    viewport: Viewport.optional(),
-    contentSize: ContentSize.optional(),
-  })
+  .object({ disable: z.boolean().optional(), viewport: Viewport.optional() })
   .catchall(GlobalValue);
 
 /** `modes`: named modes, each captured as its own variant (web-plan.md step W5). */
@@ -50,16 +42,7 @@ function modeViewport(viewport: z.infer<typeof Viewport> | undefined): ModeViewp
 
 /** The modes a story is captured in, in the order it lists them, without disabled ones. */
 export function toCaptureModes(modes: Modes): CaptureMode[] {
-  return Object.entries(modes).flatMap(([name, { disable, viewport, contentSize, ...globals }]) =>
-    disable === true
-      ? []
-      : [
-          {
-            name,
-            globals,
-            viewport: modeViewport(viewport),
-            ...(contentSize === undefined ? {} : { contentSize }),
-          },
-        ],
+  return Object.entries(modes).flatMap(([name, { disable, viewport, ...globals }]) =>
+    disable === true ? [] : [{ name, globals, viewport: modeViewport(viewport) }],
   );
 }

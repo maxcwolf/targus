@@ -38,7 +38,7 @@ export interface DeviceDriver {
   setAppearance(appearance: Appearance): Promise<void>;
   /**
    * Set the system text size, the preferred content size category (ADR 0042). Called after
-   * `boot` to pin the default, and during a capture for a mode that asks for another size: a
+   * `boot` to pin the default, and during a capture for a story that asks for another size: a
    * running app lays its text out again at once, with no relaunch.
    */
   setContentSize(contentSize: ContentSize): Promise<void>;

@@ -2,7 +2,6 @@ import {
   createFakeClock,
   createFakeDeviceDriver,
   createFakeStorybookChannel,
-  type CaptureMode,
   type ContentSize,
   type DeviceDriverCall,
   type StoryIndexEntry,
@@ -20,21 +19,7 @@ const index: StoryIndexEntry[] = [
 const frame = encodeSolidPng(4, 8, [255, 255, 255, 255]);
 const hash = (bytes: Uint8Array): string => Buffer.from(bytes).toString('base64');
 
-const largest: CaptureMode = {
-  name: 'largest text',
-  globals: {},
-  viewport: null,
-  contentSize: 'accessibility-extra-extra-extra-large',
-};
-const small: CaptureMode = {
-  name: 'small text',
-  globals: {},
-  viewport: null,
-  contentSize: 'small',
-};
-const dark: CaptureMode = { name: 'dark', globals: { theme: 'dark' }, viewport: null };
-
-function setup(modes: readonly CaptureMode[]) {
+function setup(contentSizes: readonly ContentSize[]) {
   const clock = createFakeClock();
   const channel = createFakeStorybookChannel(index);
   const driver = createFakeDeviceDriver();
@@ -55,7 +40,7 @@ function setup(modes: readonly CaptureMode[]) {
   };
   channel.setOutcome('button--primary', {
     kind: 'rendered',
-    parameters: { delay: null, skip: false, modes },
+    parameters: { delay: null, skip: false, contentSizes },
   });
   return { channel, driver, input, slept };
 }
@@ -63,30 +48,26 @@ function setup(modes: readonly CaptureMode[]) {
 const sizesSet = (calls: readonly DeviceDriverCall[]): string[] =>
   calls.flatMap((call) => (call.method === 'setContentSize' ? [call.contentSize] : []));
 
-describe('captureStories on a device, with content size modes', () => {
-  it('captures the default, then each sized mode, and puts the size back', async () => {
-    const { channel, driver, input } = setup([largest, small]);
+describe('captureStories on a device, with content sizes', () => {
+  it('captures the default, then each size as its own variant, and puts the size back', async () => {
+    const { channel, driver, input } = setup(['ax5', 's']);
 
     const report = await captureStories(input);
 
     expect(report.stories.map((story) => [story.id, story.variant])).toEqual([
       ['button--primary', 'default'],
-      ['button--primary', 'largest text'],
-      ['button--primary', 'small text'],
+      ['button--primary', 'ax5'],
+      ['button--primary', 's'],
       ['card--plain', 'default'],
     ]);
     expect(report.stories.every((story) => story.png !== null && story.stable)).toBe(true);
-    expect(sizesSet(driver.calls)).toEqual([
-      'accessibility-extra-extra-extra-large',
-      'small',
-      'large',
-    ]);
-    // The story stays on screen: a sized mode is a new layout, not a new selection.
+    expect(sizesSet(driver.calls)).toEqual(['ax5', 's', 'l']);
+    // The story stays on screen: a size is a new layout, not a new selection.
     expect(channel.selected).toEqual(['button--primary', 'card--plain']);
   });
 
-  it('screenshots a sized mode only after its size is set, and settles after the reset', async () => {
-    const { driver, input, slept } = setup([largest]);
+  it('screenshots a size only after it is set, and settles after the reset', async () => {
+    const { driver, input, slept } = setup(['ax5']);
 
     await captureStories({ ...input, stories: index.slice(0, 1) });
 
@@ -103,10 +84,9 @@ describe('captureStories on a device, with content size modes', () => {
   });
 });
 
-describe('captureStories on a device, with modes it does not size', () => {
-  it('leaves out modes without a content size, and a mode named default', async () => {
-    const named: CaptureMode = { ...small, name: 'default' };
-    const { driver, input } = setup([dark, named]);
+describe('captureStories on a device, when a size is not captured', () => {
+  it('captures a story without content sizes once', async () => {
+    const { driver, input } = setup([]);
 
     const report = await captureStories(input);
 
@@ -114,28 +94,26 @@ describe('captureStories on a device, with modes it does not size', () => {
     expect(sizesSet(driver.calls)).toEqual([]);
   });
 
-  it("records a size the device refuses as that mode's error, and still resets", async () => {
-    const { driver, input } = setup([largest, small]);
+  it("records a size the device refuses as that variant's error, and still resets", async () => {
+    const { driver, input } = setup(['ax5', 's']);
     const refusing = {
       ...driver,
       setContentSize: (size: ContentSize) =>
-        size === 'small'
-          ? Promise.reject(new Error('simctl said no'))
-          : driver.setContentSize(size),
+        size === 's' ? Promise.reject(new Error('simctl said no')) : driver.setContentSize(size),
     };
 
     const report = await captureStories({ ...input, driver: refusing, stories: index.slice(0, 1) });
 
     expect(report.stories.map((story) => [story.variant, story.error])).toEqual([
       ['default', null],
-      ['largest text', null],
-      ['small text', 'simctl said no'],
+      ['ax5', null],
+      ['s', 'simctl said no'],
     ]);
     expect(driver.calls.filter((call) => call.method === 'setContentSize')).toHaveLength(2);
   });
 
-  it('does not size a story that failed to render', async () => {
-    const { channel, driver, input } = setup([largest]);
+  it('captures no size of a story that failed to render', async () => {
+    const { channel, driver, input } = setup(['ax5']);
     channel.setOutcome('button--primary', { kind: 'error', message: 'boom' });
 
     const report = await captureStories({ ...input, stories: index.slice(0, 1) });
@@ -146,8 +124,8 @@ describe('captureStories on a device, with modes it does not size', () => {
     expect(sizesSet(driver.calls)).toEqual([]);
   });
 
-  it('captures no sized mode with a driver that cannot set the size, as on the web', async () => {
-    const { driver, input } = setup([largest]);
+  it('captures no size with a driver that cannot set it, as on the web', async () => {
+    const { driver, input } = setup(['ax5']);
 
     const report = await captureStories({
       ...input,

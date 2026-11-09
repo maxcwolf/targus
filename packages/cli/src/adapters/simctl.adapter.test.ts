@@ -146,12 +146,12 @@ describe('SimctlDriver launch and status bar', () => {
 });
 
 describe('SimctlDriver setContentSize', () => {
-  it('sets the preferred content size category with simctl ui', async () => {
+  it('sets the content size category of a size with simctl ui', async () => {
     const fake = fakeExec();
     const driver = new SimctlDriver({ udid, exec: fake.exec });
 
-    await driver.setContentSize('accessibility-extra-extra-extra-large');
-    await driver.setContentSize('large');
+    await driver.setContentSize('ax5');
+    await driver.setContentSize('l');
 
     expect(fake.argv()).toEqual([
       ['xcrun', 'simctl', 'ui', udid, 'content_size', 'accessibility-extra-extra-extra-large'],

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import type { StoryCaptureParameters } from '../ports/storybook-channel.ts';
 import { Modes, toCaptureModes } from './capture-modes.ts';
+import { ContentSize, extraContentSizes } from './content-size.ts';
 
 /** The longest `parameters.targus.delay` a story may ask for (ADR 0022). */
 export const maxStoryDelayMs = 10_000;
@@ -16,11 +17,13 @@ export const storyParametersEvent = 'targus/storyParameters';
 export const StoryParameters = z.object({
   delay: z.number().min(0).max(maxStoryDelayMs).optional(),
   skip: z.boolean().optional(),
-  /**
-   * On the web each mode is a capture. On a device only the modes that set `contentSize` are,
-   * beside the default capture (ADR 0042).
-   */
+  /** Web only for now: a channel without `supportsModes` captures the default globals once. */
   modes: Modes.optional(),
+  /**
+   * Device only: system text sizes to capture the story at, each its own variant named after
+   * the size, beside the default capture (ADR 0042). A web capture ignores it.
+   */
+  contentSizes: z.array(ContentSize).max(ContentSize.options.length).optional(),
 });
 export type StoryParameters = z.infer<typeof StoryParameters>;
 
@@ -51,13 +54,14 @@ export function parseStoryParameters(targus: unknown): ParsedStoryParameters {
     );
     return { ok: false, message: `invalid parameters.targus: ${issues.join('; ')}` };
   }
-  const { delay, skip, modes } = parsed.data;
+  const { delay, skip, modes, contentSizes } = parsed.data;
   return {
     ok: true,
     parameters: {
       delay: delay ?? null,
       skip: skip ?? false,
       ...(modes === undefined ? {} : { modes: toCaptureModes(modes) }),
+      ...(contentSizes === undefined ? {} : { contentSizes: extraContentSizes(contentSizes) }),
     },
   };
 }
