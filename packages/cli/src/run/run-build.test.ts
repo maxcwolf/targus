@@ -135,8 +135,7 @@ describe('runBuild against a baseline', () => {
 
     const { output, byId } = await resultsFor(api, [captured('a', onePixelOff)]);
 
-    const diffPng = diffImages(whitePng, onePixelOff).diffPng;
-    if (diffPng === null) throw new Error('expected a diff image');
+    const { diffPng } = diffImages(whitePng, onePixelOff);
     const diffHash = sha256Hex(diffPng);
     expect(byId.get('a')).toMatchObject({
       state: 'changed',

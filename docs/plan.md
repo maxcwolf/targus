@@ -250,7 +250,8 @@ Built. Pure functions with fixture-based and property-based tests:
   `unchanged | changed | new | removed | unstable | error` and whether an existing approval
   carries forward.
 - `diffImages(a, b, options)` wraps pixelmatch with an anti-aliasing tolerance, returning the
-  changed-pixel ratio and the diff bitmap.
+  changed-pixel ratio and the diff bitmap. Images of different sizes are padded onto the larger
+  canvas, anchored top left, and the padding counts as changed.
 - `buildStatus(snapshots)`, and `tallySnapshots` with `buildStatusFromTally`, fold snapshot
   states into a build status and a check-run conclusion.
 - `acceptedImageHash` (rule 5) and `libraryStories` (the library page).

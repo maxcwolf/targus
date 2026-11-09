@@ -119,7 +119,7 @@ describe('runCompare', () => {
 });
 
 describe('runCompare with a size change', () => {
-  it('reports size changes without a diff image', async () => {
+  it('diffs the images on a padded canvas and writes the diff image', async () => {
     const baseline = await writeCapture('baseline', { s: encodeSolidPng(4, 4, white) });
     const current = await writeCapture('current', { s: encodeSolidPng(4, 5, white) });
     const out = path.join(dir, 'report');
@@ -129,8 +129,30 @@ describe('runCompare with a size change', () => {
       { ...defaultCompareDeps, log: () => undefined },
     );
 
-    expect(comparison.changed).toMatchObject([{ id: 's', ratio: 1, diffPng: null }]);
+    // The added row of 4 pixels is the only change on the 4 x 5 canvas.
+    expect(comparison.changed).toMatchObject([{ id: 's', ratio: 0.2 }]);
+    expect(comparison.changed[0]?.diffPng).toBeInstanceOf(Uint8Array);
+    expect(await readdir(out)).toContain('s.diff.png');
+    const html = await readFile(path.join(out, 'report.html'), 'utf8');
+    expect(html).toContain('src="s.diff.png"');
+    expect(html).toContain('20.000% changed');
+  });
+});
+
+describe('runCompare without a diff image', () => {
+  it('reports a changed story with no diff image when the comparer makes none', async () => {
+    const baseline = await writeCapture('baseline', { s: encodeSolidPng(4, 4, white) });
+    const current = await writeCapture('current', { s: encodeSolidPng(4, 4, red) });
+    const out = path.join(dir, 'report');
+
+    await runCompare(
+      { current, baseline, out, threshold: 0.001 },
+      { compareImages: () => ({ ratio: 1, diffPng: null }), log: () => undefined },
+    );
+
     expect(await readdir(out)).not.toContain('s.diff.png');
-    expect(await readFile(path.join(out, 'report.html'), 'utf8')).toContain('sizes differ');
+    const report = JSON.parse(await readFile(path.join(out, 'report.json'), 'utf8')) as unknown;
+    expect(report).toMatchObject({ changed: [{ id: 's', diff: null }] });
+    expect(await readFile(path.join(out, 'report.html'), 'utf8')).toContain('no diff image');
   });
 });

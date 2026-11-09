@@ -47,7 +47,7 @@ function escapeHtml(text: string): string {
 function image(label: string, src: string | null): string {
   const body =
     src === null
-      ? '<p class="none">sizes differ: no diff image</p>'
+      ? '<p class="none">no diff image</p>'
       : `<a href="${escapeHtml(src)}"><img loading="lazy" src="${escapeHtml(src)}" alt="${label}"></a>`;
   return `<figure><figcaption>${label}</figcaption>${body}</figure>`;
 }

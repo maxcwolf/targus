@@ -45,7 +45,8 @@ describe('diffImages', () => {
       ratio: 0,
       sizeMismatch: false,
     });
-    expect(result.diffPng).not.toBeNull();
+    const diff = decodePng(result.diffPng);
+    expect([diff.width, diff.height]).toEqual([20, 10]);
   });
 
   it('counts the pixels of one changed rectangle and emits a diff PNG of the same size', () => {
@@ -56,7 +57,6 @@ describe('diffImages', () => {
 
     expect(result.differingPixels).toBe(15);
     expect(result.sizeMismatch).toBe(false);
-    if (result.diffPng === null) throw new Error('expected a diff image');
     const diff = decodePng(result.diffPng);
     expect([diff.width, diff.height]).toEqual([20, 20]);
     // pixelmatch paints differing pixels red by default.
@@ -84,21 +84,6 @@ describe('diffImages options and inputs', () => {
 
     expect(diffImages(baseline, current).differingPixels).toBe(0);
     expect(diffImages(baseline, current, { threshold: 0 }).differingPixels).toBe(10);
-  });
-
-  it('treats a size mismatch as fully different, sized by the larger image', () => {
-    const result = diffImages(makePng(10, 10, white), makePng(12, 20, white));
-
-    expect(result).toEqual({
-      width: 12,
-      height: 20,
-      differingPixels: 240,
-      totalPixels: 240,
-      ratio: 1,
-      diffPng: null,
-      sizeMismatch: true,
-    });
-    expect(diffImages(makePng(12, 20, white), makePng(10, 10, white)).totalPixels).toBe(240);
   });
 
   it('accepts a Uint8Array view that does not start at offset 0', () => {
