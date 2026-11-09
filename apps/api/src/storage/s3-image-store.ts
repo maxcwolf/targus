@@ -68,7 +68,11 @@ export class S3ImageStore implements ImageStore {
     return new Uint8Array(await response.arrayBuffer());
   }
 
-  /** A signed request for `key`; null on 404, the response on 2xx, and a throw otherwise. */
+  /**
+   * A signed request for `key`: the response on 2xx, null when a read (GET, HEAD) finds nothing,
+   * and a throw otherwise. A 404 on a PUT is thrown: it means the bucket is not there, and
+   * answering null would report an upload that stored nothing.
+   */
   private async request(
     method: 'GET' | 'HEAD' | 'PUT',
     key: string,
@@ -79,7 +83,7 @@ export class S3ImageStore implements ImageStore {
       ...init,
     });
     const response = await this.send(signed);
-    if (response.status === 404) {
+    if (response.status === 404 && method !== 'PUT') {
       await response.body?.cancel();
       return null;
     }

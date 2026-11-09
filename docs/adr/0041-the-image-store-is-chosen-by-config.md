@@ -52,9 +52,10 @@ store from the same config.
 - The Worker keeps its `IMAGES` binding even when S3 is configured; it is simply unused.
 - The image metadata (the `images` table) stays in the database, so switching stores without
   copying the objects leaves hashes recorded whose bytes are in the other store.
-- The adapter is tested against an in-memory S3 behind `fetch`. Differences of real servers
-  (error codes, a 403 instead of a 404 for a missing key without list permission) are not covered
-  until the contract suite runs against MinIO or S3.
+- The adapter's tests run against an in-memory S3 behind `fetch`. It was run by hand once
+  against a server that checks signatures (hosting-portability.md, step 2), but differences
+  between real servers (error codes, a 403 instead of a 404 for a missing key without list
+  permission) are not covered until the contract suite runs against one in CI.
 
 ## Alternatives considered
 

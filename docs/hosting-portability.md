@@ -33,8 +33,9 @@ store fits the same way.
    entry that reads `process.env`, builds `StorageDeps` and serves `createApp` with
    `@hono/node-server`.
 3. **The image store.** Done in code: the S3 adapter exists and the Worker uses it when the `S3_*`
-   variables are set. It is tested against an in-memory S3 behind an injected `fetch`, not yet
-   against a real S3, MinIO or R2's S3 API.
+   variables are set. Its tests run against an in-memory S3 behind an injected `fetch`. It was
+   run by hand once, on 2026-11-09, against a Zenko CloudServer container, which checks request
+   signatures; not yet against AWS S3, MinIO or R2's S3 API.
 4. **Local development and e2e.** `yarn dev:local` and the Playwright suite start `wrangler dev`.
 
 ## The changes that make the switch cheap
@@ -58,8 +59,14 @@ its injected `fetch`. The Worker picks it when `S3_ENDPOINT`, `S3_REGION`, `S3_B
 `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` are set (ADR 0041); the Node entry of step 4 will
 build it the same way.
 
-Still to do: run the contract suite against a real S3-compatible server (MinIO or LocalStack in
-CI) and once against R2's S3 API. Nothing has been run against a real server yet.
+Run by hand on 2026-11-09 against a Zenko CloudServer container, with path-style URLs: put and
+get of a 200 kB image, a second put keeping the first bytes, the stored headers, a wrong secret
+answered 403 and thrown, and an upload to a bucket that does not exist thrown. That run found
+that a 404 on an upload was read as "not there" and reported a stored image; it is now an error.
+
+Still to do: run the contract suite against an S3-compatible server in CI, and once against AWS
+S3 (virtual-hosted URLs) and R2's S3 API. MinIO's public images could not be pulled on that date
+and LocalStack asked for a licence, so the CI job needs a server chosen with that in mind.
 
 ### 3. Postgres repositories
 

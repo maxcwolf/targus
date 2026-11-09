@@ -97,6 +97,13 @@ describe('S3ImageStore requests', () => {
     expect(s3.requests.map((request) => request.method)).toEqual(['HEAD', 'PUT', 'HEAD']);
   });
 
+  it('throws when an upload answers 404, as a bucket that does not exist does', async () => {
+    const store = new S3ImageStore(config, metadataStore(), createS3Fake({ status: 404 }).fetch);
+
+    expect(await store.get(imageHash('a'))).toBeNull();
+    await expect(store.put(imageHash('a'), new Uint8Array([1]))).rejects.toThrow(/PUT.*404/);
+  });
+
   it('throws on any failure other than 404', async () => {
     const store = new S3ImageStore(config, metadataStore(), createS3Fake({ status: 403 }).fetch);
 
