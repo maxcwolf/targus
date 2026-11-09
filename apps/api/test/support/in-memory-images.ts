@@ -4,9 +4,9 @@ import type {
   ImageRecord,
   ImageRepository,
   UploaderOrg,
-} from '../../src/repositories/image.repository.ts';
-import type { MembershipRepository } from '../../src/repositories/membership.repository.ts';
-import type { ProjectRepository } from '../../src/repositories/project.repository.ts';
+} from '../../src/ports/image-repository.ts';
+import type { MembershipRepository } from '../../src/ports/membership-repository.ts';
+import type { ProjectRepository } from '../../src/ports/project-repository.ts';
 import { foreignKeyViolation } from './d1-semantics.ts';
 
 export interface InMemoryImages extends ImageRepository, ImageStore {

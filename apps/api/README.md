@@ -10,6 +10,8 @@ src/middleware/    requestLogger (request id, one log line), projectAuth / admin
                    sessionAuth / readerAuth (cookie), cookies, JSON body parsing
 src/logging/       the request log line: its fields, and the ServiceLog services warn through
 src/services/      use-cases; the only place rules live outside packages/core
+src/ports/         the repository interfaces and record types the services are written against,
+                   and the paging rules every implementation shares
 src/repositories/  D1 via Drizzle (projects, builds + snapshots, approvals, images, users,
                    sessions, org membership cache)
 src/storage/       R2ImageStore and S3ImageStore (bytes in R2 or an S3 bucket, "missing" answered

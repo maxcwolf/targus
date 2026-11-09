@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { UserLogin, UserRepository } from '../../../src/repositories/user.repository.ts';
+import type { UserLogin, UserRepository } from '../../../src/ports/user-repository.ts';
 
 /** A users repository, D1's or the double's, called once per test. */
 type Harness = () => UserRepository;

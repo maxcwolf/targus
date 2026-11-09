@@ -93,7 +93,7 @@ const ports = {
     wiring: 'd1',
     superset: {
       type: 'ApiBuildRepository',
-      file: 'apps/api/src/repositories/build.repository.ts',
+      file: 'apps/api/src/ports/build-repository.ts',
     },
   },
   'github-client': {
@@ -211,7 +211,8 @@ export async function main(args, root) {
   const spec = {
     portType: port.type,
     implemented,
-    implementedFrom: port.superset === undefined ? null : `./${path.basename(port.superset.file)}`,
+    implementedFrom:
+      port.superset === undefined ? null : path.posix.relative(layer.dir, port.superset.file),
     portFile,
     methods: methodsOf(portFile, implemented),
     adapter: port.wiring === null ? toCamel(adapter) : adapter,

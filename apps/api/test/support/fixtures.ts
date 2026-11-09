@@ -6,8 +6,8 @@ import {
   type StoryResult,
 } from '@targus/core';
 
-import type { SnapshotRecord } from '../../src/repositories/build.repository.ts';
-import type { NewProject } from '../../src/repositories/project.repository.ts';
+import type { SnapshotRecord } from '../../src/ports/build-repository.ts';
+import type { NewProject } from '../../src/ports/project-repository.ts';
 
 /** A full 40-character sha made of one repeated hex digit. */
 export const sha = (digit: string): string => digit.repeat(40);

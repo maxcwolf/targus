@@ -1,27 +1,14 @@
 import { maxBuildsPageLimit, TargusError } from '@targus/core';
 
-import type { BuildRecord } from './build-rows.ts';
+import type { BuildPage, BuildRecord } from './build-repository.ts';
 
 /**
- * Keyset paging of a project's builds, shared by the D1 repository and its in-memory double so
- * both page the same way. Builds are ordered by `number` descending: it is unique per project
+ * Keyset paging of a project's builds, shared by every implementation of the builds port and its
+ * in-memory double so they all page the same way. Builds are ordered by `number` descending: it is unique per project
  * (`builds_project_number_unique`, which also serves the query), so builds created in the same
  * millisecond still have a strict order and a page boundary can neither skip nor repeat one.
  * A cursor is the number of the last build of a page, encoded so clients treat it as opaque.
  */
-
-/** Which page of a project's builds to read. */
-export interface BuildPageRequest {
-  readonly limit: number;
-  /** A previous page's `nextCursor`; absent for the newest page. */
-  readonly cursor?: string | undefined;
-}
-
-/** One page of builds, newest first, and the cursor of the next (older) page, if any. */
-export interface BuildPage {
-  readonly builds: BuildRecord[];
-  readonly nextCursor: string | null;
-}
 
 const cursorPrefix = 'n:';
 const base64Url = /^[A-Za-z0-9_-]+$/;

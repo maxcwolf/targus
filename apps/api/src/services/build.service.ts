@@ -18,8 +18,8 @@ import {
   type Snapshot,
 } from '@targus/core';
 
-import type { BuildRecord, SnapshotRecord } from '../repositories/build.repository.ts';
-import type { Project } from '../repositories/project.repository.ts';
+import type { BuildRecord, SnapshotRecord } from '../ports/build-repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 import { requireBuildAccess, requireProjectAccess } from './access.service.ts';
 import type { ServiceDeps } from './deps.ts';
 import type { Principal, Reviewer } from './principal.ts';

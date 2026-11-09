@@ -1,8 +1,7 @@
 import type { Approval } from '@targus/core';
 
-import type { ApprovalRepository } from '../../src/repositories/approval.repository.ts';
-import type { ApprovalIdentity } from '../../src/repositories/build.repository.ts';
-import type { ProjectRepository } from '../../src/repositories/project.repository.ts';
+import type { ApprovalRepository, ApprovalIdentity } from '../../src/ports/approval-repository.ts';
+import type { ProjectRepository } from '../../src/ports/project-repository.ts';
 import { compareText, foreignKeyViolation } from './d1-semantics.ts';
 
 // The in-memory double of the approvals repository. It and the D1 adapter run the same

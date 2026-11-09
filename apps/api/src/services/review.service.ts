@@ -10,13 +10,9 @@ import {
   type ReviewState,
 } from '@targus/core';
 
-import type {
-  ApprovalChanges,
-  ApprovalIdentity,
-  BuildRecord,
-  SnapshotRecord,
-} from '../repositories/build.repository.ts';
-import type { Project } from '../repositories/project.repository.ts';
+import type { ApprovalIdentity } from '../ports/approval-repository.ts';
+import type { ApprovalChanges, BuildRecord, SnapshotRecord } from '../ports/build-repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 import { requireBuildAccess } from './access.service.ts';
 import { toSnapshot, withSummary } from './build.service.ts';
 import { syncCheckRun } from './check-run.ts';

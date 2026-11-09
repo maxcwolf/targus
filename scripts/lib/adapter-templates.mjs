@@ -52,7 +52,7 @@ export const wirings = {
     testTodo: 'talk to it from a real client, as ws-channel.adapter.test.ts does.',
   }),
   http: (type) => ({
-    imports: ["import type { ImageRepository } from '../repositories/image.repository.ts';"],
+    imports: ["import type { ImageRepository } from '../ports/image-repository.ts';"],
     options: `export interface ${type}Options {
   /** Base URL of the service that holds the bytes. */
   readonly endpoint: string;

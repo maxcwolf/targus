@@ -1,7 +1,7 @@
 import { tallySnapshots, type GitHubClient } from '@targus/core';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ApiBuildRepository } from '../repositories/build.repository.ts';
+import type { ApiBuildRepository } from '../ports/build-repository.ts';
 import {
   createBuildRequest,
   imageHash,

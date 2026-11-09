@@ -1,6 +1,6 @@
 import { TargusError } from '@targus/core';
 
-import type { Project } from '../repositories/project.repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 import type { ServiceDeps } from './deps.ts';
 import type { Reviewer } from './principal.ts';
 

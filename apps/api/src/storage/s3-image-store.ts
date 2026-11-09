@@ -2,7 +2,7 @@ import type { ImageStore } from '@targus/core';
 import { AwsClient } from 'aws4fetch';
 
 import type { S3Config } from '../config.ts';
-import type { ImageRepository } from '../repositories/image.repository.ts';
+import type { ImageRepository } from '../ports/image-repository.ts';
 
 /** Sends a signed request. Injected so tests never reach the network. */
 export type S3Fetch = (request: Request) => Promise<Response>;

@@ -8,7 +8,7 @@ import {
   sha,
 } from '../../test/support/fixtures.ts';
 import { completion, createTestDeps, type TestDeps } from '../../test/support/in-memory.ts';
-import type { Project } from '../repositories/project.repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 import { createBuild } from './build.service.ts';
 
 // A repeated `POST /api/builds` under one idempotency key (ADR 0027).

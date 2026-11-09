@@ -11,7 +11,7 @@ import {
 import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
 import { signInReviewer } from '../../test/support/in-memory-auth.ts';
 import { createTestDeps } from '../../test/support/in-memory.ts';
-import type { SnapshotRecord } from '../repositories/build.repository.ts';
+import type { SnapshotRecord } from '../ports/build-repository.ts';
 import { createBuild } from './build.service.ts';
 import { approveAll, reviewSnapshot } from './review.service.ts';
 

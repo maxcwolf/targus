@@ -5,7 +5,7 @@ import type {
   ApprovalChanges,
   ReviewCommit,
   SnapshotRecord,
-} from '../../../src/repositories/build.repository.ts';
+} from '../../../src/ports/build-repository.ts';
 import {
   completedAt,
   completionOf,

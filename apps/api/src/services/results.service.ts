@@ -12,8 +12,8 @@ import {
   type SubmitResultsResponse,
 } from '@targus/core';
 
-import type { SnapshotRecord } from '../repositories/build.repository.ts';
-import type { Project } from '../repositories/project.repository.ts';
+import type { SnapshotRecord } from '../ports/build-repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 import { baselineEntries, requireBuild } from './build.service.ts';
 import { createCheckRun, followNewerReviews, reviewUrlOf } from './check-run.ts';
 import type { ServiceDeps } from './deps.ts';

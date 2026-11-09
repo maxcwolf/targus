@@ -57,3 +57,4 @@ the same change.
 | [0040](0040-the-build-check-is-a-commit-status.md) | The build's check is a commit status | accepted |
 | [0041](0041-the-image-store-is-chosen-by-config.md) | The image store is chosen by config | accepted |
 | [0042](0042-content-sizes-on-a-device.md) | A device captures a story at the content sizes it lists | accepted |
+| [0043](0043-api-repository-ports.md) | The API's repository interfaces live in a ports directory | accepted |

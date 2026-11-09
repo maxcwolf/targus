@@ -20,7 +20,7 @@ import type {
   UploadImageResponse,
 } from '@targus/core';
 
-import type { Project } from '../repositories/project.repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 import {
   authenticateAdmin,
   authenticateProjectToken,
@@ -122,7 +122,7 @@ export function bindServices(deps: ServiceDeps): Services {
   };
 }
 
-export type { Project } from '../repositories/project.repository.ts';
+export type { Project } from '../ports/project-repository.ts';
 export type { CookieSettings } from './login.service.ts';
 export { sessionLifetimeSeconds } from './login.service.ts';
 export type { Principal, Reviewer } from './principal.ts';

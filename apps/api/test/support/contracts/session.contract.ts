@@ -1,8 +1,8 @@
 import type { ReviewerUser } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import type { SessionRepository } from '../../../src/repositories/session.repository.ts';
-import type { UserRepository } from '../../../src/repositories/user.repository.ts';
+import type { SessionRepository } from '../../../src/ports/session-repository.ts';
+import type { UserRepository } from '../../../src/ports/user-repository.ts';
 import { isForeignKeyViolation } from '../d1-semantics.ts';
 
 /** A sessions repository, D1's or the double's, over the users repository it joins. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ProjectRepository } from '../../../src/repositories/project.repository.ts';
+import type { ProjectRepository } from '../../../src/ports/project-repository.ts';
 import { newProject } from '../fixtures.ts';
 
 /** A projects repository, D1's or the double's, called once per test. */

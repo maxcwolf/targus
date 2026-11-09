@@ -4,9 +4,9 @@ import type { GitHubOAuth, GitHubUser } from '../../src/adapters/github-oauth.ad
 import type {
   CachedMembership,
   MembershipRepository,
-} from '../../src/repositories/membership.repository.ts';
-import type { NewSession, SessionRepository } from '../../src/repositories/session.repository.ts';
-import type { UserRepository } from '../../src/repositories/user.repository.ts';
+} from '../../src/ports/membership-repository.ts';
+import type { NewSession, SessionRepository } from '../../src/ports/session-repository.ts';
+import type { UserRepository } from '../../src/ports/user-repository.ts';
 import type { ServiceDeps } from '../../src/services/deps.ts';
 import type { Reviewer } from '../../src/services/principal.ts';
 import { foreignKeyViolation, uniqueViolation } from './d1-semantics.ts';

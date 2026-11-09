@@ -9,12 +9,8 @@ import {
 import { NoopGitHubClient } from '../../src/adapters/github-client.adapter.ts';
 import { webCryptoTokens } from '../../src/adapters/token.adapter.ts';
 import type { ApiConfig } from '../../src/config.ts';
-import type { BuildCompletion } from '../../src/repositories/build.repository.ts';
-import type {
-  NewProject,
-  Project,
-  ProjectRepository,
-} from '../../src/repositories/project.repository.ts';
+import type { BuildCompletion } from '../../src/ports/build-repository.ts';
+import type { NewProject, Project, ProjectRepository } from '../../src/ports/project-repository.ts';
 import type { ServiceDeps } from '../../src/services/deps.ts';
 import type { Principal } from '../../src/services/principal.ts';
 import {

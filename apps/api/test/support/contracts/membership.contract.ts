@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { MembershipRepository } from '../../../src/repositories/membership.repository.ts';
+import type { MembershipRepository } from '../../../src/ports/membership-repository.ts';
 import { isForeignKeyViolation } from '../d1-semantics.ts';
 
 /** A membership cache, D1's or the double's, and how to make the user and org it caches. */

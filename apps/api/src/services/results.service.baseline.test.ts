@@ -1,7 +1,7 @@
 import { emptyTally, type StoryResult } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import type { Project } from '../repositories/project.repository.ts';
+import type { Project } from '../ports/project-repository.ts';
 import {
   createBuildRequest,
   imageHash,

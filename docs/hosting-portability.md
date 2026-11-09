@@ -25,7 +25,7 @@ store fits the same way.
 ## What is still Cloudflare-specific
 
 1. **The database.** The drizzle schema (`apps/api/src/db/schema.ts`) uses `sqlite-core`, the
-   twelve repository files under `apps/api/src/repositories/` wrap a `D1Database`, the batched
+   repository files under `apps/api/src/repositories/` wrap a `D1Database`, the batched
    writes of ADR 0013 use D1's `batch`, and the migrations under `apps/api/migrations/` are
    SQLite SQL. The in-memory doubles copy SQLite's semantics (text ordering, unique-key
    rejection). This is the one piece of real work in a move.
@@ -42,13 +42,13 @@ store fits the same way.
 
 In the order they should land. Each one is a tracker item.
 
-### 1. Repository interfaces in a ports file (E2)
+### 1. Repository interfaces in a ports directory (E2): done
 
-Today each repository interface lives in the D1 file that implements it, so a service that
-imports the interface also imports `drizzle-orm/d1`. Move the interfaces and row types into
-`apps/api/src/ports/`, repoint the services and the doubles, then tighten the guard so that
-neutral code imports `repositories/` and `storage/` nowhere. After this, a Postgres
-implementation is a new directory, not an edit.
+Every repository interface and record type is in `apps/api/src/ports/` (ADR 0043). Services, the
+in-memory doubles and the contract suites import those; the D1 files import the interface they
+implement. A Postgres implementation is a new directory, not an edit. What is left is the guard:
+a dependency-cruiser rule that stops neutral code importing `repositories/`, `storage/` or `db/`,
+which a maintainer adds because the guard files are protected.
 
 ### 2. An S3 `ImageStore` adapter (E3)
 

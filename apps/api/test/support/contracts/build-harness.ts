@@ -1,15 +1,13 @@
 import { tallySnapshots, type NewBuild } from '@targus/core';
 
-import {
-  D1BuildRepository,
-  type ApiBuildRepository,
-  type BuildCompletion,
-  type SnapshotRecord,
-} from '../../../src/repositories/build.repository.ts';
-import {
-  createApprovalRepository,
-  type ApprovalRepository,
-} from '../../../src/repositories/approval.repository.ts';
+import { D1BuildRepository } from '../../../src/repositories/build.repository.ts';
+import type {
+  ApiBuildRepository,
+  BuildCompletion,
+  SnapshotRecord,
+} from '../../../src/ports/build-repository.ts';
+import { createApprovalRepository } from '../../../src/repositories/approval.repository.ts';
+import type { ApprovalRepository } from '../../../src/ports/approval-repository.ts';
 import { createProjectRepository } from '../../../src/repositories/project.repository.ts';
 import { newBuild, newProject, snapshotRecord } from '../fixtures.ts';
 import { createInMemoryApprovals } from '../in-memory-approvals.ts';
