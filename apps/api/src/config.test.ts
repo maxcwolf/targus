@@ -20,6 +20,7 @@ describe('loadConfig', () => {
       githubOAuth: null,
       githubOAuthOrigin: 'https://github.com',
       githubApiOrigin: 'https://api.github.com',
+      s3: null,
     });
   });
 
@@ -81,5 +82,41 @@ describe('loadConfig secrets and thresholds', () => {
     ).toThrow(/PKCS#8/);
     expect(() => loadConfig({ ...vars, DIFF_THRESHOLD: '2' })).toThrow();
     expect(() => loadConfig({ ...vars, PUBLIC_URL: 'not a url' })).toThrow();
+  });
+});
+
+describe('loadConfig S3 image store', () => {
+  const s3 = {
+    S3_ENDPOINT: 'http://localhost:9000',
+    S3_REGION: 'us-east-1',
+    S3_BUCKET: 'targus',
+    S3_ACCESS_KEY_ID: 'minio',
+    S3_SECRET_ACCESS_KEY: 'minio-secret',
+  };
+
+  it('reads the bucket when every S3 var is set, virtual-hosted unless told otherwise', () => {
+    expect(loadConfig({ ...vars, ...s3 }).s3).toEqual({
+      endpoint: 'http://localhost:9000',
+      region: 'us-east-1',
+      bucket: 'targus',
+      accessKeyId: 'minio',
+      secretAccessKey: 'minio-secret',
+      forcePathStyle: false,
+    });
+    expect(loadConfig({ ...vars, ...s3, S3_FORCE_PATH_STYLE: 'true' }).s3?.forcePathStyle).toBe(
+      true,
+    );
+  });
+
+  it('treats blank S3 vars as unset', () => {
+    const blank = { S3_ENDPOINT: '', S3_REGION: ' ', S3_FORCE_PATH_STYLE: '' };
+    expect(loadConfig({ ...vars, ...blank }).s3).toBeNull();
+  });
+
+  it('rejects a half-configured bucket, a bad endpoint and a bad path-style flag', () => {
+    expect(() => loadConfig({ ...vars, ...s3, S3_SECRET_ACCESS_KEY: '' })).toThrow(/or none/);
+    expect(() => loadConfig({ ...vars, S3_BUCKET: 'targus' })).toThrow(/S3_ENDPOINT/);
+    expect(() => loadConfig({ ...vars, ...s3, S3_ENDPOINT: 'nope' })).toThrow();
+    expect(() => loadConfig({ ...vars, ...s3, S3_FORCE_PATH_STYLE: 'yes' })).toThrow();
   });
 });

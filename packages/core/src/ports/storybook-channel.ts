@@ -1,3 +1,5 @@
+import type { ContentSize } from '../contracts/content-size.ts';
+
 /** One entry of the story index the app reports over `RN_GET_INDEX`. */
 export interface StoryIndexEntry {
   readonly id: string;
@@ -25,12 +27,14 @@ export interface CaptureMode {
  * A story's validated `parameters.targus`, as the app reported it after the story committed
  * (ADR 0022). `delay` is `null` when the story set none, so the capture uses `--settle`.
  * `modes`, when set, replaces the single default capture with one capture per mode; an empty
- * list (every mode disabled) captures nothing.
+ * list (every mode disabled) captures nothing. `contentSizes`, on a device, adds one capture per
+ * size to the default one (ADR 0042); the default size is never in the list.
  */
 export interface StoryCaptureParameters {
   readonly delay: number | null;
   readonly skip: boolean;
   readonly modes?: readonly CaptureMode[];
+  readonly contentSizes?: readonly ContentSize[];
 }
 
 /**

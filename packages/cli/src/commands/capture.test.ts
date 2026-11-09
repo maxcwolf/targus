@@ -34,6 +34,7 @@ const preparedDevice = [
   { method: 'boot' },
   { method: 'silenceSystemNotices' },
   { method: 'setAppearance', appearance: 'light' },
+  { method: 'setContentSize', contentSize: 'l' },
   { method: 'setStatusBar', overrides: { time: '9:41', batteryLevel: 100, cellularBars: 4 } },
   { method: 'install', appPath: '/apps/Example.app' },
   { method: 'launch', bundleId: 'co.example.app', env: {} },

@@ -18,6 +18,23 @@ const origin = (fallback: string) =>
       .transform((url) => url.replace(/\/+$/, '')),
   );
 
+/** `true` or `false`; blank or absent is `false`. */
+const flag = z.preprocess(
+  (value) => (value === '' ? undefined : value),
+  z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+);
+
+const s3Names = [
+  'S3_ENDPOINT',
+  'S3_REGION',
+  'S3_BUCKET',
+  'S3_ACCESS_KEY_ID',
+  'S3_SECRET_ACCESS_KEY',
+] as const;
+
 const VarsSchema = z
   .object({
     APP_VERSION: z.string().min(1),
@@ -35,6 +52,12 @@ const VarsSchema = z
     GITHUB_CLIENT_SECRET: optionalSecret,
     GITHUB_OAUTH_ORIGIN: origin('https://github.com'),
     GITHUB_API_ORIGIN: origin('https://api.github.com'),
+    S3_ENDPOINT: optionalSecret.pipe(z.url().nullable()),
+    S3_REGION: optionalSecret,
+    S3_BUCKET: optionalSecret,
+    S3_ACCESS_KEY_ID: optionalSecret,
+    S3_SECRET_ACCESS_KEY: optionalSecret,
+    S3_FORCE_PATH_STYLE: flag,
   })
   .refine((vars) => (vars.GITHUB_APP_ID === null) === (vars.GITHUB_APP_PRIVATE_KEY === null), {
     message: 'set both GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY, or neither',
@@ -42,9 +65,24 @@ const VarsSchema = z
   .refine((vars) => (vars.GITHUB_CLIENT_ID === null) === (vars.GITHUB_CLIENT_SECRET === null), {
     message: 'set both GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET, or neither',
   })
+  .refine((vars) => new Set(s3Names.map((name) => vars[name] === null)).size === 1, {
+    message: `set all of ${s3Names.join(', ')}, or none`,
+  })
   .refine((vars) => !vars.GITHUB_APP_PRIVATE_KEY?.includes('BEGIN RSA PRIVATE KEY'), {
     message: 'GITHUB_APP_PRIVATE_KEY must be PKCS#8 (BEGIN PRIVATE KEY); see apps/api/README.md',
   });
+
+/** An S3-compatible bucket (AWS S3, MinIO, R2's S3 API) that holds the images. */
+export interface S3Config {
+  /** Service origin, e.g. `https://s3.us-east-1.amazonaws.com` or `http://localhost:9000`. */
+  readonly endpoint: string;
+  readonly region: string;
+  readonly bucket: string;
+  readonly accessKeyId: string;
+  readonly secretAccessKey: string;
+  /** `endpoint/bucket/key` (MinIO) instead of `bucket.endpoint/key` (AWS virtual-hosted). */
+  readonly forcePathStyle: boolean;
+}
 
 export interface ApiConfig {
   readonly version: string;
@@ -68,6 +106,8 @@ export interface ApiConfig {
   readonly githubOAuthOrigin: string;
   /** Origin of the GitHub REST API (`https://api.github.com`; a stub in the e2e suite). */
   readonly githubApiOrigin: string;
+  /** Where images live: an S3-compatible bucket, or null for the host's own store (R2). */
+  readonly s3: S3Config | null;
 }
 
 /**
@@ -96,6 +136,30 @@ export interface ConfigVars {
   readonly GITHUB_OAUTH_ORIGIN?: string;
   /** Origin of the GitHub REST API; defaults to https://api.github.com. */
   readonly GITHUB_API_ORIGIN?: string;
+  /** Origin of an S3-compatible service. Images go to S3 only when all five S3 vars are set. */
+  readonly S3_ENDPOINT?: string;
+  /** The bucket's region (`auto` for R2, any value for MinIO). */
+  readonly S3_REGION?: string;
+  /** The bucket that holds the images. */
+  readonly S3_BUCKET?: string;
+  /** Secret: S3 access key id. */
+  readonly S3_ACCESS_KEY_ID?: string;
+  /** Secret: S3 secret access key. */
+  readonly S3_SECRET_ACCESS_KEY?: string;
+  /** `true` for path-style URLs (MinIO); defaults to virtual-hosted style. */
+  readonly S3_FORCE_PATH_STYLE?: string;
+}
+
+type Vars = z.infer<typeof VarsSchema>;
+
+/** The S3 bucket from the vars, or null when the S3 vars are unset (the schema checks all-or-none). */
+function s3From(vars: Vars): S3Config | null {
+  const { S3_ENDPOINT: endpoint, S3_REGION: region, S3_BUCKET: bucket } = vars;
+  const { S3_ACCESS_KEY_ID: accessKeyId, S3_SECRET_ACCESS_KEY: secretAccessKey } = vars;
+  if (endpoint === null || region === null || bucket === null) return null;
+  if (accessKeyId === null || secretAccessKey === null) return null;
+  const forcePathStyle = vars.S3_FORCE_PATH_STYLE;
+  return { endpoint, region, bucket, accessKeyId, secretAccessKey, forcePathStyle };
 }
 
 export function loadConfig(raw: ConfigVars): ApiConfig {
@@ -114,5 +178,6 @@ export function loadConfig(raw: ConfigVars): ApiConfig {
     githubOAuth: clientId === null || clientSecret === null ? null : { clientId, clientSecret },
     githubOAuthOrigin: vars.GITHUB_OAUTH_ORIGIN,
     githubApiOrigin: vars.GITHUB_API_ORIGIN,
+    s3: s3From(vars),
   };
 }

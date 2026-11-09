@@ -1,6 +1,6 @@
 /**
- * Content-addressed PNG storage keyed by SHA-256 hex (plan.md section 5.1). The API adapter is
- * `R2ImageStore`; the CLI reaches it through the API rather than directly.
+ * Content-addressed PNG storage keyed by SHA-256 hex (plan.md section 5.1). The API adapters are
+ * `R2ImageStore` and `S3ImageStore`; the CLI reaches it through the API rather than directly.
  */
 export interface ImageStore {
   /** Return the subset of `hashes` that are not stored yet, in input order. */
