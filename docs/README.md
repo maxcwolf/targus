@@ -33,4 +33,5 @@ accepted one, and holds a GitHub check until each change is approved.
 
 For contributors: [AGENTS.md](../AGENTS.md) (where code goes, the rules),
 [engineering standards](engineering-standards.md), the [design plan](plan.md), the
-[web plan](web-plan.md) and the [architecture decisions](adr/README.md).
+[web plan](web-plan.md), the [plan for closing the gaps with Chromatic](parity-plan.md) and the
+[architecture decisions](adr/README.md).
