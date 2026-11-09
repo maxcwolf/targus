@@ -2643,6 +2643,7 @@ __metadata:
     "@octokit/request": "npm:^10.0.16"
     "@targus/core": "workspace:*"
     "@vitest/coverage-istanbul": "npm:5.1.0"
+    aws4fetch: "npm:1.0.20"
     drizzle-kit: "npm:0.31.11"
     drizzle-orm: "npm:0.45.4"
     hono: "npm:4.13.16"
@@ -3533,6 +3534,13 @@ __metadata:
     estree-walker: "npm:^3.0.3"
     js-tokens: "npm:^10.0.0"
   checksum: 10c0/c6bbfbf8b8adc8d793f8d10fbf9bcb25b0c65f2faa73ec1e41d2937a9c18327167b9395134943a4814dd3d095d2453b2f0f71a5d33aecd808ac4725c23e69918
+  languageName: node
+  linkType: hard
+
+"aws4fetch@npm:1.0.20":
+  version: 1.0.20
+  resolution: "aws4fetch@npm:1.0.20"
+  checksum: 10c0/a4eac7bd0d1c3e611c17ed1ef41ac0b48c0a8e74a985ad968c071e74d94586d3572edc943b43fa5ca756c686ea73baa2f48e264d657bb8c2e95c8e0037d48a87
   languageName: node
   linkType: hard
 

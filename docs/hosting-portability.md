@@ -17,7 +17,7 @@ store fits the same way.
 | Composition                 | `apps/api/src/composition.ts` joins a host's `StorageDeps` (repositories plus the image store) with the clock, ids, tokens and GitHub clients. A host supplies storage and config; nothing else.                                                                                                             |
 | Config                      | `config.ts` validates plain string variables (`ConfigVars`). On the Worker they are bindings; on a container they are environment variables. No code change.                                                                                                                                            |
 | Logs                        | One JSON line per request through an injected `Logger` (ADR 0020), written with `console` on the Worker. A log collector that reads stdout (Datadog, CloudWatch, Fluent Bit) takes it as is.                                                                                                            |
-| Images                      | The `ImageStore` port is tiny (put, get, missing) and R2 speaks the S3 API, so the S3 adapter is a second small file beside `storage/r2-image-store.ts`, and `test/support/contracts/image-store.contract.ts` tests both the same way.                                                                      |
+| Images | The `ImageStore` port is tiny (put, get, missing). `storage/s3-image-store.ts` keeps images in any S3-compatible bucket with SigV4-signed requests (aws4fetch), beside the R2 one; config chooses between them (ADR 0041), and `test/support/contracts/image-store.contract.ts` tests both the same way. |
 | Sign-in and GitHub          | GitHub OAuth and the GitHub App are HTTP calls to GitHub from the API; they do not depend on the host. A new host needs the App installed on the organisation and its id, private key and OAuth client in the config, nothing more.                                                                      |
 | The CLI in CI               | `targus run` reads the branch, sha and pull request from flags, from GitHub Actions variables or from CircleCI's `CIRCLE_BRANCH`, `CIRCLE_PR_NUMBER` and `CIRCLE_PULL_REQUEST`. The CircleCI path has not been exercised on a real job yet (docs/plan.md section 8 describes the planned job).            |
 | The web app                 | A static Vite build. It can be served by the same container as the API or from a bucket behind a CDN. Because reviewer writes must be same-origin (ADR 0015), serving it from the API's origin is the simpler choice.                                                                                     |
@@ -32,7 +32,9 @@ store fits the same way.
 2. **The entry.** `apps/api/src/cloudflare/worker.ts` is the only entry. A container needs a Node
    entry that reads `process.env`, builds `StorageDeps` and serves `createApp` with
    `@hono/node-server`.
-3. **The image store.** Only the R2 adapter exists.
+3. **The image store.** Done in code: the S3 adapter exists and the Worker uses it when the `S3_*`
+   variables are set. It is tested against an in-memory S3 behind an injected `fetch`, not yet
+   against a real S3, MinIO or R2's S3 API.
 4. **Local development and e2e.** `yarn dev:local` and the Playwright suite start `wrangler dev`.
 
 ## The changes that make the switch cheap
@@ -49,9 +51,15 @@ implementation is a new directory, not an edit.
 
 ### 2. An S3 `ImageStore` adapter (E3)
 
-`storage/s3-image-store.ts`, built on signed HTTP requests (no new dependency in `core`; the API
-may take the AWS SDK or a small signer), run through the existing image-store contract suite
-against a local S3-compatible server (MinIO or LocalStack) and against R2, which also speaks S3.
+Landed: `storage/s3-image-store.ts` signs its requests with `aws4fetch` (no new dependency in
+`core`), supports a custom endpoint and path-style addressing for MinIO as well as AWS
+virtual-hosted URLs, and passes the image-store contract suite against an in-memory S3 behind
+its injected `fetch`. The Worker picks it when `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`,
+`S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` are set (ADR 0041); the Node entry of step 4 will
+build it the same way.
+
+Still to do: run the contract suite against a real S3-compatible server (MinIO or LocalStack in
+CI) and once against R2's S3 API. Nothing has been run against a real server yet.
 
 ### 3. Postgres repositories
 

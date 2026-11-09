@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { D1BuildRepository } from '../repositories/build.repository.ts';
 import { R2ImageStore } from '../storage/r2-image-store.ts';
+import { S3ImageStore } from '../storage/s3-image-store.ts';
 import { appFor } from './worker.ts';
 import { createWorkerDeps } from './worker-deps.ts';
 
@@ -13,6 +14,20 @@ describe('createWorkerDeps', () => {
     expect(deps.builds).toBeInstanceOf(D1BuildRepository);
     expect(deps.imageStore).toBeInstanceOf(R2ImageStore);
     expect(deps.config.version).toBe(env.APP_VERSION);
+  });
+
+  it('uses the S3 bucket instead of R2 when the S3 vars are set', () => {
+    const deps = createWorkerDeps({
+      ...env,
+      S3_ENDPOINT: 'http://localhost:9000',
+      S3_REGION: 'us-east-1',
+      S3_BUCKET: 'targus',
+      S3_ACCESS_KEY_ID: 'minio',
+      S3_SECRET_ACCESS_KEY: 'minio-secret',
+      S3_FORCE_PATH_STYLE: 'true',
+    });
+
+    expect(deps.imageStore).toBeInstanceOf(S3ImageStore);
   });
 
   it('refuses an invalid configuration before any request is served', () => {

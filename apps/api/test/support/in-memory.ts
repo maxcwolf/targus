@@ -150,6 +150,7 @@ export const testConfig: ApiConfig = {
   githubOAuth: { clientId: 'client-id', clientSecret: 'client-secret' },
   githubOAuthOrigin: 'https://github.test',
   githubApiOrigin: 'https://api.github.test',
+  s3: null,
 };
 
 export interface TestDeps extends ServiceDeps {
