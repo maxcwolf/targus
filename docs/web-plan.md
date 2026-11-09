@@ -216,7 +216,8 @@ Accepted on 2026-11-08 when implementation started:
 
 ## 8. Toward Chromatic parity
 
-Not needed for the pilot's switch, ordered by value:
+Not needed for the pilot's switch, ordered by value. What comes next, on the web and on native,
+is ordered in [parity-plan.md](parity-plan.md).
 
 | Chromatic feature | targus |
 | --- | --- |
