@@ -2,16 +2,22 @@
 
 ## Status
 
-accepted, amended 2026-11-06
+accepted, amended 2026-11-06 and by [0036](0036-builds-belong-to-a-platform.md)
 
 ## Amended by
 
-The decision still holds. One statement in the text below was built differently, with no ADR
-of its own:
+The decision still holds: v1 captures iOS only. Two statements in the text below were built
+differently or overtaken:
 
 - **Pinning the device and runtime.** There is no project config file. Each build stores one
   `device` string (`builds.device`): the simulator's name, or `--device-name` when given
-  (`packages/cli/src/commands/run.ts`). The iOS runtime is not stored.
+  (`packages/cli/src/commands/run.ts`). The iOS runtime is not stored. (2026-11-06, no ADR of
+  its own.)
+- **Where other platforms slot in.** Not through the `variant` key. Every build carries a
+  `platform` (`ios`, `android` or `web`) and a `pixelRatio`; baselines, check runs
+  (`targus/<platform>`) and the library are per platform, and builds without one are `ios`. The
+  data model no longer assumes iOS, and the review UI shows captures at actual size by the
+  build's pixel ratio rather than at 3x. See [ADR 0036](0036-builds-belong-to-a-platform.md).
 
 ## Date
 

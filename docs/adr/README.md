@@ -20,7 +20,7 @@ the same change.
 | [0003](0003-diff-on-ci-runner-not-server.md) | Pixel diffing on the CI runner, not the server | accepted, amended by [0014](0014-upload-record-grants-image-access.md) and [0016](0016-cli-measures-server-classifies.md) |
 | [0004](0004-baseline-and-approval-rules.md) | Baseline and approval rules | accepted, amended by [0030](0030-an-unstable-capture-never-becomes-the-baseline.md) |
 | [0005](0005-cached-native-build-with-js-rebundle.md) | Cached native build with a per-run JS rebundle | accepted, amended 2026-11-06 |
-| [0006](0006-ios-only-full-screen-capture-for-v1.md) | iOS only, full-screen capture for v1 | accepted, amended 2026-11-06 |
+| [0006](0006-ios-only-full-screen-capture-for-v1.md) | iOS only, full-screen capture for v1 | accepted, amended 2026-11-06 and by [0036](0036-builds-belong-to-a-platform.md) |
 | [0007](0007-org-scoped-tenancy.md) | Org-scoped tenancy from day one | accepted, amended by [0011](0011-github-login-sessions-and-org-authorization.md), [0012](0012-personal-accounts-as-single-member-orgs.md) and [0014](0014-upload-record-grants-image-access.md) |
 | [0008](0008-storybook-websocket-channel-for-story-selection.md) | Storybook websocket channel for story selection | accepted, amended by [0022](0022-story-parameters-reported-by-the-decorator.md) |
 | [0009](0009-every-standard-has-a-guard.md) | Every standard has a guard | accepted, amended 2026-11-06 |
@@ -50,6 +50,6 @@ the same change.
 | [0033](0033-the-cli-silences-system-notices-before-capture.md) | The CLI silences system notices before capture | accepted |
 | [0034](0034-published-declarations-name-the-js-file.md) | Published declaration files name the `.js` file | accepted |
 | [0035](0035-the-cli-pins-the-simulator-appearance.md) | The CLI pins the simulator appearance | accepted |
-| [0036](0036-builds-belong-to-a-platform.md) | Builds belong to a platform | proposed |
+| [0036](0036-builds-belong-to-a-platform.md) | Builds belong to a platform | accepted |
 | [0037](0037-web-capture-with-playwright-on-the-runner.md) | Web capture with Playwright on the runner | accepted |
 | [0038](0038-a-config-file-chooses-the-platforms.md) | A config file chooses the platforms a run captures | accepted |

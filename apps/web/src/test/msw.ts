@@ -26,6 +26,8 @@ interface ApiState {
   builds: Build[];
   snapshots: Snapshot[];
   library: GetLibraryResponse;
+  /** What `?platform=` answers, by platform; a platform not listed gets `library`. */
+  libraryByPlatform: Partial<Record<string, GetLibraryResponse>>;
   /** `METHOD /path` of every mutating request, for assertions. */
   calls: string[];
   /** Snapshots another reviewer denies while an approve-all runs, so it skips them. */
@@ -37,6 +39,7 @@ export const apiState: ApiState = {
   builds: [],
   snapshots: [],
   library: initialLibrary(),
+  libraryByPlatform: {},
   calls: [],
   deniedDuringApproveAll: [],
 };
@@ -46,6 +49,7 @@ export function resetApiState(): void {
   apiState.builds = [prBuild, mainBuild];
   apiState.snapshots = initialSnapshots();
   apiState.library = initialLibrary();
+  apiState.libraryByPlatform = {};
   apiState.calls = [];
   apiState.deniedDuringApproveAll = [];
 }
@@ -106,9 +110,12 @@ export const handlers = [
     if (params.projectId !== project.id) return apiError(404, 'not_found', 'No project');
     return HttpResponse.json({ builds: apiState.builds.map(withSummary) });
   }),
-  http.get('*/api/projects/:projectId/library', ({ params }) => {
+  http.get('*/api/projects/:projectId/library', ({ params, request }) => {
     if (params.projectId !== project.id) return apiError(404, 'not_found', 'No project');
-    return HttpResponse.json(apiState.library);
+    const platform = new URL(request.url).searchParams.get('platform');
+    return HttpResponse.json(
+      (platform === null ? undefined : apiState.libraryByPlatform[platform]) ?? apiState.library,
+    );
   }),
   http.get('*/api/builds/:buildId', ({ params }) => {
     const build = findBuild(params.buildId);

@@ -1,15 +1,17 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import type { LibraryStory } from '@targus/core/browser';
+import type { LibraryStory, Platform } from '@targus/core/browser';
 import { type ReactElement, useMemo } from 'react';
 
 import { imageUrl } from '../../api-client/index.ts';
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons.tsx';
 import { SnapshotImage } from '../../components/SnapshotImage.tsx';
 import { useHotkeys } from '../snapshot/index.ts';
-import { storyKey, storyTitle } from './stories.ts';
+import { librarySearch, storyKey, storyTitle } from './stories.ts';
 
 export interface StoryCanvasProps {
   readonly projectId: string;
+  /** The `?platform=` the library was opened with, kept by every link. */
+  readonly platform: Platform | undefined;
   readonly story: LibraryStory;
   /** The stories previous/next step through; it contains `story`. */
   readonly stories: readonly LibraryStory[];
@@ -17,6 +19,7 @@ export interface StoryCanvasProps {
 
 function StepLink(props: {
   readonly projectId: string;
+  readonly platform: Platform | undefined;
   readonly target: LibraryStory | undefined;
   readonly label: 'Previous' | 'Next';
   readonly title: string;
@@ -34,7 +37,7 @@ function StepLink(props: {
       className="icon-button"
       to="/projects/$projectId/library"
       params={{ projectId: props.projectId }}
-      search={{ story: storyKey(props.target) }}
+      search={librarySearch(props.platform, storyKey(props.target))}
       aria-label={props.label}
       title={props.title}
     >
@@ -43,15 +46,17 @@ function StepLink(props: {
   );
 }
 
-/** One story on its own, like Storybook's canvas, with previous/next through the library. */
-export function StoryCanvas({ projectId, story, stories }: StoryCanvasProps): ReactElement {
+/** j or → and k or ← step to the next and previous story, Escape back to the overview. */
+function useStepKeys(
+  projectId: string,
+  platform: Platform | undefined,
+  previous: LibraryStory | undefined,
+  next: LibraryStory | undefined,
+): void {
   const navigate = useNavigate();
-  const index = stories.findIndex((candidate) => storyKey(candidate) === storyKey(story));
-  const previous = stories[index - 1];
-  const next = stories[index + 1];
   const hotkeys = useMemo(() => {
     const open = (target: LibraryStory | undefined) => (): void => {
-      const search = target ? { story: storyKey(target) } : {};
+      const search = librarySearch(platform, target ? storyKey(target) : undefined);
       void navigate({ to: '/projects/$projectId/library', params: { projectId }, search });
     };
     return {
@@ -59,8 +64,21 @@ export function StoryCanvas({ projectId, story, stories }: StoryCanvasProps): Re
       ...(previous ? { k: open(previous), ArrowLeft: open(previous) } : {}),
       Escape: open(undefined),
     };
-  }, [navigate, projectId, previous, next]);
+  }, [navigate, projectId, platform, previous, next]);
   useHotkeys(hotkeys);
+}
+
+/** One story on its own, like Storybook's canvas, with previous/next through the library. */
+export function StoryCanvas({
+  projectId,
+  platform,
+  story,
+  stories,
+}: StoryCanvasProps): ReactElement {
+  const index = stories.findIndex((candidate) => storyKey(candidate) === storyKey(story));
+  const previous = stories[index - 1];
+  const next = stories[index + 1];
+  useStepKeys(projectId, platform, previous, next);
   const label = storyTitle(story);
   return (
     <div className="story-canvas">
@@ -74,6 +92,7 @@ export function StoryCanvas({ projectId, story, stories }: StoryCanvasProps): Re
         <nav className="snapshot-nav" aria-label="Stories">
           <StepLink
             projectId={projectId}
+            platform={platform}
             target={previous}
             label="Previous"
             title="Previous (k or ←)"
@@ -81,7 +100,13 @@ export function StoryCanvas({ projectId, story, stories }: StoryCanvasProps): Re
           <span className="position">
             {index + 1} of {stories.length}
           </span>
-          <StepLink projectId={projectId} target={next} label="Next" title="Next (j or →)" />
+          <StepLink
+            projectId={projectId}
+            platform={platform}
+            target={next}
+            label="Next"
+            title="Next (j or →)"
+          />
         </nav>
       </div>
       <div className="story-stage">

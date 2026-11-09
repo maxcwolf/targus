@@ -66,6 +66,8 @@ describe('Build and Snapshot', () => {
       trigger: 'main',
       device: 'iPhone 16',
       appearance: 'light',
+      platform: 'ios',
+      pixelRatio: 3,
       status: 'pending',
       createdAt: '2026-11-04T10:00:00.000Z',
       completedAt: null,

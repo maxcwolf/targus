@@ -4,6 +4,7 @@ import {
   type BuildRepository,
   type BuildStatus,
   type NewBuild,
+  type Platform,
   type SnapshotTally,
 } from '@targus/core';
 import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from 'drizzle-orm';
@@ -67,6 +68,7 @@ export interface ApiBuildRepository extends BuildRepository {
   findById(projectId: string, buildId: string): Promise<BuildRecord | null>;
   findLatestSuccessfulForShas(
     projectId: string,
+    platform: Platform,
     shas: readonly string[],
   ): Promise<BuildRecord | null>;
   /** A build of any project; the caller authorizes it through its project. */
@@ -76,8 +78,14 @@ export interface ApiBuildRepository extends BuildRepository {
    * `bad_request` for a limit outside 1..`maxBuildsPageLimit` or a cursor it did not issue.
    */
   listForProject(projectId: string, page: BuildPageRequest): Promise<BuildPage>;
-  /** The newest signed-off build (`baselineBuildStatuses`) of a project on `branch`. */
-  findLatestBaselineOnBranch(projectId: string, branch: string): Promise<BuildRecord | null>;
+  /** The newest signed-off build (`baselineBuildStatuses`) of a project's `platform` on `branch`. */
+  findLatestBaselineOnBranch(
+    projectId: string,
+    platform: Platform,
+    branch: string,
+  ): Promise<BuildRecord | null>;
+  /** Every platform with a signed-off build of the project on `branch`, in no set order. */
+  listBaselinePlatformsOnBranch(projectId: string, branch: string): Promise<Platform[]>;
   /**
    * Store a build's snapshots and move it out of `in_progress`, in one transaction, only if it
    * is still `in_progress` when the transaction runs. False, with nothing written, when it is
@@ -184,13 +192,18 @@ export class D1BuildRepository implements ApiBuildRepository {
     return toBuildPage(rows.map(toBuildRecord), limit);
   }
 
-  async findLatestBaselineOnBranch(projectId: string, branch: string): Promise<BuildRecord | null> {
+  async findLatestBaselineOnBranch(
+    projectId: string,
+    platform: Platform,
+    branch: string,
+  ): Promise<BuildRecord | null> {
     const row = await this.db
       .select()
       .from(builds)
       .where(
         and(
           eq(builds.projectId, projectId),
+          eq(builds.platform, platform),
           eq(builds.branch, branch),
           inArray(builds.status, [...baselineBuildStatuses]),
         ),
@@ -201,13 +214,29 @@ export class D1BuildRepository implements ApiBuildRepository {
     return row === undefined ? null : toBuildRecord(row);
   }
 
+  async listBaselinePlatformsOnBranch(projectId: string, branch: string): Promise<Platform[]> {
+    const rows = await this.db
+      .selectDistinct({ platform: builds.platform })
+      .from(builds)
+      .where(
+        and(
+          eq(builds.projectId, projectId),
+          eq(builds.branch, branch),
+          inArray(builds.status, [...baselineBuildStatuses]),
+        ),
+      );
+    return rows.map((row) => row.platform);
+  }
+
   /**
-   * The SQL form of core's `resolveBaseline`: the first sha in `shas` order with a successful
-   * build, then the latest `createdAt`, ties broken by the greater id. `shas` travels as one
-   * JSON parameter because D1 binds at most 100 parameters and the CLI sends up to 101 shas.
+   * The SQL form of core's `resolveBaseline`: among the `platform` builds, the first sha in
+   * `shas` order with a successful build, then the latest `createdAt`, ties broken by the
+   * greater id. `shas` travels as one JSON parameter because D1 binds at most 100 parameters and
+   * the CLI sends up to 101 shas.
    */
   async findLatestSuccessfulForShas(
     projectId: string,
+    platform: Platform,
     shas: readonly string[],
   ): Promise<BuildRecord | null> {
     if (shas.length === 0) return null;
@@ -218,6 +247,7 @@ export class D1BuildRepository implements ApiBuildRepository {
       .where(
         and(
           eq(builds.projectId, projectId),
+          eq(builds.platform, platform),
           inArray(builds.status, [...baselineBuildStatuses]),
           sql`${builds.sha} IN (SELECT value FROM json_each(${order}))`,
         ),

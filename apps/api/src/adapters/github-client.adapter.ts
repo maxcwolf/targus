@@ -5,9 +5,6 @@ import type { CheckRunState, CheckRunTarget, GitHubClient } from '@targus/core';
 import { InstallationTokenCache, type InstallationToken } from './installation-token-cache.ts';
 import { systemClock } from './system-clock.adapter.ts';
 
-/** The check run name targus reports on every commit (plan.md section 5.2). */
-export const checkRunName = 'targus/ios';
-
 export interface GitHubAppCredentials {
   readonly appId: string;
   /** PKCS#8 PEM; WebCrypto cannot import the PKCS#1 key GitHub hands out (see README). */
@@ -107,6 +104,7 @@ export class OctokitGitHubClient implements GitHubClient {
 
   async createCheckRun(
     target: CheckRunTarget,
+    name: string,
     state: CheckRunState,
     detailsUrl: string,
   ): Promise<{ id: number }> {
@@ -114,7 +112,7 @@ export class OctokitGitHubClient implements GitHubClient {
       this.request('POST /repos/{owner}/{repo}/check-runs', {
         ...splitRepo(target.repo),
         headers,
-        name: checkRunName,
+        name,
         head_sha: target.headSha,
         details_url: detailsUrl,
         ...stateFields(state),

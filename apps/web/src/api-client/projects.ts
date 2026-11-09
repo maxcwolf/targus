@@ -3,6 +3,7 @@ import {
   GetLibraryResponse,
   ListBuildsResponse,
   ListProjectsResponse,
+  type Platform,
 } from '@targus/core/browser';
 
 import { getJson } from './http.ts';
@@ -29,7 +30,14 @@ export function listBuilds(
   return getJson(path, ListBuildsResponse);
 }
 
-/** `GET /api/projects/:id/library`: every story of the accepted default-branch build. */
-export function getLibrary(projectId: string): Promise<GetLibraryResponse> {
-  return getJson(`/api/projects/${encodeURIComponent(projectId)}/library`, GetLibraryResponse);
+/**
+ * `GET /api/projects/:id/library`: every story of the accepted default-branch build of
+ * `platform`, or of the first platform that has one when it is undefined (ADR 0036).
+ */
+export function getLibrary(projectId: string, platform?: Platform): Promise<GetLibraryResponse> {
+  const query = platform === undefined ? '' : `?${new URLSearchParams({ platform }).toString()}`;
+  return getJson(
+    `/api/projects/${encodeURIComponent(projectId)}/library${query}`,
+    GetLibraryResponse,
+  );
 }

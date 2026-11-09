@@ -1,4 +1,10 @@
-import { ListBuildsQuery, maxBuildsPageLimit, TargusError } from '@targus/core';
+import {
+  GetLibraryQuery,
+  ListBuildsQuery,
+  maxBuildsPageLimit,
+  Platform,
+  TargusError,
+} from '@targus/core';
 import { Hono } from 'hono';
 
 import type { AppEnv } from '../app-env.ts';
@@ -20,6 +26,12 @@ export const projectsRoute = new Hono<AppEnv>()
     const { services, reviewer } = c.var;
     return c.json(await services.listBuilds(reviewer, c.req.param('id'), query.data));
   })
-  .get('/:id/library', sessionAuth, async (c) =>
-    c.json(await c.var.services.getLibrary(c.var.reviewer, c.req.param('id'))),
-  );
+  .get('/:id/library', sessionAuth, async (c) => {
+    const query = GetLibraryQuery.safeParse(c.req.query());
+    if (!query.success) {
+      const message = `platform must be one of ${Platform.options.join(', ')}`;
+      throw new TargusError('bad_request', message);
+    }
+    const { services, reviewer } = c.var;
+    return c.json(await services.getLibrary(reviewer, c.req.param('id'), query.data));
+  });

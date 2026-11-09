@@ -56,7 +56,7 @@ describe('OctokitGitHubClient installation tokens', () => {
     const { github, client } = setup();
 
     await client.isOrgMember(42, 'example-org', 'member');
-    await client.createCheckRun(target, done, 'https://targus.test/builds/b1');
+    await client.createCheckRun(target, 'targus/ios', done, 'https://targus.test/builds/b1');
     await client.updateCheckRun(target, 901, done);
     expect(github.mints()).toBe(1);
     expect(github.lastAuthorization()).toBe('token token-1');

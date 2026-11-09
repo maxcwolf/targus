@@ -54,6 +54,8 @@ const replayedFields = [
   'trigger',
   'device',
   'appearance',
+  'platform',
+  'pixelRatio',
 ] as const;
 
 /**
@@ -67,7 +69,11 @@ async function openBuild(
   now: Date,
 ): Promise<BuildRecord> {
   const shas = baselineShaOrder(request.mergeBaseSha, request.ancestors);
-  const baseline = await deps.builds.findLatestSuccessfulForShas(project.id, shas);
+  const baseline = await deps.builds.findLatestSuccessfulForShas(
+    project.id,
+    request.platform,
+    shas,
+  );
   const id = deps.ids.next();
   const build = await deps.builds.create(
     {
@@ -81,6 +87,8 @@ async function openBuild(
       trigger: request.trigger,
       device: request.device,
       appearance: request.appearance,
+      platform: request.platform,
+      pixelRatio: request.pixelRatio,
       status: 'in_progress',
       createdAt: now.toISOString(),
       completedAt: null,
@@ -164,6 +172,8 @@ function toWireBuild(record: BuildRecord): Build {
     trigger: record.trigger,
     device: record.device,
     appearance: record.appearance,
+    platform: record.platform,
+    pixelRatio: record.pixelRatio,
     status: record.status,
     createdAt: record.createdAt,
     completedAt: record.completedAt,

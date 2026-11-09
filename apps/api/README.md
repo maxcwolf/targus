@@ -22,35 +22,41 @@ src/cloudflare/    the Worker edge: bindings, env -> deps (D1, R2), and the Work
 
 ## Routes
 
-| Route                                 | Auth                     | Purpose                                                               |
-| ------------------------------------- | ------------------------ | --------------------------------------------------------------------- |
-| `GET /api/health`                     | none                     | Liveness and version                                                  |
-| `POST /api/admin/projects`            | `ADMIN_TOKEN`            | Create a project (and its org); returns the token once                |
-| `GET /api/auth/github?returnTo=`      | none                     | Start GitHub login: state cookie, 302 to GitHub                       |
-| `GET /api/auth/github/callback`       | state cookie             | Finish login: session cookie, 302 to `returnTo` (a local path)        |
-| `POST /api/auth/logout`               | session                  | Delete the session and clear the cookie (204)                         |
-| `GET /api/me`                         | session                  | The signed-in GitHub user                                             |
-| `GET /api/projects`                   | session                  | Projects of the orgs the user belongs to                              |
-| `GET /api/projects/:id/builds?limit=` | session                  | Builds, newest first, with summary and counts (limit 1..100)          |
-| `GET /api/projects/:id/library`       | session                  | Every story of the newest signed-off default-branch build             |
-| `GET /api/projects/current`           | project token            | The token's project; the CLI checks its token with it                 |
-| `POST /api/builds`                    | project token            | Open a build: baseline, baseline hashes, missing image hashes         |
-| `PUT /api/images/:hash`               | project token            | Upload a PNG (`Content-Type: image/png`, at most 10 MB)               |
-| `GET /api/images/:hash`               | session or project token | Read a PNG                                                            |
-| `POST /api/builds/:id/results`        | project token            | Submit story results; stores snapshots, creates check run             |
-| `GET /api/builds/:id`                 | session or project token | Build (with `checkRunId`), its status summary and counts              |
-| `GET /api/builds/:id/snapshots`       | session or project token | Snapshots of a build                                                  |
-| `POST /api/snapshots/:id/review`      | session                  | `{ "decision": "approve" \| "deny" }`; updates the check run          |
-| `POST /api/builds/:id/approve-all`    | session                  | Approve every pending change; answers `approvedCount`, `skippedCount` |
+| Route                                     | Auth                     | Purpose                                                                 |
+| ----------------------------------------- | ------------------------ | ----------------------------------------------------------------------- |
+| `GET /api/health`                         | none                     | Liveness and version                                                    |
+| `POST /api/admin/projects`                | `ADMIN_TOKEN`            | Create a project (and its org); returns the token once                  |
+| `GET /api/auth/github?returnTo=`          | none                     | Start GitHub login: state cookie, 302 to GitHub                         |
+| `GET /api/auth/github/callback`           | state cookie             | Finish login: session cookie, 302 to `returnTo` (a local path)          |
+| `POST /api/auth/logout`                   | session                  | Delete the session and clear the cookie (204)                           |
+| `GET /api/me`                             | session                  | The signed-in GitHub user                                               |
+| `GET /api/projects`                       | session                  | Projects of the orgs the user belongs to                                |
+| `GET /api/projects/:id/builds?limit=`     | session                  | Builds, newest first, with summary and counts (limit 1..100)            |
+| `GET /api/projects/:id/library?platform=` | session                  | Every story of the newest signed-off default-branch build of a platform |
+| `GET /api/projects/current`               | project token            | The token's project; the CLI checks its token with it                   |
+| `POST /api/builds`                        | project token            | Open a build: baseline, baseline hashes, missing image hashes           |
+| `PUT /api/images/:hash`                   | project token            | Upload a PNG (`Content-Type: image/png`, at most 10 MB)                 |
+| `GET /api/images/:hash`                   | session or project token | Read a PNG                                                              |
+| `POST /api/builds/:id/results`            | project token            | Submit story results; stores snapshots, creates check run               |
+| `GET /api/builds/:id`                     | session or project token | Build (with `checkRunId`), its status summary and counts                |
+| `GET /api/builds/:id/snapshots`           | session or project token | Snapshots of a build                                                    |
+| `POST /api/snapshots/:id/review`          | session                  | `{ "decision": "approve" \| "deny" }`; updates the check run            |
+| `POST /api/builds/:id/approve-all`        | session                  | Approve every pending change; answers `approvedCount`, `skippedCount`   |
 
 Every body and response is a zod contract from `@targus/core`. Results with no stories answer
 400, since an empty build would mark every baseline story removed and pass. A build's
 `summary.status` is `in_progress` (no conclusion, every count 0) until its results arrive, then
 the fold of its snapshots; `counts` is how many snapshots are in each state. Both come from the tally stored on
-the build row, so the builds list never reads snapshots. `build.checkRunId` is the `targus/ios`
-check run, or null when none was created. Only `passed` and `accepted` builds (core's
-`baselineBuildStatuses`) serve as baselines, so a build still `pending` review is never the
-baseline of the next one. Errors are `{ "error": { "code", "message", "requestId" } }`, with the
+the build row, so the builds list never reads snapshots. Every build has a `platform` (`ios`,
+`android` or `web`; `ios` when the CLI sends none) and a `pixelRatio` (null when it sends none),
+and its baselines, check run and library are per platform (ADR 0036). `build.checkRunId` is the build's
+`targus/<platform>` check run (`targus/ios` for iOS), or null when none was created. Only
+`passed` and `accepted` builds (core's `baselineBuildStatuses`) of the same platform serve as
+baselines, so a build still `pending` review is never the baseline of the next one, and a web
+build never that of an iOS one. The library reads one platform: `?platform=` names it, else the
+first of `ios`, `android`, `web` that has a signed-off default-branch build; the response's
+`platform` is the one read (null when none has) and `platforms` lists every platform that has
+one. Any other `platform` value answers 400. Errors are `{ "error": { "code", "message", "requestId" } }`, with the
 code mapped to a status in `src/errors.ts`; `requestId` is the request's `x-request-id` (see
 [Logging](#logging-and-request-ids)).
 

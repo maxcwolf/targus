@@ -1,5 +1,5 @@
 import type { Snapshot } from '@targus/core/browser';
-import type { ReactElement, ReactNode } from 'react';
+import type { CSSProperties, ReactElement, ReactNode } from 'react';
 
 import { ActualSizeIcon, DiffIcon, FitIcon } from '../../components/icons.tsx';
 import { releaseFocusOnPointerUp } from '../../components/releaseFocus.ts';
@@ -147,22 +147,25 @@ function ViewerTools({ viewer }: { readonly viewer: ViewerState }): ReactElement
 }
 
 /**
- * Column labels and the icon tools, then the captures. "Fit" scales captures (3x device pixels)
- * to the pane height; "100%" shows every pixel and lets the pane scroll.
+ * Column labels and the icon tools, then the captures. "Fit" scales captures to the pane height;
+ * "100%" shows them at the size they had on the device, each image pixel divided by the build's
+ * `pixelRatio` (`displayPixelRatio`, ADR 0036), and lets the pane scroll.
  */
 export function SnapshotViewer(props: {
   readonly snapshot: Snapshot;
   readonly viewer: ViewerState;
   readonly labels: ViewerLabels;
+  readonly pixelRatio: number;
 }): ReactElement {
   const { viewer } = props;
+  const ratio = { '--pixel-ratio': String(props.pixelRatio) } as CSSProperties;
   return (
     <div className="viewer">
       <div className="viewer-head">
         <ColumnLabels viewer={viewer} labels={props.labels} />
         <ViewerTools viewer={viewer} />
       </div>
-      <div className={`viewer-pane zoom-${viewer.zoom}`} data-zoom={viewer.zoom}>
+      <div className={`viewer-pane zoom-${viewer.zoom}`} data-zoom={viewer.zoom} style={ratio}>
         <ViewerBody snapshot={props.snapshot} viewer={viewer} />
       </div>
     </div>

@@ -1,9 +1,17 @@
+import type { Platform } from '@targus/core/browser';
+
 /** Every TanStack Query key in the app, so invalidation and `setQueryData` agree on them. */
 export const queryKeys = {
   me: ['me'],
   projects: ['projects'],
   builds: (projectId: string) => ['projects', projectId, 'builds'],
-  library: (projectId: string) => ['projects', projectId, 'library'],
+  /** Per platform asked for; `null` is the server's pick (ADR 0036). */
+  library: (projectId: string, platform: Platform | null = null) => [
+    'projects',
+    projectId,
+    'library',
+    platform,
+  ],
   build: (buildId: string) => ['builds', buildId],
   snapshots: (buildId: string) => ['builds', buildId, 'snapshots'],
 } as const;

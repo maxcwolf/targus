@@ -18,6 +18,8 @@ import {
 
 /** Values of `builds.status`; mirrors `BuildStatus` in @targus/core. */
 const buildStatuses = ['in_progress', 'pending', 'accepted', 'denied', 'passed', 'failed'] as const;
+/** Values of `builds.platform`; mirrors `Platform` in @targus/core. */
+const platforms = ['ios', 'android', 'web'] as const;
 /** Values of `snapshots.state`; mirrors `SnapshotState` in @targus/core. */
 const snapshotStates = ['unchanged', 'changed', 'new', 'removed', 'unstable', 'error'] as const;
 /** Values of `snapshots.review`; mirrors `ReviewState` in @targus/core. */
@@ -74,6 +76,11 @@ export const builds = sqliteTable(
     // The light or dark mode the CLI pinned before capturing (ADR 0035). Null for builds opened
     // by a CLI that predates it.
     appearance: text('appearance', { enum: ['light', 'dark'] }),
+    // What the build was captured on (ADR 0036): baselines, check runs and the library are per
+    // platform. Builds opened before the column, or by a CLI that does not send it, are `ios`.
+    platform: text('platform', { enum: platforms }).notNull().default('ios'),
+    // Device pixels per point or CSS pixel of the captures; null when the CLI did not say.
+    pixelRatio: real('pixel_ratio'),
     status: text('status', { enum: buildStatuses }).notNull(),
     checkRunId: integer('check_run_id'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),

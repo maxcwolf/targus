@@ -27,6 +27,8 @@ const buildRequest: CreateBuildRequest = {
   trigger: 'main',
   device: 'iPhone 16',
   appearance: 'light',
+  platform: 'ios',
+  pixelRatio: null,
   snapshots: [],
 };
 

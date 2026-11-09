@@ -66,7 +66,8 @@ describe('libraryStories', () => {
         imageHash: baseline,
       },
     ]);
-    expect(GetLibraryResponse.parse({ build: null, stories })).toEqual({ build: null, stories });
+    const response = { platform: null, platforms: [], build: null, stories };
+    expect(GetLibraryResponse.parse(response)).toEqual(response);
   });
 
   it('leaves out removed stories and stories without an accepted image', () => {

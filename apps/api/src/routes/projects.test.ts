@@ -108,18 +108,47 @@ describe('GET /api/projects/:id/library', () => {
     const library = `/api/projects/${project.id}/library`;
 
     const before = await getAsReviewer(library, member.cookie);
-    expect(GetLibraryResponse.parse(await before.json())).toEqual({ build: null, stories: [] });
+    expect(GetLibraryResponse.parse(await before.json())).toEqual({
+      platform: null,
+      platforms: [],
+      build: null,
+      stories: [],
+    });
 
     const approved = await postAsReviewer(`/api/builds/${buildId}/approve-all`, member.cookie);
     expect(approved.status).toBe(200);
     const after = await getAsReviewer(library, member.cookie);
 
     expect(after.status).toBe(200);
-    const { build, stories } = GetLibraryResponse.parse(await after.json());
-    expect(build).toMatchObject({ id: buildId, status: 'accepted' });
+    const { platform, platforms, build, stories } = GetLibraryResponse.parse(await after.json());
+    expect([platform, platforms]).toEqual(['ios', ['ios']]);
+    expect(build).toMatchObject({ id: buildId, status: 'accepted', platform: 'ios' });
     expect(stories).toMatchObject([{ storyId: 'button', variant: 'default' }]);
     expect((await getAsReviewer(library, outsider.cookie)).status).toBe(403);
     expect((await getAsReviewer('/api/projects/nope/library', member.cookie)).status).toBe(404);
     expect((await call(library)).status).toBe(401);
+  });
+
+  it('reads the library of the platform asked for, and refuses an unknown platform', async () => {
+    const { project, buildId } = await projectWithBuild([storyResult('button')]);
+    const member = await signIn('octocat');
+    await postAsReviewer(`/api/builds/${buildId}/approve-all`, member.cookie);
+    const library = `/api/projects/${project.id}/library`;
+
+    const web = await getAsReviewer(`${library}?platform=web`, member.cookie);
+    const ios = await getAsReviewer(`${library}?platform=ios`, member.cookie);
+    const unknown = await getAsReviewer(`${library}?platform=macos`, member.cookie);
+
+    expect(GetLibraryResponse.parse(await web.json())).toEqual({
+      platform: 'web',
+      platforms: ['ios'],
+      build: null,
+      stories: [],
+    });
+    expect(GetLibraryResponse.parse(await ios.json()).build).toMatchObject({ id: buildId });
+    expect(unknown.status).toBe(400);
+    expect(await unknown.json()).toMatchObject({
+      error: { code: 'bad_request', message: 'platform must be one of ios, android, web' },
+    });
   });
 });

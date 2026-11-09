@@ -24,6 +24,7 @@ export {
 } from './build-status.ts';
 export * from './contracts/index.ts';
 export { isTargusError, TargusError, targusErrorCodes, type TargusErrorCode } from './errors.ts';
+export { checkRunName, displayPixelRatio } from './platform.ts';
 export * from './ports/index.ts';
 export { acceptedImageHash } from './snapshots/accepted-image-hash.ts';
 export {

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { Appearance, BuildTrigger, GitSha } from './build.ts';
+import { Appearance, BuildTrigger, GitSha, PixelRatio, Platform } from './build.ts';
 import { ImageHash } from './snapshot.ts';
 
 /** One captured story the CLI reports when it opens a build. */
@@ -28,9 +28,11 @@ const IdempotencyKey = z
  * `ancestors` is the first-parent ancestor list of the merge base, nearest first, so the server
  * can pick the nearest ancestor that has a build (plan.md section 6, rule 1). A request with the
  * `idempotencyKey` of a build the project already opened returns that build; the same key with a
- * different build (sha, branch, PR, merge base, trigger, device or appearance) is a `conflict`
- * (ADR 0027). Without a key every request opens a new build. `appearance` is absent from CLIs
- * that predate it (ADR 0035) and reads as `null`.
+ * different build (sha, branch, PR, merge base, trigger, device, appearance, platform or pixel
+ * ratio) is a `conflict` (ADR 0027). Without a key every request opens a new build.
+ * `appearance` is absent from CLIs that predate it (ADR 0035) and reads as `null`. `platform`
+ * and `pixelRatio` are absent from CLIs that predate them (ADR 0036) and read as `ios` and
+ * `null`, so those builds keep the baselines and check run they had.
  */
 export const CreateBuildRequest = z.object({
   sha: GitSha,
@@ -41,6 +43,8 @@ export const CreateBuildRequest = z.object({
   trigger: BuildTrigger,
   device: z.string().min(1),
   appearance: Appearance.nullable().default(null),
+  platform: Platform.default('ios'),
+  pixelRatio: PixelRatio.nullable().default(null),
   snapshots: z.array(CapturedSnapshot),
   idempotencyKey: IdempotencyKey.optional(),
 });

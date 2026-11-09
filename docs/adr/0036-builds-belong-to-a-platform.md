@@ -2,7 +2,7 @@
 
 ## Status
 
-proposed
+accepted
 
 ## Date
 
@@ -43,15 +43,18 @@ working, and a migration adds `builds.platform` (not null, default `ios`) togeth
 - Opening a build with a known idempotency key and a different platform is a `conflict`, like any
   other difference (ADR 0027).
 - The check run is named `targus/<platform>`; iOS keeps `targus/ios`.
-- The library takes a platform, and the UI shows the platform on builds and lets the library
-  switch between platforms.
-- The UI's actual-size view divides by the build's pixel ratio.
+- The library takes a platform (`GET /api/projects/:id/library?platform=`). Without one it
+  shows the first, in ios, android, web order, of the platforms with a signed-off build on the
+  default branch, and it lists those platforms, so the UI offers a switch when there are two or
+  more. The UI shows the platform on builds.
+- The UI's actual-size view divides by the build's pixel ratio. A build without one, as every
+  build before this ADR, is taken as 1 on web and 3 on a device (`displayPixelRatio` in core).
 
 Approvals are not keyed by platform. They are keyed by story, variant and hash pair, and an image
 hash from one platform never equals one from another.
 
-One project holds every platform of a Storybook. ADR 0006 is amended by this ADR once it is
-accepted: v1 captures iOS only, but the data model no longer assumes it.
+One project holds every platform of a Storybook. ADR 0006 is amended by this ADR: v1 captures
+iOS only, but the data model no longer assumes it.
 
 ## Consequences
 
@@ -61,12 +64,19 @@ accepted: v1 captures iOS only, but the data model no longer assumes it.
   in one project with one token.
 - The library can show a story on every platform, and later side by side.
 - Android slots in the same way, with no further schema change.
-- iOS behaviour and existing check-run names do not change.
+- iOS builds, their baselines and the `targus/ios` check-run name do not change, and a CLI that
+  sends no platform opens an iOS build.
 
 ### Negative
 
-- One more column on every baseline query, and one more index column to keep row reads low on
-  D1 (ADR 0002).
+- One more column on every baseline query. It gets no index: `builds_project_sha_idx` (project,
+  sha, created_at) already narrows the baseline lookup to the few builds of a project at each
+  candidate sha. The library now reads twice (its platforms, then the newest build of one), and
+  each read narrows by project through the same index, as its one read did before, so D1 row
+  reads grow little (ADR 0002). An index on (project, branch, platform) can follow if one
+  project's builds grow large enough to show in the reads.
+- The 100% view of an iOS build now shows its captures at point size, a third of their pixels
+  each way, where it showed one image pixel per CSS pixel before.
 - A project whose web and iOS Storybooks name their stories differently gets two libraries that
   do not line up. That is the consumer's choice, and nothing breaks.
 - Branch protection must require each platform's check separately.

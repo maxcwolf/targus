@@ -1,3 +1,4 @@
+import type { Platform } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import { createBuildRequest, newProject, sha, storyResult } from '../../test/support/fixtures.ts';
@@ -12,11 +13,16 @@ import { approveAll, reviewSnapshot } from './review.service.ts';
 // A check run GitHub failed to create when the results came in is created by the next review.
 
 /** A build with two new stories, submitted while the first `failCreates` creations fail. */
-async function submittedWhileGitHubFailed(installationId: number | null, failCreates = 1) {
+async function submittedWhileGitHubFailed(
+  installationId: number | null,
+  failCreates = 1,
+  platform: Platform = 'ios',
+) {
   const github = createRecordingGitHub(['octocat'], { failCreates });
   const deps = createTestDeps({ github });
   const project = await deps.projects.create(newProject('recreate', { installationId }));
-  const { build } = await createBuild(deps, project, createBuildRequest(sha('a')));
+  const request = createBuildRequest(sha('a'), { platform });
+  const { build } = await createBuild(deps, project, request);
   const results = [storyResult('one'), storyResult('two')];
   await markUploaded(deps.images, project.id, results);
   const response = await submitResults(deps, project, build.id, {
@@ -43,6 +49,7 @@ describe('a check run missing after the results', () => {
     expect(github.creates).toEqual([
       {
         target: { installationId: 42, repo: 'org-recreate/app', headSha: sha('a') },
+        name: 'targus/ios',
         state: { status: 'in_progress', summary: '1 change awaiting review' },
         detailsUrl: `https://targus.test/builds/${buildId}`,
       },
@@ -84,5 +91,15 @@ describe('a check run missing after the results', () => {
 
     expect(response).toMatchObject({ checkRun: null, checkRunMissing: 'no_installation' });
     expect(github.creates).toEqual([]);
+  });
+});
+
+describe('a check run missing after the results of a web build', () => {
+  it('is created by the next review as targus/web', async () => {
+    const { deps, github, reviewer, snapshotIds } = await submittedWhileGitHubFailed(42, 1, 'web');
+
+    await reviewSnapshot(deps, reviewer, snapshotIds[0] ?? '', 'approve');
+
+    expect(github.creates.map((create) => create.name)).toEqual(['targus/web']);
   });
 });

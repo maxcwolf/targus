@@ -40,8 +40,8 @@ const libraryRoute = createRoute({
   validateSearch: validateLibrarySearch,
   component: function LibraryRoute(): ReactElement {
     const { projectId } = libraryRoute.useParams();
-    const { story } = libraryRoute.useSearch();
-    return <LibraryPage projectId={projectId} story={story} />;
+    const { story, platform } = libraryRoute.useSearch();
+    return <LibraryPage projectId={projectId} story={story} platform={platform} />;
   },
 });
 

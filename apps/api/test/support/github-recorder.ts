@@ -14,6 +14,7 @@ export interface RecordingGitHub extends GitHubClient {
   /** The check runs created, in order; each gets id 901, 902, ... */
   readonly creates: {
     readonly target: CheckRunTarget;
+    readonly name: string;
     readonly state: CheckRunState;
     readonly detailsUrl: string;
   }[];
@@ -58,12 +59,12 @@ export function createRecordingGitHub(
         options.accounts?.[installationId] ?? defaultAccountId(installationId),
       );
     },
-    createCheckRun(target, state, detailsUrl) {
+    createCheckRun(target, name, state, detailsUrl) {
       createCalls += 1;
       if (createCalls <= (options.failCreates ?? 0)) {
         return Promise.reject(new Error('GitHub is down'));
       }
-      creates.push({ target, state, detailsUrl });
+      creates.push({ target, name, state, detailsUrl });
       return Promise.resolve({ id: 900 + creates.length });
     },
     updateCheckRun(target, checkRunId, state) {

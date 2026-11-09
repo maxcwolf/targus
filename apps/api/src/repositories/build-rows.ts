@@ -74,6 +74,8 @@ export function toBuildRecord(row: BuildRow): BuildRecord {
     trigger: row.trigger,
     device: row.device,
     appearance: row.appearance,
+    platform: row.platform,
+    pixelRatio: row.pixelRatio,
     status: row.status,
     createdAt: row.createdAt.toISOString(),
     completedAt: row.completedAt === null ? null : row.completedAt.toISOString(),

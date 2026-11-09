@@ -130,6 +130,32 @@ describe('createBuild with a baseline', () => {
     ]);
     expect(response.build.number).toBe(2);
   });
+
+  it('takes a baseline of the same platform only, and stores the platform and pixel ratio', async () => {
+    const { deps, project } = await setup();
+    const web = { platform: 'web' as const, pixelRatio: 2 };
+    const pr = { mergeBaseSha: sha('b'), trigger: 'pr' as const };
+    const passed = async (opened: Promise<CreateBuildResponse>) => {
+      const { build, baselineBuildId } = await opened;
+      await deps.builds.completeWithResults(build.id, [], completion('passed', deps.clock.now()));
+      return { id: build.id, baselineBuildId };
+    };
+
+    const ios = await passed(createBuild(deps, project, createBuildRequest(sha('b'))));
+    const webMain = await passed(createBuild(deps, project, createBuildRequest(sha('b'), web)));
+    const iosPr = await createBuild(deps, project, createBuildRequest(sha('c'), pr));
+    const webPr = await createBuild(deps, project, createBuildRequest(sha('c'), { ...pr, ...web }));
+
+    expect(webMain.baselineBuildId).toBeNull();
+    expect(iosPr.baselineBuildId).toBe(ios.id);
+    expect(webPr.baselineBuildId).toBe(webMain.id);
+    expect(deps.builds.builds.map(({ platform, pixelRatio }) => [platform, pixelRatio])).toEqual([
+      ['ios', null],
+      ['web', 2],
+      ['ios', null],
+      ['web', 2],
+    ]);
+  });
 });
 
 describe('getBuild and listSnapshots', () => {

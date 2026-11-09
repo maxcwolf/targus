@@ -57,6 +57,7 @@ describe('BuildsPage', () => {
     expect(cells.getByText('3 changes · 1 new · 1 removed')).toBeInTheDocument();
     expect(cells.getByText('4 stories')).toBeInTheDocument();
     expect(row).toHaveTextContent('2026');
+    expect(cells.getByText('iOS')).toBeInTheDocument();
   });
 
   it('shows the failed main build with its error count and no PR', async () => {

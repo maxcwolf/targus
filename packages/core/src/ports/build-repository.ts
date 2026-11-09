@@ -1,4 +1,4 @@
-import type { Build } from '../contracts/build.ts';
+import type { Build, Platform } from '../contracts/build.ts';
 import type { Snapshot } from '../contracts/snapshot.ts';
 
 /** Fields the caller supplies when a build is opened; the repository assigns `number`. */
@@ -14,10 +14,15 @@ export interface BuildRepository {
   /** Read one build of a project, or `null` when it does not exist in that project. */
   findById(projectId: string, buildId: string): Promise<Build | null>;
   /**
-   * The most recent successful build whose sha is the first of `shas` that has one. Used for
-   * baseline resolution: `shas` is the merge base followed by its first-parent ancestors.
+   * The most recent successful build of `platform` whose sha is the first of `shas` that has one.
+   * Used for baseline resolution: `shas` is the merge base followed by its first-parent
+   * ancestors, and a build of one platform is never the baseline of another (ADR 0036).
    */
-  findLatestSuccessfulForShas(projectId: string, shas: readonly string[]): Promise<Build | null>;
+  findLatestSuccessfulForShas(
+    projectId: string,
+    platform: Platform,
+    shas: readonly string[],
+  ): Promise<Build | null>;
   /** Every snapshot of a build. */
   listSnapshots(buildId: string): Promise<Snapshot[]>;
 }
