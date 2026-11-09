@@ -145,6 +145,21 @@ describe('SimctlDriver launch and status bar', () => {
   });
 });
 
+describe('SimctlDriver setContentSize', () => {
+  it('sets the content size category of a size with simctl ui', async () => {
+    const fake = fakeExec();
+    const driver = new SimctlDriver({ udid, exec: fake.exec });
+
+    await driver.setContentSize('ax5');
+    await driver.setContentSize('l');
+
+    expect(fake.argv()).toEqual([
+      ['xcrun', 'simctl', 'ui', udid, 'content_size', 'accessibility-extra-extra-extra-large'],
+      ['xcrun', 'simctl', 'ui', udid, 'content_size', 'large'],
+    ]);
+  });
+});
+
 describe('SimctlDriver setAppearance', () => {
   it('sets the appearance with simctl ui', async () => {
     const fake = fakeExec();

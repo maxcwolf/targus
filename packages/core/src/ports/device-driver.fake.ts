@@ -1,4 +1,5 @@
 import type { Appearance } from '../contracts/build.ts';
+import type { ContentSize } from '../contracts/content-size.ts';
 import type { DeviceDriver, StatusBarOverrides } from './device-driver.ts';
 
 /** One call a `FakeDeviceDriver` received, in the order it was made. */
@@ -11,6 +12,7 @@ export type DeviceDriverCall =
       readonly env: Readonly<Record<string, string>>;
     }
   | { readonly method: 'setAppearance'; readonly appearance: Appearance }
+  | { readonly method: 'setContentSize'; readonly contentSize: ContentSize }
   | { readonly method: 'setStatusBar'; readonly overrides: StatusBarOverrides };
 
 /** A `DeviceDriver` that records its calls and returns queued screenshots. */
@@ -52,6 +54,7 @@ export function createFakeDeviceDriver(): FakeDeviceDriver {
     isAppRunning: () => Promise.resolve(running),
     silenceSystemNotices: () => record({ method: 'silenceSystemNotices' }),
     setAppearance: (appearance) => record({ method: 'setAppearance', appearance }),
+    setContentSize: (contentSize) => record({ method: 'setContentSize', contentSize }),
     setStatusBar: (overrides) => record({ method: 'setStatusBar', overrides: { ...overrides } }),
     shutdown: () => record({ method: 'shutdown' }),
     screenshot: () => {
