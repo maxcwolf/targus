@@ -12,8 +12,10 @@
     "dev": "WRANGLER_BUILD_CONDITIONS=development,workerd,worker,browser wrangler dev",
     "deploy": "yarn workspace @targus/web build && wrangler deploy --var PUBLIC_URL:https://targus.targus-api.workers.dev",
     "db:generate": "drizzle-kit generate",
+    "db:generate:postgres": "drizzle-kit generate --config drizzle.postgres.config.ts",
     "db:migrate:local": "wrangler d1 migrations apply targus --local",
-    "test": "vitest run --coverage && yarn test:drift",
+    "test": "vitest run --coverage && yarn test:postgres && yarn test:drift",
+    "test:postgres": "vitest run --config vitest.postgres.config.ts --coverage",
     "test:drift": "vitest run --config vitest.node.config.ts"
   },
   "dependencies": {
@@ -28,8 +30,11 @@
   "devDependencies": {
     "@cloudflare/vitest-plugin": "1.5.1",
     "@cloudflare/workers-types": "5.20261104.1",
+    "@electric-sql/pglite": "0.5.15",
+    "@types/pg": "8.23.1",
     "@vitest/coverage-istanbul": "5.1.0",
     "drizzle-kit": "0.31.11",
+    "pg": "8.23.1",
     "vite": "8.3.5",
     "vitest": "5.1.0",
     "wrangler": "4.157.0"

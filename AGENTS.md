@@ -30,6 +30,9 @@ app imports `@targus/core/browser` (`src/browser.ts`), which leaves out the Node
   mounts it in `apps/api/src/app.ts`).
   Routes parse, call one service, and map the result. They never import a repository.
 - A use-case: `apps/api/src/services/`. The only place rules live outside core.
+- Postgres access: `apps/api/src/postgres/` (ADR 0044). A schema change is made in both
+  `src/db/schema.ts` and `src/postgres/schema.ts`, with a migration generated for each
+  (`db:generate`, `db:generate:postgres`); its tests are in `apps/api/test/postgres/` (ADR 0045).
 - D1 or R2 access: `apps/api/src/repositories/` or `apps/api/src/storage/`. The interface a
   repository implements, and its record types, live in `apps/api/src/ports/`; services and the
   test doubles import those, never a file under `repositories/`.

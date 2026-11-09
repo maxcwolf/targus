@@ -23,8 +23,17 @@ export function foreignKeyViolation(column: string): Promise<never> {
   return Promise.reject(new Error(`${foreignKeyFailed}: ${column}`));
 }
 
-/** Whether `error` is D1's foreign-key rejection, bare or wrapped by drizzle, or the double's. */
+/** SQLSTATE `foreign_key_violation`, which Postgres puts in the `code` of the error it raises. */
+const postgresForeignKeyViolation = '23503';
+
+/**
+ * Whether `error` is a foreign-key rejection: D1's, bare or wrapped by drizzle, the double's, or
+ * Postgres's. Each engine words it its own way and no service reads it, so the contract suites
+ * ask only that the engine itself called the write a foreign-key violation (ADR 0044).
+ */
 export function isForeignKeyViolation(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
-  return error.message.includes(foreignKeyFailed) || isForeignKeyViolation(error.cause);
+  if (error.message.includes(foreignKeyFailed)) return true;
+  if ('code' in error && error.code === postgresForeignKeyViolation) return true;
+  return isForeignKeyViolation(error.cause);
 }

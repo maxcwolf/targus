@@ -14,6 +14,8 @@ src/ports/         the repository interfaces and record types the services are w
                    and the paging rules every implementation shares
 src/repositories/  D1 via Drizzle (projects, builds + snapshots, approvals, images, users,
                    sessions, org membership cache)
+src/postgres/      the same repositories on Postgres, for a container host (ADR 0044): schema,
+                   one repository per port, createPostgresRepositories(db)
 src/storage/       R2ImageStore and S3ImageStore (bytes in R2 or an S3 bucket, "missing" answered
                    by the images table)
 src/adapters/      Clock, IdGenerator, tokens, GitHub App client (Octokit or no-op), GitHub OAuth,
