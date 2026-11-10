@@ -38,6 +38,18 @@ describe('SnapshotPage header', () => {
     expect(screen.getByText('Build 12 on feature/buttons')).toBeInTheDocument();
   });
 
+  it('names the variant of a snapshot that is not the default one, in the title and the sidebar', async () => {
+    apiState.snapshots = apiState.snapshots.map((snapshot) =>
+      snapshot.id === 'snap-changed' ? { ...snapshot, variant: 'ax5' } : snapshot,
+    );
+    await openSnapshot('/builds/build-12/snapshots/snap-changed?filter=all');
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Button : Primary (ax5)');
+    const sidebar = screen.getByRole('navigation', { name: 'Build snapshots' });
+    expect(within(sidebar).getByRole('link', { name: 'Primary (ax5)' })).toBeInTheDocument();
+    expect(within(sidebar).getByRole('link', { name: 'Large' })).toBeInTheDocument();
+  });
+
   it('says there is no baseline for a first build', async () => {
     await openSnapshot('/builds/build-11/snapshots/snap-unstable');
 

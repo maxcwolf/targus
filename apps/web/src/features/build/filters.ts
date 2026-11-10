@@ -100,6 +100,14 @@ export function storyName(snapshot: Pick<Snapshot, 'name' | 'storyId'>): string 
   return snapshot.name ?? snapshot.storyId;
 }
 
+/** The story name, with the variant when it is not the default one: "Primary (ax5)". */
+export function storyNameWithVariant(
+  snapshot: Pick<Snapshot, 'name' | 'storyId' | 'variant'>,
+): string {
+  const name = storyName(snapshot);
+  return snapshot.variant === 'default' ? name : `${name} (${snapshot.variant})`;
+}
+
 export interface SnapshotGroup {
   readonly title: string;
   readonly snapshots: readonly Snapshot[];

@@ -17,6 +17,7 @@ export {
   navigationList,
   type SnapshotFilter,
   storyName,
+  storyNameWithVariant,
   validateFilterSearch,
 } from './filters.ts';
 export { useBuildData } from './useBuildData.ts';
