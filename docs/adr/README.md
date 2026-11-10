@@ -61,3 +61,4 @@ the same change.
 | [0044](0044-postgres-beside-d1.md) | Postgres is a second storage implementation, beside D1 | accepted |
 | [0045](0045-postgres-tests-on-pglite-in-node.md) | The Postgres repositories are tested in Node, on PGlite by default | accepted |
 | [0046](0046-the-newest-build-sets-the-check.md) | Only the newest build of a commit sets its check | accepted |
+| [0047](0047-play-functions-on-a-device.md) | Play functions on a device go through the story's own handlers | accepted |

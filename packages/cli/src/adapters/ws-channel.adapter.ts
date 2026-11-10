@@ -13,7 +13,7 @@ import { formatDuration } from '../duration.ts';
 import {
   ChannelEvent,
   isTargusEvent,
-  renderSignalFor,
+  selectionAnswers,
   targusReport,
   targusReportFor,
 } from './channel-events.ts';
@@ -168,11 +168,7 @@ export class WsStorybookChannel implements StorybookChannel {
     // for it. Only `storyUnchanged` says the earlier render is still what the screen shows.
     const earlier = this.reports.get(storyId);
     this.reports.delete(storyId);
-    const first = this.waitFor(
-      (event) => renderSignalFor(event, storyId) ?? targusReportFor(event, storyId),
-      timeoutMs,
-      `storyRendered ${storyId}`,
-    );
+    const first = this.waitFor(selectionAnswers(storyId), timeoutMs, `storyRendered ${storyId}`);
     this.send('setCurrentStory', [{ storyId }]);
     const signal = await first;
     if (typeof signal !== 'string') return signal;

@@ -17,6 +17,8 @@ accepted one, and holds a GitHub check until each change is approved.
 - [Run targus in GitHub Actions](guide/ci-github-actions.md), or [in CircleCI](guide/ci-circleci.md).
 - [Capture a web Storybook](guide/web.md): Chromium captures, Chromatic parameters, modes, and
   running native, web or both.
+- [Play functions](guide/play-functions.md): capture a story after an interaction, on the web
+  and on a device.
 - [Review changes](guide/review.md): the review UI, and how baselines and approvals work.
 - [Troubleshooting](guide/troubleshooting.md): every error message and its fix.
 

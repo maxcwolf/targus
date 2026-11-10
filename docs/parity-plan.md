@@ -23,6 +23,7 @@ workflow on 2026-11-09:
 | #   | Item                                                          | Why it is here                                                                    |
 | --- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | N1  | Capture at a system font scale (built; below)                 | The mode the pilot app uses most on the web had no native equivalent              |
+| N1b | Play functions on a device (built; [guide](guide/play-functions.md)) | The pilot app's play functions had no native equivalent |
 | N2  | Dark mode and a second device size as modes                   | Appearance is per build today (ADR 0035), not per story                           |
 | N3  | First real CircleCI run, with run time on a full story set    | The recipe has only run on GitHub Actions; the time decides whether N5 is needed  |
 | N4  | Baselines partitioned by device and iOS runtime               | A new runner image shows every story as changed today (plan.md section 6)         |
@@ -64,7 +65,7 @@ Still to do:
 | #   | Item                                                                    | Why it is here                                                                  |
 | --- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | W1  | A web job in the proof of concept's CI, then on the pilot app in shadow | Nothing below can be judged until web builds run on real pull requests          |
-| W2  | Check modes and play functions against the pilot app's own stories      | Both are built or designed for, and proven only on the proof of concept         |
+| W2  | Check modes and play functions against the pilot app's own stories      | Both are built, and proven only on the proof of concept                         |
 | W3  | Measure a full run, then choose: parallel pages or changed-stories-only | `onlyChanged` saves Chromatic's snapshot cost; targus needs it only if slow     |
 | W4  | A published Storybook per build, linked from the review                 | Reviewers lose the hosted Storybook when Chromatic goes                         |
 | W5  | Per-story threshold, ignore regions, pause at the end of an animation   | Not used by the pilot app; cheap to have before a switch                        |

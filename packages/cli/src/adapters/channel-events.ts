@@ -27,7 +27,7 @@ export function isTargusEvent(event: ChannelEvent): boolean {
 }
 
 /** `storyRendered`/`storyUnchanged` for `storyId`; the id comes as a string or `{ storyId }`. */
-export function renderSignalFor(event: ChannelEvent, storyId: string): RenderSignal | undefined {
+function renderSignalFor(event: ChannelEvent, storyId: string): RenderSignal | undefined {
   const signal = renderSignals.get(event.type);
   return signal !== undefined && eventStoryId(event.args[0]) === storyId ? signal : undefined;
 }
@@ -82,6 +82,52 @@ export function targusReport(event: ChannelEvent): TargusReport | undefined {
 export function targusReportFor(event: ChannelEvent, storyId: string): StorySelection | undefined {
   const report = targusReport(event);
   return report?.storyId === storyId ? report.selection : undefined;
+}
+
+const RenderPhasePayload = z.object({ storyId: z.string(), newPhase: z.string() });
+const ThrownPayload = z.object({ message: z.string().min(1) });
+
+/** Storybook saying it is running `storyId`'s play function, on a device that runs them. */
+function startsPlaying(event: ChannelEvent, storyId: string): boolean {
+  if (event.type !== 'storyRenderPhaseChanged') return false;
+  const phase = RenderPhasePayload.safeParse(event.args[0]);
+  return phase.success && phase.data.storyId === storyId && phase.data.newPhase === 'playing';
+}
+
+/**
+ * A play function that threw. `playFunctionThrewException` carries the error and no story id;
+ * Storybook runs one play function at a time, so it belongs to the selection that is waiting.
+ */
+function playFailure(event: ChannelEvent): StorySelection | undefined {
+  if (event.type !== 'playFunctionThrewException') return undefined;
+  const thrown = ThrownPayload.safeParse(event.args[0]);
+  const message = thrown.success ? thrown.data.message : 'it threw without a message';
+  return { kind: 'error', message: `play function: ${message}` };
+}
+
+/** What ends the wait of a selection: a render signal, or the story's outcome itself. */
+type SelectionAnswer = RenderSignal | StorySelection;
+
+/**
+ * The events that answer a selection of `storyId`, as a function to call with each event in
+ * order. Without a play function the first of `storyRendered` and the decorator's report
+ * answers. A story with a play function (ADR 0047) reports its parameters when it mounts, which
+ * is before the play function has finished, so once Storybook says the story is playing only
+ * `storyRendered`, which follows the play function, or an error answers.
+ */
+export function selectionAnswers(
+  storyId: string,
+): (event: ChannelEvent) => SelectionAnswer | undefined {
+  let playing = false;
+  return (event) => {
+    playing ||= startsPlaying(event, storyId);
+    const failure = playFailure(event);
+    if (failure !== undefined) return failure;
+    const signal = renderSignalFor(event, storyId);
+    if (signal !== undefined) return signal;
+    const report = targusReportFor(event, storyId);
+    return playing && report?.kind !== 'error' ? undefined : report;
+  };
 }
 
 function eventStoryId(value: unknown): string | null {
