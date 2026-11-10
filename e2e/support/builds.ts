@@ -83,3 +83,24 @@ export async function publishPrBuild(published: Published): Promise<string> {
   );
   return pr.buildId;
 }
+
+/**
+ * Publish the build of `main` at `sha`, the commit a merge of the PR left there, with the PR's
+ * captures: what CI runs on the push to `main`. The checkout must have `main` at `sha`.
+ */
+export async function publishMergedBuild(published: Published, sha: string): Promise<string> {
+  const merged = await targusRun(
+    published.token,
+    [
+      ...cliFlags(published.apiUrl),
+      '--from-capture',
+      path.join(published.dir, 'changed'),
+      '--branch',
+      'main',
+      '--sha',
+      sha,
+    ],
+    published.checkout.dir,
+  );
+  return merged.buildId;
+}

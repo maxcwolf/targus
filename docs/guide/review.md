@@ -73,7 +73,8 @@ These rules decide what each build is compared with, and when you are asked to r
    PR or rebasing it does not ask for the same review twice.
 3. **Merging accepts what was approved.** The build on `main` after the merge applies the PR's
    approvals and becomes the baseline for later pull requests. A change that reaches `main`
-   without an approval stays pending there, so it still gets reviewed.
+   without an approval stays pending there, so it still gets reviewed. This holds for a merge
+   commit, a squash merge and a rebase merge alike ([below](#squash-and-rebase-merges)).
 4. **A story that errors keeps its old baseline.** It fails the build until a later build renders
    it again.
 5. **`removed` and `unstable` never block the check.** They are shown so you can notice a story
@@ -84,6 +85,28 @@ These rules decide what each build is compared with, and when you are asked to r
 
 The comparison itself is pixel-based: a story is `unchanged` when less than 0.1% of its pixels
 differ (the service's threshold), and `changed` otherwise.
+
+
+## Squash and rebase merges
+
+A squash merge or a rebase merge puts new commits on `main`, and git no longer connects them to
+the pull request's commits. targus does not use that connection. The build of `main` after the
+merge is compared with the previous build of `main`, so a story the pull request changed shows as
+changed again, from the same image to the same image, and the approval given on the pull request
+(rule 2) accepts it. Nobody reviews it twice, and the check on `main` is green.
+
+After a rebase merge only the last of the new commits has a build; its baseline is found by
+walking back along `main` to the nearest commit that has one.
+
+A story is reviewed again on `main` in two cases, because the pair of images is no longer the one
+that was approved:
+
+- **The merged commit renders the story differently from the pull request's last build**, even
+  by a few pixels. Stories that render the same way every time do not meet this
+  ([prepare your app](prepare-your-app.md)).
+- **`main` changed the same story while the pull request was open**, so the story goes from a
+  different image than the one the reviewer saw. Updating the branch from `main` before merging
+  has the pull request reviewed against the new image instead.
 
 ## When everything changed at once
 
