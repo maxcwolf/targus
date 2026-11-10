@@ -7,6 +7,7 @@ import {
 } from 'react';
 
 import { TargusErrorBoundary, type StoryErrorReport } from './error-boundary.ts';
+import { StoryTree } from './on-device.ts';
 
 /** Channel event the CLI listens for to record a story as an error (ADR 0008). */
 export const storyErrorEvent = 'targus/storyError';
@@ -75,8 +76,9 @@ export interface WithTargusOptions {
 /**
  * Build the decorator around an `emit` function. It wraps each story in `TargusErrorBoundary`,
  * reports render errors as `targus/storyError`, and reports `parameters.targus` as
- * `targus/storyParameters` once the story commits without a render error. Reduced motion and
- * the locked date land with plan.md section 7.
+ * `targus/storyParameters` once the story commits without a render error. The story sits in a
+ * `StoryTree`, where a play function's `onDevice` actions find it (ADR 0047). Reduced motion
+ * and the locked date land with plan.md section 7.
  */
 export function createWithTargus({ emit }: WithTargusOptions): TargusDecorator {
   return (Story, context) =>
@@ -89,7 +91,10 @@ export function createWithTargus({ emit }: WithTargusOptions): TargusDecorator {
         storyId: context.id,
         targus: targusOf(context.parameters),
         emit,
-        children: createElement(Story),
+        children: createElement(StoryTree, {
+          storyId: context.id,
+          children: createElement(Story),
+        }),
       }),
     });
 }

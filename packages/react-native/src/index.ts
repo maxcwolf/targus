@@ -19,3 +19,4 @@ export {
   type TargusStoryContext,
   type WithTargusOptions,
 } from './with-targus.ts';
+export { onDevice, type DeviceActions, type OnDeviceOptions } from './on-device.ts';
