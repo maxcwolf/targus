@@ -7,7 +7,12 @@ import { deviceLabel, formatDateTime } from '../../components/format.ts';
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons.tsx';
 import { StatusCircle } from '../../components/StatusCircle.tsx';
 import { Tabs } from '../../components/Tabs.tsx';
-import { componentTitle, isReviewable, type SnapshotFilter, storyName } from '../build/index.ts';
+import {
+  componentTitle,
+  isReviewable,
+  type SnapshotFilter,
+  storyNameWithVariant,
+} from '../build/index.ts';
 import type { ViewerMode, ViewerState } from './useViewer.ts';
 
 const modes: readonly { id: ViewerMode; label: string }[] = [
@@ -58,7 +63,7 @@ function StepLink(props: {
 
 function TitleBlock({ item, snapshot, filter }: SnapshotBarProps): ReactElement {
   const { build, summary } = item;
-  const title = `${componentTitle(snapshot)} : ${storyName(snapshot)}`;
+  const title = `${componentTitle(snapshot)} : ${storyNameWithVariant(snapshot)}`;
   return (
     <div className="bar-title">
       <Link

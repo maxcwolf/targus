@@ -4,7 +4,12 @@ import { type ReactElement, useEffect, useRef } from 'react';
 
 import { formatPercent } from '../../components/format.ts';
 import { PathText } from '../../components/PathText.tsx';
-import { groupByTitle, isReviewable, type SnapshotFilter, storyName } from '../build/index.ts';
+import {
+  groupByTitle,
+  isReviewable,
+  type SnapshotFilter,
+  storyNameWithVariant,
+} from '../build/index.ts';
 
 export interface SnapshotSidebarProps {
   readonly buildId: string;
@@ -43,10 +48,10 @@ export function SnapshotSidebar(props: SnapshotSidebarProps): ReactElement {
                     search={{ filter }}
                     className={current ? 'sidebar-link current' : 'sidebar-link'}
                     aria-current={current ? 'page' : undefined}
-                    aria-label={storyName(snapshot)}
+                    aria-label={storyNameWithVariant(snapshot)}
                   >
                     <span className={dotClass(snapshot)} aria-hidden="true" />
-                    <span className="sidebar-name">{storyName(snapshot)}</span>
+                    <span className="sidebar-name">{storyNameWithVariant(snapshot)}</span>
                     {snapshot.diffRatio === null ? null : (
                       <span className="diff-ratio">{formatPercent(snapshot.diffRatio)}</span>
                     )}
