@@ -21,6 +21,11 @@ baseline build the build was compared with.
 **Approve all** approves every change still pending in the build. If someone else decides one of
 them while it runs, their decision stands and the result says how many were left that way.
 
+You can also decide from the table without opening a snapshot. Each changed or new story has a
+**Deny** and an **Approve** button on its row; the one it already has is shown pressed, and the
+other changes the decision. A component's row has **Deny N** and **Approve N**, which decide
+every story under it that is still unreviewed and leave the ones already decided alone.
+
 ## The snapshot viewer
 
 Open a story to compare it with its baseline:
@@ -28,7 +33,13 @@ Open a story to compare it with its baseline:
 - **1 up**: one image at a time; `s` switches between the new image and the baseline.
 - **2 up**: baseline and new side by side.
 - **Slider**: drag across the image to wipe from one to the other.
-- **Diff**: highlights the changed pixels on top of the image (not available in Slider).
+- **Diff**: marks the changed pixels on top of the new image, in every mode. Once it is on,
+  choose how: **Highlight** tints them, **Focus** dims everything else and leaves them as
+  captured, **Strobe** blinks the tint so a small change is easy to find. The opacity slider sets
+  how strong the mark is.
+
+Baseline and new are always shown at one scale, aligned top left. When their sizes differ, the
+viewer says so above the images, and the area the smaller one does not cover is hatched.
 - **Fit** and **100%**: fit the images to the pane, or show them at the size they had on the
   device: each image is divided by the pixel ratio it was captured at, so a 3x iOS capture is shown
   at a third of its pixel width and height.
@@ -60,6 +71,13 @@ Every decision updates the check at once:
 
 Denying is not final. Approve the story later, or push a fix: the next build is compared again.
 
+### History
+
+Under the viewer, **History** lists every build in which this story was new, changed, removed,
+unstable or failed to render, on any branch, newest first, with what the reviewer decided. Builds
+where it was unchanged are left out. Click a row to open the story in that build. The library
+shows the same list under a story's accepted image.
+
 ## How baselines and approvals work
 
 These rules decide what each build is compared with, and when you are asked to review:
@@ -84,7 +102,9 @@ These rules decide what each build is compared with, and when you are asked to r
    and any difference is `changed` and reviewed as usual.
 
 The comparison itself is pixel-based: a story is `unchanged` when less than 0.1% of its pixels
-differ (the service's threshold), and `changed` otherwise.
+differ (the service's threshold), and `changed` otherwise. Two pixels differ when their colours
+are further apart than a small tolerance (0.063, the default Chromatic uses), and differences
+that are only anti-aliasing are not counted.
 
 
 ## Squash and rebase merges

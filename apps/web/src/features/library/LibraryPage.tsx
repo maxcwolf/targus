@@ -123,6 +123,7 @@ function LibraryContent({
       <StoryCanvas
         projectId={project.id}
         platform={platform}
+        shownPlatform={build.platform}
         story={current}
         stories={shown.includes(current) ? shown : stories}
       />

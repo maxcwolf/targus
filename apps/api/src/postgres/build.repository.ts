@@ -12,6 +12,8 @@ import type {
   NewApiBuild,
   ReviewCommit,
   SnapshotRecord,
+  StoryHistoryRecord,
+  StoryRef,
 } from '../ports/build-repository.ts';
 import { checkRunClaim, tallyColumns, toBuildRecord, toSnapshotRecord } from './build-rows.ts';
 import { commitReview, completeWithResults } from './build-writes.ts';
@@ -230,6 +232,33 @@ export class PostgresBuildRepository implements ApiBuildRepository {
 
   async listSnapshots(buildId: string): Promise<SnapshotRecord[]> {
     return (await snapshotsOf(this.db, buildId)).map(toSnapshotRecord);
+  }
+
+  /** As the D1 adapter: the project's builds newest first, the story looked up in each. */
+  async listStoryHistory(
+    projectId: string,
+    story: StoryRef,
+    limit: number,
+  ): Promise<StoryHistoryRecord[]> {
+    const rows = await this.db
+      .select({ build: builds, snapshot: snapshots })
+      .from(builds)
+      .innerJoin(snapshots, eq(snapshots.buildId, builds.id))
+      .where(
+        and(
+          eq(builds.projectId, projectId),
+          eq(builds.platform, story.platform),
+          eq(snapshots.storyId, story.storyId),
+          eq(snapshots.variant, story.variant),
+          ne(snapshots.state, 'unchanged'),
+        ),
+      )
+      .orderBy(desc(builds.number))
+      .limit(limit);
+    return rows.map(({ build, snapshot }) => ({
+      build: toBuildRecord(build),
+      snapshot: toSnapshotRecord(snapshot),
+    }));
   }
 
   async findSnapshotById(snapshotId: string): Promise<SnapshotRecord | null> {

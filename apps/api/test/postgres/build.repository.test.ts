@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { postgresMaxBoundParameters } from '../../src/postgres/database.ts';
 import { completionOf, openBuild, records } from '../support/contracts/build-harness.ts';
+import { describeBuildHistory } from '../support/contracts/build-history.contract.ts';
 import { describeBuildPaging } from '../support/contracts/build-paging.contract.ts';
 import { describeBuildResultsContract } from '../support/contracts/build-results.contract.ts';
 import { describeBuildReviewContract } from '../support/contracts/build-review.contract.ts';
@@ -17,6 +18,7 @@ describeBuildContract('PostgresBuildRepository (Postgres)', harness);
 describeBuildResultsContract('PostgresBuildRepository (Postgres)', harness);
 describeBuildReviewContract('PostgresBuildRepository (Postgres)', harness);
 describeBuildPaging('PostgresBuildRepository (Postgres)', harness);
+describeBuildHistory('PostgresBuildRepository (Postgres)', harness);
 
 describe('PostgresBuildRepository.completeWithResults (Postgres)', () => {
   // A database copied from D1 may still hold a build the old non-atomic write wedged.

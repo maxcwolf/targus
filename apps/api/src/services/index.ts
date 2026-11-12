@@ -8,6 +8,8 @@ import type {
   GetBuildResponse,
   GetLibraryQuery,
   GetLibraryResponse,
+  GetStoryHistoryQuery,
+  GetStoryHistoryResponse,
   HealthResponse,
   ListBuildsQuery,
   ListBuildsResponse,
@@ -15,6 +17,8 @@ import type {
   ListSnapshotsResponse,
   ReviewDecision,
   ReviewSnapshotResponse,
+  ReviewSnapshotsRequest,
+  ReviewSnapshotsResponse,
   SubmitResultsRequest,
   SubmitResultsResponse,
   UploadImageResponse,
@@ -29,6 +33,7 @@ import {
 import { createBuild, getBuild, listBuilds, listSnapshots } from './build.service.ts';
 import type { ServiceDeps } from './deps.ts';
 import { getHealth } from './health.service.ts';
+import { getStoryHistory } from './history.service.ts';
 import { getImage, uploadImage } from './image.service.ts';
 import { getLibrary } from './library.service.ts';
 import {
@@ -45,7 +50,7 @@ import { assertSameOrigin, type RequestOrigin } from './origin.service.ts';
 import type { Principal, Reviewer } from './principal.ts';
 import { createProject, currentProject, listProjects } from './project.service.ts';
 import { submitResults } from './results.service.ts';
-import { approveAll, reviewSnapshot } from './review.service.ts';
+import { approveAll, reviewSnapshot, reviewSnapshots } from './review.service.ts';
 
 /** The use-cases with their dependencies bound: what routes and middleware call. */
 export interface Services {
@@ -74,6 +79,11 @@ export interface Services {
     projectId: string,
     query?: GetLibraryQuery,
   ): Promise<GetLibraryResponse>;
+  getStoryHistory(
+    reviewer: Reviewer,
+    projectId: string,
+    query: GetStoryHistoryQuery,
+  ): Promise<GetStoryHistoryResponse>;
   createBuild(project: Project, request: CreateBuildRequest): Promise<CreateBuildResponse>;
   getBuild(principal: Principal, buildId: string): Promise<GetBuildResponse>;
   listSnapshots(principal: Principal, buildId: string): Promise<ListSnapshotsResponse>;
@@ -87,6 +97,11 @@ export interface Services {
     snapshotId: string,
     decision: ReviewDecision,
   ): Promise<ReviewSnapshotResponse>;
+  reviewSnapshots(
+    reviewer: Reviewer,
+    buildId: string,
+    request: ReviewSnapshotsRequest,
+  ): Promise<ReviewSnapshotsResponse>;
   approveAll(reviewer: Reviewer, buildId: string): Promise<ApproveAllResponse>;
   uploadImage(project: Project, hash: string, bytes: Uint8Array): Promise<UploadImageResponse>;
   getImage(principal: Principal, hash: string): Promise<Uint8Array>;
@@ -110,12 +125,16 @@ export function bindServices(deps: ServiceDeps): Services {
     currentProject: (project) => currentProject(project),
     listBuilds: (reviewer, projectId, query) => listBuilds(deps, reviewer, projectId, query),
     getLibrary: (reviewer, projectId, query) => getLibrary(deps, reviewer, projectId, query),
+    getStoryHistory: (reviewer, projectId, query) =>
+      getStoryHistory(deps, reviewer, projectId, query),
     createBuild: (project, request) => createBuild(deps, project, request),
     getBuild: (principal, buildId) => getBuild(deps, principal, buildId),
     listSnapshots: (principal, buildId) => listSnapshots(deps, principal, buildId),
     submitResults: (project, buildId, request) => submitResults(deps, project, buildId, request),
     reviewSnapshot: (reviewer, snapshotId, decision) =>
       reviewSnapshot(deps, reviewer, snapshotId, decision),
+    reviewSnapshots: (reviewer, buildId, request) =>
+      reviewSnapshots(deps, reviewer, buildId, request),
     approveAll: (reviewer, buildId) => approveAll(deps, reviewer, buildId),
     uploadImage: (project, hash, bytes) => uploadImage(deps, project, hash, bytes),
     getImage: (principal, hash) => getImage(deps, principal, hash),

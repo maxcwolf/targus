@@ -1,6 +1,7 @@
 import {
   defaultBuildsPageLimit,
   GetLibraryResponse,
+  GetStoryHistoryResponse,
   ListBuildsResponse,
   ListProjectsResponse,
   type Platform,
@@ -40,4 +41,24 @@ export function getLibrary(projectId: string, platform?: Platform): Promise<GetL
     `/api/projects/${encodeURIComponent(projectId)}/library${query}`,
     GetLibraryResponse,
   );
+}
+
+/** One story of one platform: what a history is read by. */
+export interface StoryRef {
+  readonly storyId: string;
+  readonly variant: string;
+  readonly platform: Platform;
+}
+
+/**
+ * `GET /api/projects/:id/history`: the builds in which the story was anything but unchanged,
+ * newest first.
+ */
+export function getStoryHistory(
+  projectId: string,
+  story: StoryRef,
+): Promise<GetStoryHistoryResponse> {
+  const query = new URLSearchParams({ ...story });
+  const path = `/api/projects/${encodeURIComponent(projectId)}/history?${query.toString()}`;
+  return getJson(path, GetStoryHistoryResponse);
 }

@@ -1,7 +1,9 @@
 import {
   GetLibraryQuery,
+  GetStoryHistoryQuery,
   ListBuildsQuery,
   maxBuildsPageLimit,
+  maxStoryHistoryLimit,
   Platform,
   TargusError,
 } from '@targus/core';
@@ -34,4 +36,13 @@ export const projectsRoute = new Hono<AppEnv>()
     }
     const { services, reviewer } = c.var;
     return c.json(await services.getLibrary(reviewer, c.req.param('id'), query.data));
+  })
+  .get('/:id/history', sessionAuth, async (c) => {
+    const query = GetStoryHistoryQuery.safeParse(c.req.query());
+    if (!query.success) {
+      const message = `storyId is required; platform must be one of ${Platform.options.join(', ')}; limit an integer 1..${String(maxStoryHistoryLimit)}`;
+      throw new TargusError('bad_request', message);
+    }
+    const { services, reviewer } = c.var;
+    return c.json(await services.getStoryHistory(reviewer, c.req.param('id'), query.data));
   });

@@ -3,7 +3,9 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react';
 
 import { ActualSizeIcon, DiffIcon, FitIcon } from '../../components/icons.tsx';
 import { releaseFocusOnPointerUp } from '../../components/releaseFocus.ts';
-import type { ViewerState } from './useViewer.ts';
+import { DiffFilter } from './Stage.tsx';
+import { sizeChange } from './stage-sizes.ts';
+import type { DiffStyle, ViewerState } from './useViewer.ts';
 import { ViewerBody } from './ViewerModes.tsx';
 
 export interface ViewerLabels {
@@ -92,7 +94,7 @@ function ColumnLabels({
 
 function OpacityRange({ viewer }: { readonly viewer: ViewerState }): ReactElement {
   return (
-    <label className="toolbar-range" title="Red pixels are the changes pixelmatch found">
+    <label className="toolbar-range" title="How strongly the changes are marked">
       Diff opacity
       <input
         type="range"
@@ -108,13 +110,45 @@ function OpacityRange({ viewer }: { readonly viewer: ViewerState }): ReactElemen
   );
 }
 
+const diffStyles: readonly {
+  readonly style: DiffStyle;
+  readonly name: string;
+  readonly title: string;
+}[] = [
+  { style: 'highlight', name: 'Highlight', title: 'Tint the changed pixels' },
+  { style: 'focus', name: 'Focus', title: 'Dim everything but the changes' },
+  { style: 'strobe', name: 'Strobe', title: 'Blink the tint, to find a small change' },
+];
+
+function DiffStyles({ viewer }: { readonly viewer: ViewerState }): ReactElement {
+  return (
+    <div className="segmented small" role="group" aria-label="Diff style">
+      {diffStyles.map(({ style, name, title }) => (
+        <button
+          key={style}
+          type="button"
+          className="segment"
+          title={title}
+          aria-pressed={viewer.diffStyle === style}
+          onClick={() => {
+            viewer.setDiffStyle(style);
+          }}
+        >
+          {name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ViewerTools({ viewer }: { readonly viewer: ViewerState }): ReactElement {
   return (
     <div className="viewer-tools">
+      {viewer.diff ? <DiffStyles viewer={viewer} /> : null}
       {viewer.diff ? <OpacityRange viewer={viewer} /> : null}
       <ToolButton
         label="Diff"
-        title="Show the diff over the new image (3). Red pixels changed."
+        title="Mark the changed pixels over the new image (3)"
         pressed={viewer.diff}
         disabled={!viewer.diffAvailable}
         onPress={viewer.toggleDiff}
@@ -146,10 +180,22 @@ function ViewerTools({ viewer }: { readonly viewer: ViewerState }): ReactElement
   );
 }
 
+/** Says so when the two captures differ in size, which the shared canvas would otherwise hide. */
+function SizeNote({ viewer }: { readonly viewer: ViewerState }): ReactElement | null {
+  const change = sizeChange(viewer.stage.baseline, viewer.stage.current);
+  if (change === null) return null;
+  return (
+    <p className="size-note" role="note">
+      <strong>Size changed</strong> {change}. Both are shown at one scale, aligned top left.
+    </p>
+  );
+}
+
 /**
- * Column labels and the icon tools, then the captures. "Fit" scales captures to the pane height;
- * "100%" shows them at the size they had on the device, each image pixel divided by the build's
- * `pixelRatio` (`displayPixelRatio`, ADR 0036), and lets the pane scroll.
+ * Column labels and the icon tools, then the captures. "100%" shows them at the size they had on
+ * the device, each image pixel divided by the build's `pixelRatio` (`displayPixelRatio`,
+ * ADR 0036), and lets the pane scroll; "Fit" shrinks that, never enlarges it, until the comparison
+ * fits the pane both ways.
  */
 export function SnapshotViewer(props: {
   readonly snapshot: Snapshot;
@@ -165,6 +211,8 @@ export function SnapshotViewer(props: {
         <ColumnLabels viewer={viewer} labels={props.labels} />
         <ViewerTools viewer={viewer} />
       </div>
+      <SizeNote viewer={viewer} />
+      <DiffFilter />
       <div className={`viewer-pane zoom-${viewer.zoom}`} data-zoom={viewer.zoom} style={ratio}>
         <ViewerBody snapshot={props.snapshot} viewer={viewer} />
       </div>

@@ -5,6 +5,7 @@ import {
   type GetLibraryResponse,
   needsReview,
   ReviewRequest,
+  ReviewSnapshotsRequest,
   type Snapshot,
   tallySnapshots,
 } from '@targus/core/browser';
@@ -117,6 +118,26 @@ export const handlers = [
       (platform === null ? undefined : apiState.libraryByPlatform[platform]) ?? apiState.library,
     );
   }),
+  // As the API: the story's snapshots that are not `unchanged`, newest build first.
+  http.get('*/api/projects/:projectId/history', ({ params, request }) => {
+    if (params.projectId !== project.id) return apiError(404, 'not_found', 'No project');
+    const query = new URL(request.url).searchParams;
+    const entries = [...apiState.builds]
+      .filter((build) => build.platform === query.get('platform'))
+      .sort((a, b) => b.number - a.number)
+      .flatMap((build) =>
+        apiState.snapshots
+          .filter(
+            (snapshot) =>
+              snapshot.buildId === build.id &&
+              snapshot.storyId === query.get('storyId') &&
+              snapshot.variant === query.get('variant') &&
+              snapshot.state !== 'unchanged',
+          )
+          .map((snapshot) => ({ build, snapshot })),
+      );
+    return HttpResponse.json({ entries });
+  }),
   http.get('*/api/builds/:buildId', ({ params }) => {
     const build = findBuild(params.buildId);
     return build ? HttpResponse.json(withSummary(build)) : notFound();
@@ -137,6 +158,18 @@ export const handlers = [
     if (!needsReview(snapshot.state)) return apiError(409, 'conflict', 'Not reviewable');
     const updated = decide(snapshot, decision === 'approve' ? 'approved' : 'denied');
     return HttpResponse.json({ snapshot: updated, ...withSummary(build) });
+  }),
+  http.post('*/api/builds/:buildId/review', async ({ params, request }) => {
+    apiState.calls.push(`POST /api/builds/${String(params.buildId)}/review`);
+    const build = findBuild(params.buildId);
+    if (!build) return notFound();
+    const body = ReviewSnapshotsRequest.parse(await request.json());
+    const review = body.decision === 'approve' ? 'approved' : 'denied';
+    const decided = apiState.snapshots.filter(
+      (s) => s.buildId === build.id && body.snapshotIds.includes(s.id) && s.review !== review,
+    );
+    for (const snapshot of decided) decide(snapshot, review);
+    return HttpResponse.json({ ...withSummary(build), decidedCount: decided.length });
   }),
   http.post('*/api/builds/:buildId/approve-all', ({ params }) => {
     apiState.calls.push(`POST /api/builds/${String(params.buildId)}/approve-all`);

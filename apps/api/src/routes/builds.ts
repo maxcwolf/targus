@@ -1,4 +1,4 @@
-import { CreateBuildRequest, SubmitResultsRequest } from '@targus/core';
+import { CreateBuildRequest, ReviewSnapshotsRequest, SubmitResultsRequest } from '@targus/core';
 import { Hono } from 'hono';
 
 import type { AppEnv } from '../app-env.ts';
@@ -24,6 +24,11 @@ export const buildsRoute = new Hono<AppEnv>()
   .post('/:id/results', projectAuth, async (c) => {
     const request = await jsonBody(c, SubmitResultsRequest);
     return c.json(await c.var.services.submitResults(c.var.project, c.req.param('id'), request));
+  })
+  .post('/:id/review', sessionAuth, async (c) => {
+    const request = await jsonBody(c, ReviewSnapshotsRequest);
+    const { services, reviewer } = c.var;
+    return c.json(await services.reviewSnapshots(reviewer, c.req.param('id'), request));
   })
   .post('/:id/approve-all', sessionAuth, async (c) =>
     c.json(await c.var.services.approveAll(c.var.reviewer, c.req.param('id'))),

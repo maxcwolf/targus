@@ -4,6 +4,8 @@ import type {
   ApiBuildRepository,
   BuildRecord,
   SnapshotRecord,
+  StoryHistoryRecord,
+  StoryRef,
 } from '../../src/ports/build-repository.ts';
 import { checkBuildPageLimit, decodeBuildCursor, toBuildPage } from '../../src/ports/build-page.ts';
 import type { ProjectRepository } from '../../src/ports/project-repository.ts';
@@ -91,6 +93,28 @@ function rejectedSnapshot(
   const others = [...snapshots].filter(([id]) => id !== buildId).flatMap(([, stored]) => stored);
   const ids = new Set([...records, ...others].map((record) => record.id));
   return ids.size === records.length + others.length ? null : 'snapshots.id';
+}
+
+/** As the D1 query: the project's builds of the platform, newest first, where the story changed. */
+function storyHistory(
+  builds: readonly BuildRecord[],
+  snapshots: ReadonlyMap<string, readonly SnapshotRecord[]>,
+  projectId: string,
+  story: StoryRef,
+): StoryHistoryRecord[] {
+  return builds
+    .filter((build) => build.projectId === projectId && build.platform === story.platform)
+    .sort((a, b) => b.number - a.number)
+    .flatMap((build) =>
+      (snapshots.get(build.id) ?? [])
+        .filter(
+          (snapshot) =>
+            snapshot.storyId === story.storyId &&
+            snapshot.variant === story.variant &&
+            snapshot.state !== 'unchanged',
+        )
+        .map((snapshot) => ({ build, snapshot })),
+    );
 }
 
 type Patch = (buildId: string, fields: Partial<BuildRecord>) => void;
@@ -248,6 +272,8 @@ export function createInMemoryBuilds(
     findResultsDigest: (buildId) => Promise.resolve(digests.get(buildId) ?? null),
     ...checkRunClaims(builds, patch),
     listSnapshots: (buildId) => Promise.resolve(storyOrder(snapshots.get(buildId) ?? [])),
+    listStoryHistory: (projectId, story, limit) =>
+      Promise.resolve(storyHistory(builds, snapshots, projectId, story).slice(0, limit)),
     ...snapshotReviews({ builds, snapshots, versions, patch, approvals }),
   };
 }

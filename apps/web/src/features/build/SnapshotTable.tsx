@@ -13,6 +13,7 @@ import {
   type SnapshotGroup,
   storyName,
 } from './filters.ts';
+import { ReviewButtons } from './ReviewButtons.tsx';
 import { ReviewProgress } from './ReviewProgress.tsx';
 
 export interface SnapshotTableProps {
@@ -60,6 +61,9 @@ function StoryRow({ buildId, snapshot, filter }: RowProps): ReactElement {
         <Status snapshot={snapshot} />
       </td>
       <td className="actions-cell">
+        {isReviewable(snapshot) ? (
+          <ReviewButtons buildId={buildId} snapshots={[snapshot]} name={storyName(snapshot)} />
+        ) : null}
         <Link
           to={to}
           params={params}
@@ -81,10 +85,13 @@ function Group({
   filter,
 }: { readonly group: SnapshotGroup } & Omit<RowProps, 'snapshot'>) {
   const [open, setOpen] = useState(true);
+  const unreviewed = group.snapshots.filter(
+    (snapshot) => isReviewable(snapshot) && snapshot.review === 'pending',
+  );
   return (
     <tbody aria-label={group.title}>
       <tr className="group-row">
-        <td colSpan={3}>
+        <td colSpan={2}>
           <button
             type="button"
             className={open ? 'group-toggle open' : 'group-toggle'}
@@ -98,6 +105,11 @@ function Group({
             <span className="lighter">· {group.snapshots.length}</span>
           </button>
           <ReviewProgress snapshots={group.snapshots} compact />
+        </td>
+        <td className="actions-cell">
+          {unreviewed.length > 0 ? (
+            <ReviewButtons buildId={buildId} snapshots={unreviewed} name={group.title} counted />
+          ) : null}
         </td>
       </tr>
       {open

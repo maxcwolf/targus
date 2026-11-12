@@ -14,12 +14,15 @@ import type {
   NewApiBuild,
   ReviewCommit,
   SnapshotRecord,
+  StoryHistoryRecord,
+  StoryRef,
 } from '../ports/build-repository.ts';
 import {
   buildInProgress,
   checkRunClaim,
   guardedSnapshotInserts,
   runBatch,
+  storyHistoryFilter,
   tallyColumns,
   toBuildRecord,
   toSnapshotRecord,
@@ -252,6 +255,28 @@ export class D1BuildRepository implements ApiBuildRepository {
       .where(eq(snapshots.buildId, buildId))
       .orderBy(asc(snapshots.storyId), asc(snapshots.variant));
     return rows.map(toSnapshotRecord);
+  }
+
+  /**
+   * Walks the project's builds newest first (`builds_project_number_unique`) and looks the story
+   * up in each (`snapshots_build_story_variant_unique`), so it needs no index of its own.
+   */
+  async listStoryHistory(
+    projectId: string,
+    story: StoryRef,
+    limit: number,
+  ): Promise<StoryHistoryRecord[]> {
+    const rows = await this.db
+      .select({ build: builds, snapshot: snapshots })
+      .from(builds)
+      .innerJoin(snapshots, eq(snapshots.buildId, builds.id))
+      .where(storyHistoryFilter(projectId, story))
+      .orderBy(desc(builds.number))
+      .limit(limit);
+    return rows.map(({ build, snapshot }) => ({
+      build: toBuildRecord(build),
+      snapshot: toSnapshotRecord(snapshot),
+    }));
   }
 
   async findSnapshotById(snapshotId: string): Promise<SnapshotRecord | null> {

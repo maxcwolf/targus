@@ -1,9 +1,9 @@
 import type { SnapshotTally } from '@targus/core';
-import { getTableColumns, sql, type Query, type SQL } from 'drizzle-orm';
+import { and, eq, getTableColumns, ne, sql, type Query, type SQL } from 'drizzle-orm';
 import { SQLiteAsyncDialect } from 'drizzle-orm/sqlite-core';
 
 import { builds, snapshots } from '../db/schema.ts';
-import type { BuildRecord, SnapshotRecord } from '../ports/build-repository.ts';
+import type { BuildRecord, SnapshotRecord, StoryRef } from '../ports/build-repository.ts';
 import { chunkForD1 } from './d1-limits.ts';
 
 // Row mappings of `builds` and `snapshots`, and the guarded statements their writes share.
@@ -126,5 +126,19 @@ export function guardedSnapshotInserts(
     dialect.sqlToQuery(
       sql`INSERT INTO ${snapshots} (${names}) SELECT * FROM (VALUES ${sql.join(chunk.map(tuple), sql`, `)}) WHERE ${guard}`,
     ),
+  );
+}
+
+/**
+ * The rows of a story's history in `builds` joined to `snapshots`: the project's builds of the
+ * story's platform in which it was anything but `unchanged`.
+ */
+export function storyHistoryFilter(projectId: string, story: StoryRef): SQL | undefined {
+  return and(
+    eq(builds.projectId, projectId),
+    eq(builds.platform, story.platform),
+    eq(snapshots.storyId, story.storyId),
+    eq(snapshots.variant, story.variant),
+    ne(snapshots.state, 'unchanged'),
   );
 }

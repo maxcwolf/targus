@@ -5,8 +5,14 @@ export interface SnapshotImageProps {
   readonly alt: string;
   readonly className?: string;
   readonly style?: CSSProperties;
-  /** Called with `src` once the browser has decoded it, so a caller can tell what is on screen. */
-  readonly onLoad?: (src: string) => void;
+  /**
+   * Called with `src` and the image's own size in pixels once the browser has decoded it, so a
+   * caller can tell what is on screen and lay it out.
+   */
+  readonly onLoad?: (
+    src: string,
+    size: { readonly width: number; readonly height: number },
+  ) => void;
 }
 
 type LoadState = 'loading' | 'loaded' | 'error';
@@ -37,9 +43,10 @@ function LoadingImage({ src, alt, className, style, onLoad }: SnapshotImageProps
       loading="lazy"
       className={classes(state, className)}
       style={style}
-      onLoad={() => {
+      onLoad={(event) => {
         setState('loaded');
-        onLoad?.(src);
+        const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
+        onLoad?.(src, { width, height });
       }}
       onError={() => {
         setState('error');

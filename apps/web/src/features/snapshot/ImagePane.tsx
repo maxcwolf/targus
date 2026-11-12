@@ -2,8 +2,9 @@ import type { Snapshot } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
 import { imageUrl } from '../../api-client/index.ts';
-import { SnapshotImage } from '../../components/SnapshotImage.tsx';
-import type { ImageKind } from './useViewer.ts';
+import { Stage, type StageLayer } from './Stage.tsx';
+import { diffLayers, diffTitle } from './stage-layers.ts';
+import type { ImageKind, ViewerState } from './useViewer.ts';
 
 const titles: Record<ImageKind, string> = { baseline: 'Baseline', current: 'New' };
 
@@ -19,15 +20,11 @@ function missingText(kind: ImageKind, snapshot: Snapshot): string {
 export interface ImagePaneProps {
   readonly kind: ImageKind;
   readonly snapshot: Snapshot;
-  /** Lay the pixelmatch diff over the new capture at this opacity (0..100); null for none. */
-  readonly diffOpacity: number | null;
-  /** Called with each image's URL once it has loaded. */
-  readonly onImageLoad: (src: string) => void;
+  readonly viewer: ViewerState;
 }
 
-/** One capture on a white card, optionally with the diff over it, or why it is missing. */
-export function ImagePane(props: ImagePaneProps): ReactElement {
-  const { kind, snapshot, diffOpacity, onImageLoad } = props;
+/** One capture on a white card, the changed pixels highlighted over the new one, or why it is missing. */
+export function ImagePane({ kind, snapshot, viewer }: ImagePaneProps): ReactElement {
   const hash = kind === 'baseline' ? snapshot.baselineHash : snapshot.imageHash;
   if (hash === null) {
     return (
@@ -36,24 +33,19 @@ export function ImagePane(props: ImagePaneProps): ReactElement {
       </div>
     );
   }
-  const diffHash = kind === 'current' && diffOpacity !== null ? snapshot.diffHash : null;
+  const overlay = kind === 'current' ? diffLayers(snapshot, viewer) : [];
+  const layers: StageLayer[] = [
+    { src: imageUrl(hash), alt: titles[kind], size: viewer.stage[kind] },
+    ...overlay,
+  ];
   return (
     <div className="capture">
-      <div
-        className="frame"
-        title={diffHash ? 'Red pixels are the changes pixelmatch found' : undefined}
-      >
-        <SnapshotImage src={imageUrl(hash)} alt={titles[kind]} onLoad={onImageLoad} />
-        {diffHash ? (
-          <SnapshotImage
-            src={imageUrl(diffHash)}
-            alt="Diff"
-            className="overlay"
-            style={{ opacity: (diffOpacity ?? 100) / 100 }}
-            onLoad={onImageLoad}
-          />
-        ) : null}
-      </div>
+      <Stage
+        canvas={viewer.stage.canvas}
+        layers={layers}
+        onImageLoad={viewer.onImageLoad}
+        title={overlay.length > 0 ? diffTitle : undefined}
+      />
     </div>
   );
 }
