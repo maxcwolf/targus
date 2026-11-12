@@ -86,6 +86,14 @@ describe('diffImages options and inputs', () => {
     expect(diffImages(baseline, current, { threshold: 0 }).differingPixels).toBe(10);
   });
 
+  it('sees one shade of a colour by default, which pixelmatch’s own 0.1 does not', () => {
+    const baseline = makePng(10, 10, [37, 99, 235, 255]);
+    const current = makePng(10, 10, [29, 78, 216, 255]);
+
+    expect(diffImages(baseline, current).differingPixels).toBe(100);
+    expect(diffImages(baseline, current, { threshold: 0.1 }).differingPixels).toBe(0);
+  });
+
   it('accepts a Uint8Array view that does not start at offset 0', () => {
     const image = makePng(4, 4, white);
     const padded = new Uint8Array(image.length + 3);
