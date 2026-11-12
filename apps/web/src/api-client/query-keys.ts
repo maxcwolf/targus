@@ -12,6 +12,16 @@ export const queryKeys = {
     'library',
     platform,
   ],
+  /** Under `builds(projectId)`, so whatever refreshes the project's builds refreshes it too. */
+  storyHistory: (projectId: string, storyId: string, variant: string, platform: Platform) => [
+    'projects',
+    projectId,
+    'builds',
+    'history',
+    platform,
+    storyId,
+    variant,
+  ],
   build: (buildId: string) => ['builds', buildId],
   snapshots: (buildId: string) => ['builds', buildId, 'snapshots'],
 } as const;

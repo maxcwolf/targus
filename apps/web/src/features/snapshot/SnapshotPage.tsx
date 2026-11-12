@@ -19,6 +19,7 @@ import {
   useBuildData,
 } from '../build/index.ts';
 import { ErrorView, NotFound, RefetchNotice } from '../errors/index.ts';
+import { StoryHistory } from '../history/index.ts';
 import { ReviewActions } from './ReviewActions.tsx';
 import { SnapshotBar } from './SnapshotBar.tsx';
 import { SnapshotSidebar } from './SnapshotSidebar.tsx';
@@ -98,6 +99,15 @@ function SnapshotContent(props: {
         pixelRatio={displayPixelRatio(props.build)}
       />
       <BaselineSection baseline={props.baseline} />
+      <StoryHistory
+        projectId={props.build.projectId}
+        story={{
+          storyId: props.snapshot.storyId,
+          variant: props.snapshot.variant,
+          platform: props.build.platform,
+        }}
+        currentSnapshotId={props.snapshot.id}
+      />
     </div>
   );
 }

@@ -54,3 +54,29 @@ export const ApproveAllResponse = z.object({
   skippedCount: z.number().int().nonnegative(),
 });
 export type ApproveAllResponse = z.infer<typeof ApproveAllResponse>;
+
+/** The most snapshots one `POST /api/builds/:id/review` may decide. */
+export const maxReviewSnapshots = 500;
+
+/**
+ * `POST /api/builds/:id/review` request body: one decision on several snapshots of the build,
+ * such as every unreviewed story of a component.
+ */
+export const ReviewSnapshotsRequest = z.object({
+  decision: ReviewDecision,
+  snapshotIds: z.array(z.string().min(1)).min(1).max(maxReviewSnapshots),
+});
+export type ReviewSnapshotsRequest = z.infer<typeof ReviewSnapshotsRequest>;
+
+/**
+ * `POST /api/builds/:id/review` response: the build after the decision. `decidedCount` is how
+ * many of the snapshots it changed; one already decided that way is left as it was and not
+ * counted.
+ */
+export const ReviewSnapshotsResponse = z.object({
+  build: Build,
+  summary: BuildStatusSummary,
+  counts: SnapshotCounts,
+  decidedCount: z.number().int().nonnegative(),
+});
+export type ReviewSnapshotsResponse = z.infer<typeof ReviewSnapshotsResponse>;

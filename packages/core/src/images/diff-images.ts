@@ -11,12 +11,13 @@ import {
   type Rgb,
 } from './padded-canvas.ts';
 
-/** Tuning for `diffImages`. Both fields default to pixelmatch's own defaults. */
+/** Tuning for `diffImages`. */
 export interface DiffImagesOptions {
   /**
    * Per-pixel colour distance (0 to 1) below which two pixels count as equal. Smaller is more
-   * sensitive. Defaults to 0.1. This is not the per-story failure threshold, which applies to
-   * `ratio` (ADR 0003).
+   * sensitive. Defaults to 0.063, which is Chromatic's default: pixelmatch's own 0.1 misses a
+   * restyle such as a button going one shade darker. This is not the per-story failure
+   * threshold, which applies to `ratio` (ADR 0003).
    */
   readonly threshold?: number;
   /** Count anti-aliased pixels as differences. Defaults to false, so anti-aliasing is tolerated. */
@@ -42,7 +43,7 @@ export interface DiffImagesResult {
   readonly sizeMismatch: boolean;
 }
 
-const defaultThreshold = 0.1;
+const defaultThreshold = 0.063;
 /** pixelmatch's default colour for a differing pixel, also used to paint the padding. */
 const diffColor: Rgb = [255, 0, 0];
 

@@ -5,6 +5,7 @@ import { type ReactElement, useMemo } from 'react';
 import { imageUrl } from '../../api-client/index.ts';
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons.tsx';
 import { SnapshotImage } from '../../components/SnapshotImage.tsx';
+import { StoryHistory } from '../history/index.ts';
 import { useHotkeys } from '../snapshot/index.ts';
 import { librarySearch, storyKey, storyTitle } from './stories.ts';
 
@@ -12,6 +13,8 @@ export interface StoryCanvasProps {
   readonly projectId: string;
   /** The `?platform=` the library was opened with, kept by every link. */
   readonly platform: Platform | undefined;
+  /** The platform of the library on screen, which the story's history is read for. */
+  readonly shownPlatform: Platform;
   readonly story: LibraryStory;
   /** The stories previous/next step through; it contains `story`. */
   readonly stories: readonly LibraryStory[];
@@ -69,12 +72,8 @@ function useStepKeys(
 }
 
 /** One story on its own, like Storybook's canvas, with previous/next through the library. */
-export function StoryCanvas({
-  projectId,
-  platform,
-  story,
-  stories,
-}: StoryCanvasProps): ReactElement {
+export function StoryCanvas(props: StoryCanvasProps): ReactElement {
+  const { projectId, platform, shownPlatform, story, stories } = props;
   const index = stories.findIndex((candidate) => storyKey(candidate) === storyKey(story));
   const previous = stories[index - 1];
   const next = stories[index + 1];
@@ -112,6 +111,10 @@ export function StoryCanvas({
       <div className="story-stage">
         <SnapshotImage src={imageUrl(story.imageHash)} alt={label} />
       </div>
+      <StoryHistory
+        projectId={projectId}
+        story={{ storyId: story.storyId, variant: story.variant, platform: shownPlatform }}
+      />
     </div>
   );
 }

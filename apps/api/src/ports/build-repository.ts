@@ -79,6 +79,19 @@ export interface BuildPage {
   readonly nextCursor: string | null;
 }
 
+/** One story of one platform of a project: what its baselines and its history are kept by. */
+export interface StoryRef {
+  readonly storyId: string;
+  readonly variant: string;
+  readonly platform: Platform;
+}
+
+/** A story's snapshot in one build, with that build. */
+export interface StoryHistoryRecord {
+  readonly build: BuildRecord;
+  readonly snapshot: SnapshotRecord;
+}
+
 /** `BuildRepository` plus the reads and writes the API's use-cases need. */
 export interface ApiBuildRepository extends BuildRepository {
   /**
@@ -145,6 +158,15 @@ export interface ApiBuildRepository extends BuildRepository {
   /** Drop the claim made at `claimedAt`, when the check run could not be created. */
   releaseCheckRunClaim(buildId: string, claimedAt: Date): Promise<void>;
   listSnapshots(buildId: string): Promise<SnapshotRecord[]>;
+  /**
+   * The story's snapshots across a project's builds of its platform, every state but
+   * `unchanged`, newest build first, at most `limit`.
+   */
+  listStoryHistory(
+    projectId: string,
+    story: StoryRef,
+    limit: number,
+  ): Promise<StoryHistoryRecord[]>;
   findSnapshotById(snapshotId: string): Promise<SnapshotRecord | null>;
   /** The build's snapshots and its review version, read together. */
   readForReview(buildId: string): Promise<BuildReviewRead>;

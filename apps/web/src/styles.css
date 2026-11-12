@@ -900,8 +900,29 @@ p {
   gap: 6px;
 }
 .actions-cell {
-  width: 80px;
+  width: 150px;
   text-align: right !important;
+  white-space: nowrap;
+}
+.review-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.review-buttons .error-text {
+  margin-right: 4px;
+  white-space: normal;
+}
+.review-buttons .icon-button[aria-pressed='true'] {
+  opacity: 1;
+}
+.review-buttons .icon-button.approve[aria-pressed='true'] {
+  color: var(--positive-text);
+}
+.review-buttons .icon-button.deny[aria-pressed='true'] {
+  color: var(--negative-text);
 }
 .empty-state {
   padding: 48px;
@@ -1217,6 +1238,8 @@ p {
 }
 .viewer-pane {
   --fit-h: calc(100vh - 300px);
+  --cols: 1;
+  container-type: inline-size;
   display: flex;
   justify-content: center;
   min-height: calc(100vh - 230px);
@@ -1226,6 +1249,7 @@ p {
   justify-content: safe center;
 }
 .two-up {
+  --cols: 2;
   display: flex;
   gap: 24px;
   align-items: stretch;
@@ -1281,27 +1305,70 @@ p {
   line-height: 1.4;
   text-align: center;
 }
-.zoom-fit .frame .snapshot-image {
-  height: auto;
-  width: auto;
-  max-height: var(--fit-h);
-  max-width: 100%;
+/* A comparison's canvas: `--w` by `--h` image pixels (Stage.tsx), on which every layer sits top
+   left at its own share. Actual size is one CSS pixel per device point (or CSS pixel, on web), so
+   the canvas is divided by the build's pixel ratio (ADR 0036). */
+.stage {
+  --css-w: calc(var(--w) * 1px / var(--pixel-ratio, 1));
+  position: relative;
+  width: var(--css-w);
+  aspect-ratio: var(--w) / var(--h);
+  /* Where a smaller capture leaves the canvas bare. */
+  background: repeating-linear-gradient(-45deg, var(--fill) 0 6px, transparent 6px 12px);
 }
-.zoom-actual .snapshot-image {
-  max-width: none;
+/* Fit: actual size at most, shrunk to the column's width (the frame's padding and border taken
+   off) and to the pane's height. */
+.zoom-fit .stage {
+  width: min(
+    var(--css-w),
+    calc((100cqw - 24px * (var(--cols) - 1)) / var(--cols) - 50px),
+    calc(var(--fit-h) * var(--w) / var(--h))
+  );
 }
-/* Actual size: one CSS pixel per device point (or CSS pixel, on web), so a capture is divided by
-   the build's pixel ratio (ADR 0036). The overlays follow the frame the base image sizes. */
-.zoom-actual .snapshot-image:not(.overlay, .image-error) {
-  zoom: calc(1 / var(--pixel-ratio, 1));
+/* No size is known yet: a placeholder the images fill. */
+.stage-unsized {
+  width: 160px;
+  height: 200px;
+  aspect-ratio: auto;
 }
-.frame .overlay {
+.stage .layer {
   position: absolute;
-  top: 24px;
-  left: 24px;
-  width: calc(100% - 48px);
-  height: calc(100% - 48px);
-  max-height: none !important;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  background-color: var(--surface);
+}
+.stage .layer.is-loading {
+  background-color: var(--fill);
+}
+/* The pixelmatch diff, reduced to its changed pixels in the highlight colour (DiffFilter). */
+.stage .diff-layer {
+  background: none;
+  filter: url('#targus-diff-key');
+}
+/* Focus: a veil over everything but the changes, which stay as captured. */
+.stage .diff-layer.diff-focus {
+  filter: url('#targus-diff-focus');
+}
+/* Strobe: the tint blinks once a second, slow enough to be no flash hazard. */
+.stage .diff-layer.diff-strobe {
+  animation: diff-strobe 1s steps(1, end) infinite;
+}
+@keyframes diff-strobe {
+  50% {
+    visibility: hidden;
+  }
+}
+.diff-filter {
+  position: absolute;
+}
+.size-note {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
 }
 .missing {
   display: flex;
@@ -1321,8 +1388,8 @@ p {
 }
 .split-line {
   position: absolute;
-  top: 24px;
-  bottom: 24px;
+  top: 0;
+  bottom: 0;
   width: 2px;
   margin-left: -1px;
   background: var(--primary);
@@ -1342,10 +1409,10 @@ p {
 }
 .split-input {
   position: absolute;
-  inset: 24px;
+  inset: 0;
   z-index: 3;
-  width: calc(100% - 48px);
-  height: calc(100% - 48px);
+  width: 100%;
+  height: 100%;
   margin: 0;
   opacity: 0;
   cursor: ew-resize;
@@ -1353,11 +1420,74 @@ p {
 .compare-slider:focus-within .split-grip {
   box-shadow: 0 0 0 3px var(--focus);
 }
-.compare-slider .frame .snapshot-image:first-child {
-  position: relative;
-}
 .baseline-section .section-label {
   margin-top: 24px;
+}
+
+/* A story's history: one row per build that changed it */
+.history-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-width: 720px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.history-list li + li {
+  border-top: 1px solid var(--border);
+}
+.history-entry {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 13px;
+  text-decoration: none;
+}
+.history-entry:hover,
+.history-entry.current {
+  background: var(--primary-tint);
+}
+.history-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--fill);
+}
+.history-thumb .snapshot-image {
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  font-size: 0;
+  padding: 0;
+  border: 0;
+}
+.history-build {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.history-build .lighter {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-badges {
+  display: inline-flex;
+  gap: 6px;
+}
+.history-date {
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 /* Sign in, error panels */

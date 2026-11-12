@@ -122,7 +122,7 @@ describe('BuildPage counter filters', () => {
   it('collapses and expands a component group', async () => {
     renderApp('/builds/build-12?filter=all');
     const group = await screen.findByRole('rowgroup', { name: 'Button' });
-    const toggle = within(group).getByRole('button', { name: /Button/ });
+    const toggle = within(group).getByRole('button', { name: /^Button/ });
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'false');

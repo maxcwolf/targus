@@ -39,6 +39,13 @@ export {
 export { HealthResponse } from './health.ts';
 export { GetLibraryQuery, GetLibraryResponse, LibraryStory } from './library.ts';
 export {
+  defaultStoryHistoryLimit,
+  GetStoryHistoryQuery,
+  GetStoryHistoryResponse,
+  maxStoryHistoryLimit,
+  StoryHistoryEntry,
+} from './story-history.ts';
+export {
   ApproveAllResponse,
   ListProjectsResponse,
   MeResponse,
@@ -46,6 +53,9 @@ export {
   ReviewerUser,
   ReviewRequest,
   ReviewSnapshotResponse,
+  maxReviewSnapshots,
+  ReviewSnapshotsRequest,
+  ReviewSnapshotsResponse,
 } from './review.ts';
 export { Modes, toCaptureModes } from './capture-modes.ts';
 export { ContentSize, defaultContentSize, extraContentSizes } from './content-size.ts';

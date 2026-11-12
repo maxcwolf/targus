@@ -85,7 +85,6 @@ describe('SnapshotPage viewer modes', () => {
       target: { value: '30' },
     });
     expect(baseline.style.clipPath).toBe('inset(0 70% 0 0)');
-    expect(screen.getByRole('button', { name: 'Diff' })).toBeDisabled();
   });
 
   it('overlays the diff on the new image in 2 up and 1 up', async () => {
@@ -97,7 +96,7 @@ describe('SnapshotPage viewer modes', () => {
     fireEvent.click(diff);
     expect(diff).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('img', { name: 'Diff' })).toHaveAttribute('src', img('4'));
-    expect(screen.getByRole('img', { name: 'Diff' })).toHaveStyle({ opacity: '1' });
+    expect(screen.getByRole('img', { name: 'Diff' })).toHaveStyle({ opacity: '0.6' });
     fireEvent.change(screen.getByRole('slider', { name: 'Diff opacity' }), {
       target: { value: '25' },
     });

@@ -7,6 +7,8 @@ import {
   type BuildStatusSummary,
   type ReviewDecision,
   type ReviewSnapshotResponse,
+  type ReviewSnapshotsRequest,
+  type ReviewSnapshotsResponse,
   type ReviewState,
 } from '@targus/core';
 
@@ -207,4 +209,38 @@ export async function approveAll(
     approvedCount,
     skippedCount: asked.size - approvedCount,
   };
+}
+
+/**
+ * `POST /api/builds/:id/review`: one decision on several snapshots of a build, as
+ * `reviewSnapshot` makes it on one. Every id must be a changed or new snapshot of the build, or
+ * nothing is written. One already decided that way is left as it was; any other takes this
+ * decision, whoever decided it before, since the later decision stands.
+ */
+export async function reviewSnapshots(
+  deps: ReviewDeps,
+  reviewer: Reviewer,
+  buildId: string,
+  request: ReviewSnapshotsRequest,
+): Promise<ReviewSnapshotsResponse> {
+  const { build, project } = await requireReviewableBuild(deps, reviewer, buildId);
+  const asked = new Set(request.snapshotIds);
+  const named = (await deps.builds.listSnapshots(build.id)).filter((s) => asked.has(s.id));
+  if (named.length !== asked.size) {
+    throw new TargusError('not_found', `build ${build.id} does not have every snapshot named`);
+  }
+  if (!named.every((snapshot) => needsReview(snapshot.state))) {
+    throw new TargusError('conflict', 'only changed and new snapshots are reviewable');
+  }
+  named.forEach((snapshot) => pairOf(project, snapshot));
+  const review: ReviewState = request.decision === 'approve' ? 'approved' : 'denied';
+  const undecided = (snapshots: readonly SnapshotRecord[]) =>
+    snapshots.filter((snapshot) => asked.has(snapshot.id) && snapshot.review !== review);
+  if (undecided(named).length === 0) return { ...withSummary(build), decidedCount: 0 };
+
+  const made = { review, reviewedBy: reviewer.user.login, reviewedAt: deps.clock.now() };
+  const approvals = review === 'approved' ? recording(deps, project, made) : withdrawing(project);
+  const committed = await commitDecision(deps, build, undecided, { ...made, approvals });
+  await syncCheckRun(deps, project, committed.build, committed);
+  return { ...withSummary(committed.build), decidedCount: committed.decided.length };
 }
