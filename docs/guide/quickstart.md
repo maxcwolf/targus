@@ -84,18 +84,18 @@ Publishing needs a project on a targus service.
 
 ### Get a project token
 
-Sign in to the targus review UI with GitHub and choose **New project**:
+Ask whoever runs your targus service to create a project for your repository and to install the
+targus GitHub App on its account or org. They get a token back, shown once; keep it in a password
+manager or a CI secret, never in a file in the repo.
 
-1. Install the targus GitHub App on the account or org that owns the repository (the page links
-   to it), giving it access to the repository. GitHub brings you back to targus afterwards.
-2. Choose the repository and **Create project**.
-
-The page then shows the project token, once. Keep it in a password manager or a CI secret, never
-in a file in the repo. You can create a project when you are a member of the GitHub org that owns
-the repository, or the owner of a personal account.
+On a service that has self-serve projects turned on (the `selfServeProjects` feature), you can do
+this yourself: sign in to the review UI and choose **New project**. Install the targus GitHub App
+on the account that owns the repository (the page links to it), choose the repository and
+**Create project**. The page shows the token once. You can create a project when you are a member
+of the GitHub org that owns the repository, or the owner of a personal account.
 
 <details>
-<summary>For the targus admin: creating a project without the UI</summary>
+<summary>For the targus admin: creating the project</summary>
 
 ```sh
 curl -s https://<targus host>/api/admin/projects \

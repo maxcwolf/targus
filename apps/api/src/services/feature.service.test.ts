@@ -15,7 +15,9 @@ describe('feature flags', () => {
   });
 
   it('answers not_found for a feature that is off', () => {
-    const deps = { config: { ...testConfig, features: { library: false } } };
+    const deps = {
+      config: { ...testConfig, features: { ...testConfig.features, library: false } },
+    };
 
     expect(() => {
       requireFeature(deps, 'library');

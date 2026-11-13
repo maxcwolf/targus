@@ -5,7 +5,7 @@ import {
 } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
-import { appWith, bearer, call, uniqueOrg } from '../../test/support/api.ts';
+import { appWithFeatures, bearer, call, uniqueOrg } from '../../test/support/api.ts';
 import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
 import { createCapturingLogger, fakeObservability } from '../../test/support/logs.ts';
 import { signIn, withCookie } from '../../test/support/session.ts';
@@ -25,7 +25,7 @@ function world() {
       },
     },
   );
-  const app = appWith({ github });
+  const app = appWithFeatures({ selfServeProjects: true }, { github });
   const get = (path: string, cookie: string) => call(path, { headers: withCookie(cookie) }, app);
   const post = (path: string, cookie: string, body: unknown) =>
     call(
@@ -114,7 +114,7 @@ describe('/api/installations access', () => {
 
   it('writes one request line naming the route and the reviewer', async () => {
     const logger = createCapturingLogger();
-    const app = appWith({}, fakeObservability(logger));
+    const app = appWithFeatures({ selfServeProjects: true }, {}, fakeObservability(logger));
     const { cookie } = await signIn('octocat');
 
     await call('/api/installations', { headers: withCookie(cookie) }, app);
@@ -125,5 +125,22 @@ describe('/api/installations access', () => {
       principal: 'reviewer',
       status: 200,
     });
+  });
+});
+
+describe('/api/installations with the feature off', () => {
+  it('answers 404 on every route, signed in or not', async () => {
+    const { cookie } = await signIn('octocat');
+    const headers = withCookie(cookie);
+
+    for (const init of [{ headers }, {}]) {
+      for (const path of ['/api/installations', '/api/installations/7/repos']) {
+        const response = await call(path, init);
+        expect(response.status).toBe(404);
+        expect(await response.json()).toMatchObject({ error: { code: 'not_found' } });
+      }
+      const post = await call('/api/installations/7/projects', { ...init, method: 'POST' });
+      expect(post.status).toBe(404);
+    }
   });
 });

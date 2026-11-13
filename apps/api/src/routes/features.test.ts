@@ -16,7 +16,7 @@ describe('a feature that is turned off', () => {
     const headers = withCookie(cookie);
 
     const me = await call('/api/me', { headers }, app);
-    expect(MeResponse.parse(await me.json()).features).toEqual({ library: false });
+    expect(MeResponse.parse(await me.json()).features).toMatchObject({ library: false });
 
     for (const init of [{ headers }, {}]) {
       const response = await call(`/api/projects/${project.id}/library`, init, app);

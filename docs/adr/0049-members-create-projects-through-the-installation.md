@@ -43,6 +43,8 @@ App can see, when they are a member of the installation's account.
   arrives from GitHub's Setup URL, `/setup?installation_id=`, which the review UI forwards to
   "New project" on that installation.
 - Any member may create a project, not only an owner or the person who installed the App.
+- It is the `selfServeProjects` feature (ADR 0048), off by default until it has run against
+  GitHub itself: the routes answer 404 and the review UI has no "New project" while it is off.
 - The admin route stays, for scripted setup and for an org with no installation.
 
 ## Consequences

@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 
 import type { AppEnv } from '../app-env.ts';
 import { sessionAuth } from '../middleware/auth.ts';
+import { feature } from '../middleware/feature.ts';
 import { jsonBody } from '../middleware/json-body.ts';
 
 /** The `:id` of the path as an installation id; anything else is `not_found`. */
@@ -16,9 +17,10 @@ function installationId(param: string): number {
  * `/api/installations/*`: how a reviewer makes a project without an admin (ADR 0049). They list
  * the GitHub App installations they can use, the repositories one can see, and make a project
  * for one of those. All behind the session; an installation on an account the reviewer does not
- * belong to answers 403.
+ * belong to answers 403. The whole route is the `selfServeProjects` feature: 404 while it is off.
  */
 export const installationsRoute = new Hono<AppEnv>()
+  .use(feature('selfServeProjects'))
   .get('/', sessionAuth, async (c) =>
     c.json(await c.var.services.listInstallations(c.var.reviewer)),
   )

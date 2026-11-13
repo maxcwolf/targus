@@ -1,12 +1,32 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { apiError, apiState, newProjectToken, server } from '../../test/msw.ts';
 import { renderApp } from '../../test/render.tsx';
 import { validateNewProjectSearch, validateSetupSearch } from './search.ts';
 
 const repoStep = () => screen.findByRole('region', { name: '2. Repository' });
+
+beforeEach(() => {
+  apiState.features = { ...apiState.features, selfServeProjects: true };
+});
+
+describe('with self-serve projects off', () => {
+  it('has no New project link, and /new and /setup are not found', async () => {
+    apiState.features = { ...apiState.features, selfServeProjects: false };
+    const projects = renderApp('/');
+    await screen.findByRole('link', { name: 'Mobile app' });
+    expect(screen.queryByRole('link', { name: 'New project' })).not.toBeInTheDocument();
+    projects.unmount();
+
+    for (const path of ['/new?installation=7', '/setup?installation_id=7']) {
+      const page = renderApp(path);
+      expect(await screen.findByRole('heading', { name: 'Not found' })).toBeInTheDocument();
+      page.unmount();
+    }
+  });
+});
 
 describe('ProjectsPage', () => {
   it('is reached from the projects page', async () => {

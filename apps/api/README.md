@@ -241,9 +241,10 @@ than `on` or `off`, stops the server at start with a message, so a typo never le
 a state nobody chose. Take a name out of `FEATURES` before deploying a version that no longer has
 that flag.
 
-| Feature   | Default | What it is                                                        |
-| --------- | ------- | ----------------------------------------------------------------- |
-| `library` | on      | Browse a project's accepted stories on the web, outside any build |
+| Feature             | Default | What it is                                                                        |
+| ------------------- | ------- | --------------------------------------------------------------------------------- |
+| `library`           | on      | Browse a project's accepted stories on the web, outside any build                 |
+| `selfServeProjects` | off     | Org members create projects from the review UI, through the GitHub App (ADR 0049) |
 
 ### GitHub App setup
 

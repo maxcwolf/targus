@@ -47,6 +47,8 @@ function workerVars(worker: LocalWorker): Record<string, string> {
     GITHUB_APP_PRIVATE_KEY: throwawayPrivateKey(),
     GITHUB_OAUTH_ORIGIN: githubStub,
     GITHUB_API_ORIGIN: githubStub,
+    // Everything that is being built is on locally and in the e2e suite (ADR 0048).
+    FEATURES: 'selfServeProjects=on',
     PUBLIC_URL: worker.publicUrl,
   };
 }

@@ -8,6 +8,20 @@ const vars = {
   DIFF_THRESHOLD: '0.002',
 };
 
+describe('loadConfig features', () => {
+  it('turns features on and off from FEATURES, and refuses a name it does not know', () => {
+    expect(loadConfig({ ...vars, FEATURES: 'library=off' }).features.library).toBe(false);
+    expect(
+      loadConfig({ ...vars, FEATURES: 'selfServeProjects=on' }).features.selfServeProjects,
+    ).toBe(true);
+    expect(loadConfig({ ...vars, FEATURES: '' }).features.library).toBe(true);
+    expect(() => loadConfig({ ...vars, FEATURES: 'libary=off' })).toThrow(
+      /FEATURES: \\"libary\\" is not a feature/,
+    );
+    expect(() => loadConfig({ ...vars, FEATURES: 'library' })).toThrow(/FEATURES: /);
+  });
+});
+
 describe('loadConfig', () => {
   it('reads vars and treats absent secrets as unset', () => {
     expect(loadConfig(vars)).toEqual({
@@ -22,17 +36,8 @@ describe('loadConfig', () => {
       githubOAuthOrigin: 'https://github.com',
       githubApiOrigin: 'https://api.github.com',
       s3: null,
-      features: { library: true },
+      features: { library: true, selfServeProjects: false },
     });
-  });
-
-  it('turns features on and off from FEATURES, and refuses a name it does not know', () => {
-    expect(loadConfig({ ...vars, FEATURES: 'library=off' }).features).toEqual({ library: false });
-    expect(loadConfig({ ...vars, FEATURES: '' }).features).toEqual({ library: true });
-    expect(() => loadConfig({ ...vars, FEATURES: 'libary=off' })).toThrow(
-      /FEATURES: \\"libary\\" is not a feature/,
-    );
-    expect(() => loadConfig({ ...vars, FEATURES: 'library' })).toThrow(/FEATURES: /);
   });
 
   it('builds the App install link from its slug, on the OAuth origin', () => {

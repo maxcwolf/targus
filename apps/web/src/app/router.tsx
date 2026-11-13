@@ -38,6 +38,7 @@ const newProjectRoute = createRoute({
   validateSearch: validateNewProjectSearch,
   component: function NewProjectRoute(): ReactElement {
     const { installation } = newProjectRoute.useSearch();
+    if (!useFeature('selfServeProjects')) return <NotFound />;
     return <NewProjectPage installation={installation} />;
   },
 });

@@ -47,9 +47,10 @@ export function call(
 export function appWithFeatures(
   features: Partial<FeatureFlags>,
   overrides: Partial<AppDeps> = {},
+  observe: Observability = fakeObservability(),
 ): Hono<AppEnv> {
   const config = { ...testDeps.config, features: { ...testDeps.config.features, ...features } };
-  return appWith({ ...overrides, config });
+  return appWith({ ...overrides, config }, observe);
 }
 
 export function bearer(token: string): { authorization: string } {
