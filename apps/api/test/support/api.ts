@@ -1,4 +1,4 @@
-import { CreateProjectResponse } from '@targus/core';
+import { CreateProjectResponse, type FeatureFlags } from '@targus/core';
 import { env } from 'cloudflare:workers';
 import type { Hono } from 'hono';
 
@@ -41,6 +41,15 @@ export function call(
   app: Hono<AppEnv> = defaultApp,
 ): Promise<Response> {
   return Promise.resolve(app.request(`http://targus.test${path}`, init));
+}
+
+/** The real app with some features set otherwise than their defaults (ADR 0048). */
+export function appWithFeatures(
+  features: Partial<FeatureFlags>,
+  overrides: Partial<AppDeps> = {},
+): Hono<AppEnv> {
+  const config = { ...testDeps.config, features: { ...testDeps.config.features, ...features } };
+  return appWith({ ...overrides, config });
 }
 
 export function bearer(token: string): { authorization: string } {

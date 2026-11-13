@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { FeatureFlags } from '../features.ts';
 import { Build } from './build.ts';
 import { BuildStatusSummary, SnapshotCounts } from './build-summary.ts';
 import { ProjectSummary } from './project.ts';
@@ -15,7 +16,8 @@ export const ReviewerUser = z.object({
 export type ReviewerUser = z.infer<typeof ReviewerUser>;
 
 /** `GET /api/me` response; 401 when there is no session. */
-export const MeResponse = z.object({ user: ReviewerUser });
+/** The signed-in reviewer, and which features this server has turned on (ADR 0048). */
+export const MeResponse = z.object({ user: ReviewerUser, features: FeatureFlags });
 export type MeResponse = z.infer<typeof MeResponse>;
 
 /** `GET /api/projects` response: the projects whose org the reviewer belongs to. */

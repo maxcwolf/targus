@@ -1,4 +1,4 @@
-import { defaultThreshold } from '@targus/core';
+import { defaultThreshold, type FeatureFlags, resolveFeatureFlags } from '@targus/core';
 import { z } from 'zod';
 
 // Configuration arrives as plain string variables (Worker bindings on Cloudflare) and is
@@ -52,6 +52,15 @@ const VarsSchema = z
     GITHUB_CLIENT_SECRET: optionalSecret,
     GITHUB_OAUTH_ORIGIN: origin('https://github.com'),
     GITHUB_API_ORIGIN: origin('https://api.github.com'),
+    FEATURES: z
+      .string()
+      .optional()
+      .transform((text, context) => {
+        const resolved = resolveFeatureFlags(text);
+        if (resolved.ok) return resolved.flags;
+        context.addIssue({ code: 'custom', message: `FEATURES: ${resolved.problem}` });
+        return z.NEVER;
+      }),
     S3_ENDPOINT: optionalSecret.pipe(z.url().nullable()),
     S3_REGION: optionalSecret,
     S3_BUCKET: optionalSecret,
@@ -108,6 +117,8 @@ export interface ApiConfig {
   readonly githubApiOrigin: string;
   /** Where images live: an S3-compatible bucket, or null for the host's own store (R2). */
   readonly s3: S3Config | null;
+  /** Which features are on: each one's default, changed by `FEATURES` (ADR 0048). */
+  readonly features: FeatureFlags;
 }
 
 /**
@@ -136,6 +147,8 @@ export interface ConfigVars {
   readonly GITHUB_OAUTH_ORIGIN?: string;
   /** Origin of the GitHub REST API; defaults to https://api.github.com. */
   readonly GITHUB_API_ORIGIN?: string;
+  /** Features to turn on or off, e.g. `library=off`; each keeps its default otherwise. */
+  readonly FEATURES?: string;
   /** Origin of an S3-compatible service. Images go to S3 only when all five S3 vars are set. */
   readonly S3_ENDPOINT?: string;
   /** The bucket's region (`auto` for R2, any value for MinIO). */
@@ -179,5 +192,6 @@ export function loadConfig(raw: ConfigVars): ApiConfig {
     githubOAuthOrigin: vars.GITHUB_OAUTH_ORIGIN,
     githubApiOrigin: vars.GITHUB_API_ORIGIN,
     s3: s3From(vars),
+    features: vars.FEATURES,
   };
 }

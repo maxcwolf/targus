@@ -2,6 +2,7 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import type { ProjectSummary } from '@targus/core/browser';
 import type { ReactElement } from 'react';
 
+import { useFeature } from '../auth/index.ts';
 import { GridIcon, LibraryIcon, ListIcon } from '../../components/icons.tsx';
 
 /** The rail section the current path belongs to. Build and snapshot pages count as Builds. */
@@ -16,6 +17,7 @@ export function AppRail({
 }: {
   readonly project: ProjectSummary | undefined;
 }): ReactElement {
+  const library = useFeature('library');
   const section = useRouterState({ select: (state) => railSection(state.location.pathname) });
   const itemClass = (name: typeof section): string =>
     section === name ? 'rail-item active' : 'rail-item';
@@ -37,14 +39,16 @@ export function AppRail({
             <ListIcon />
             <span className="rail-label">Builds</span>
           </Link>
-          <Link
-            to="/projects/$projectId/library"
-            params={{ projectId: project.id }}
-            className={itemClass('library')}
-          >
-            <LibraryIcon />
-            <span className="rail-label">Library</span>
-          </Link>
+          {library ? (
+            <Link
+              to="/projects/$projectId/library"
+              params={{ projectId: project.id }}
+              className={itemClass('library')}
+            >
+              <LibraryIcon />
+              <span className="rail-label">Library</span>
+            </Link>
+          ) : null}
         </>
       ) : null}
     </nav>

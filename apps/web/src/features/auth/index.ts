@@ -3,4 +3,10 @@
 export { SessionExpired } from './SessionExpired.tsx';
 export { SignIn } from './SignIn.tsx';
 export { UserMenu } from './UserMenu.tsx';
-export { isSessionExpired, SessionExpiredContext, useMe, useSessionExpired } from './useMe.ts';
+export {
+  isSessionExpired,
+  SessionExpiredContext,
+  useFeature,
+  useMe,
+  useSessionExpired,
+} from './useMe.ts';

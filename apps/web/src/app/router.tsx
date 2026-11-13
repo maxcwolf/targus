@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 
+import { useFeature } from '../features/auth/index.ts';
 import { BuildPage, validateFilterSearch } from '../features/build/index.ts';
 import { NotFound, RouteCrash } from '../features/errors/index.ts';
 import { LibraryPage, validateLibrarySearch } from '../features/library/index.ts';
@@ -41,6 +42,8 @@ const libraryRoute = createRoute({
   component: function LibraryRoute(): ReactElement {
     const { projectId } = libraryRoute.useParams();
     const { story, platform } = libraryRoute.useSearch();
+    // A feature that is off has no page, like any other unknown path (ADR 0048).
+    if (!useFeature('library')) return <NotFound />;
     return <LibraryPage projectId={projectId} story={story} platform={platform} />;
   },
 });

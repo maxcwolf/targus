@@ -1,6 +1,6 @@
 import { type UseQueryResult, useQuery } from '@tanstack/react-query';
 import { useRouterState } from '@tanstack/react-router';
-import type { MeResponse } from '@targus/core/browser';
+import type { FeatureName, MeResponse } from '@targus/core/browser';
 import { createContext, useContext } from 'react';
 
 import { getMe, isSignedOut, queryKeys } from '../../api-client/index.ts';
@@ -8,6 +8,15 @@ import { getMe, isSignedOut, queryKeys } from '../../api-client/index.ts';
 /** The signed-in reviewer; the query errors with a `SignedOutError` when signed out. */
 export function useMe(): UseQueryResult<MeResponse> {
   return useQuery({ queryKey: queryKeys.me, queryFn: getMe, staleTime: 5 * 60 * 1000 });
+}
+
+/**
+ * Whether the server has `feature` on (ADR 0048); false until the reviewer has loaded. It reads
+ * what `useMe` fetched and never fetches itself, so it is safe anywhere below the auth gate.
+ */
+export function useFeature(feature: FeatureName): boolean {
+  const me = useQuery({ queryKey: queryKeys.me, queryFn: getMe, enabled: false });
+  return me.data?.features[feature] ?? false;
 }
 
 /**

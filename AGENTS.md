@@ -41,6 +41,10 @@ app imports `@targus/core/browser` (`src/browser.ts`), which leaves out the Node
   UI belongs to `apps/web/src/features/<name>/`. No `fetch` anywhere else. Another feature or
   `app/` imports a feature only through its `index.ts`, and the feature graph has no cycle
   (ADR 0019).
+- A feature that is not ready for release: behind a flag (ADR 0048). Add its name to
+  `packages/core/src/features.ts` with `enabledByDefault: false`, put `feature('<name>')` first on
+  each of its API routes, and read `useFeature('<name>')` for its pages and links in the web app.
+  Add it to the table in `apps/api/README.md`. Tests cover it both on and off.
 - Config: read env or bindings only in a file named `config.ts`, validated with zod.
 - User documentation: plain Markdown in `docs/guide/`, `docs/reference/` or `docs/prompts/`,
   linked from `docs/README.md` (ADR 0029). After changing a CLI flag or its description, run
