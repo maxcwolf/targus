@@ -9,6 +9,7 @@ import { authRoute } from './routes/auth.ts';
 import { buildsRoute } from './routes/builds.ts';
 import { healthRoute } from './routes/health.ts';
 import { imagesRoute } from './routes/images.ts';
+import { installationsRoute } from './routes/installations.ts';
 import { meRoute } from './routes/me.ts';
 import { projectsRoute } from './routes/projects.ts';
 import { snapshotsRoute } from './routes/snapshots.ts';
@@ -41,5 +42,6 @@ export function createApp(
   app.route('/api/builds', buildsRoute);
   app.route('/api/snapshots', snapshotsRoute);
   app.route('/api/images', imagesRoute);
+  app.route('/api/installations', installationsRoute);
   return app;
 }

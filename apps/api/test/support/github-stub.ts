@@ -55,8 +55,17 @@ function installationReply(path: string, accounts: StubWorld['accounts']): Respo
   const [, installation] = /^\/app\/installations\/(\d+)$/.exec(path) ?? [];
   if (installation === undefined) return null;
   const id = Number(installation);
-  return json({ id, account: { id: accounts[id] ?? defaultAccountId(id) } }, 200);
+  return json(
+    { id, account: { id: accounts[id] ?? defaultAccountId(id), login: 'example-org' } },
+    200,
+  );
 }
+
+/** What `GET /installation/repositories` answers: two repositories of `example-org`. */
+export const stubRepositories = [
+  { full_name: 'example-org/example-app', default_branch: 'main' },
+  { full_name: 'example-org/design-system', default_branch: 'trunk' },
+];
 
 /** What api.github.com would answer for `path`. */
 function replyTo(path: string, { members, accounts }: StubWorld): Response {
@@ -66,6 +75,7 @@ function replyTo(path: string, { members, accounts }: StubWorld): Response {
   const installation = installationReply(path, accounts);
   if (installation !== null) return installation;
   if (path.includes('/statuses/')) return json({ id: 901 }, 201);
+  if (path === '/installation/repositories') return json({ repositories: stubRepositories }, 200);
   const [, org, login] = /\/orgs\/([^/]+)\/members\/([^/]+)$/.exec(path) ?? [];
   if (org !== undefined && login !== undefined) {
     return isMemberOf(members, decodeURIComponent(org), decodeURIComponent(login))

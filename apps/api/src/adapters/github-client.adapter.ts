@@ -1,6 +1,12 @@
 import { createAppAuth } from '@octokit/auth-app';
 import { request as octokitRequest } from '@octokit/request';
-import type { CheckRunState, CheckRunTarget, GitHubClient } from '@targus/core';
+import type {
+  AccessibleRepo,
+  CheckRunState,
+  CheckRunTarget,
+  GitHubClient,
+  InstallationAccount,
+} from '@targus/core';
 
 import { InstallationTokenCache, type InstallationToken } from './installation-token-cache.ts';
 import { systemClock } from './system-clock.adapter.ts';
@@ -36,6 +42,19 @@ function hasStatus(error: unknown, status: number): boolean {
   return (
     typeof error === 'object' && error !== null && 'status' in error && error.status === status
   );
+}
+
+/** GitHub's largest page, and how many pages of an installation's repositories are read. */
+const repoPageSize = 100;
+const maxRepoPages = 10;
+
+/** The id and login of an installation's account; GitHub types it loosely, so it is checked. */
+function accountOf(account: unknown, installationId: number): InstallationAccount {
+  if (typeof account === 'object' && account !== null && 'id' in account && 'login' in account) {
+    const { id, login } = account;
+    if (typeof id === 'number' && typeof login === 'string') return { id, login };
+  }
+  throw new Error(`installation ${String(installationId)} names no account`);
 }
 
 /** Request headers carrying the installation token (Octokit's headers are an open record). */
@@ -150,22 +169,49 @@ export class OctokitGitHubClient implements GitHubClient {
   }
 
   /**
-   * The id of the account the installation is on, from `GET /app/installations/{id}`, which
-   * authenticates as the App itself (a JWT), not as the installation. Any failure is thrown.
+   * The account the installation is on, from `GET /app/installations/{id}`, which authenticates
+   * as the App itself (a JWT), not as the installation. Any failure is thrown.
    */
-  async installationAccountId(installationId: number): Promise<number> {
+  private async readAccount(installationId: number): Promise<InstallationAccount> {
     const { token } = await this.auth({ type: 'app' });
     const response = await this.request('GET /app/installations/{installation_id}', {
       installation_id: installationId,
       headers: { authorization: `bearer ${token}` },
     });
-    const account: unknown = response.data.account;
-    const id =
-      typeof account === 'object' && account !== null && 'id' in account ? account.id : null;
-    if (typeof id !== 'number') {
-      throw new Error(`installation ${String(installationId)} names no account`);
+    return accountOf(response.data.account, installationId);
+  }
+
+  async installationAccountId(installationId: number): Promise<number> {
+    return (await this.readAccount(installationId)).id;
+  }
+
+  /** As `installationAccountId`, except that a 404 (the App has no such installation) is null. */
+  async installationAccount(installationId: number): Promise<InstallationAccount | null> {
+    try {
+      return await this.readAccount(installationId);
+    } catch (error) {
+      if (hasStatus(error, 404)) return null;
+      throw error;
     }
-    return id;
+  }
+
+  /** Every page of `GET /installation/repositories`, up to `maxRepoPages` of them. */
+  async listInstallationRepos(installationId: number): Promise<AccessibleRepo[]> {
+    const repos: AccessibleRepo[] = [];
+    for (let page = 1; page <= maxRepoPages; page += 1) {
+      const response = await this.withToken(installationId, (headers) =>
+        this.request('GET /installation/repositories', { per_page: repoPageSize, page, headers }),
+      );
+      const { repositories } = response.data;
+      repos.push(
+        ...repositories.map((repository) => ({
+          repo: repository.full_name,
+          defaultBranch: repository.default_branch,
+        })),
+      );
+      if (repositories.length < repoPageSize) break;
+    }
+    return repos;
   }
 }
 
@@ -189,5 +235,13 @@ export class NoopGitHubClient implements GitHubClient {
   /** There is no installation to ask, so no account is ever recognised. */
   installationAccountId(): Promise<number> {
     return Promise.reject(new Error('the GitHub App is not configured'));
+  }
+
+  installationAccount(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
+  listInstallationRepos(): Promise<AccessibleRepo[]> {
+    return Promise.resolve([]);
   }
 }

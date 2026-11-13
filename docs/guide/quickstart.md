@@ -88,6 +88,12 @@ Ask whoever runs your targus service to create a project for your repository and
 targus GitHub App on its account or org. They get a token back, shown once; keep it in a password
 manager or a CI secret, never in a file in the repo.
 
+On a service that has self-serve projects turned on (the `selfServeProjects` feature), you can do
+this yourself: sign in to the review UI and choose **New project**. Install the targus GitHub App
+on the account that owns the repository (the page links to it), choose the repository and
+**Create project**. The page shows the token once. You can create a project when you are a member
+of the GitHub org that owns the repository, or the owner of a personal account.
+
 <details>
 <summary>For the targus admin: creating the project</summary>
 

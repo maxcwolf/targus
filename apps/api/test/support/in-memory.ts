@@ -145,6 +145,7 @@ export const testConfig: ApiConfig = {
   githubApp: null,
   sessionSecret: 'session-secret',
   githubOAuth: { clientId: 'client-id', clientSecret: 'client-secret' },
+  githubAppInstallUrl: 'https://github.test/apps/targus-test/installations/new',
   githubOAuthOrigin: 'https://github.test',
   githubApiOrigin: 'https://api.github.test',
   s3: null,

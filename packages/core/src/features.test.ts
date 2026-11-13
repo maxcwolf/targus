@@ -17,6 +17,10 @@ describe('the feature catalog', () => {
     }
   });
 
+  it('keeps a feature that is not released off until a server asks for it', () => {
+    expect(defaultFeatureFlags()).toEqual({ library: true, selfServeProjects: false });
+  });
+
   it('has a contract that wants every feature and nothing else', () => {
     expect(FeatureFlags.parse(defaultFeatureFlags())).toEqual(defaultFeatureFlags());
     expect(FeatureFlags.safeParse({}).success).toBe(false);
@@ -33,11 +37,21 @@ describe('resolveFeatureFlags', () => {
   });
 
   it('sets each named feature, the last setting of one winning', () => {
-    expect(resolveFeatureFlags('library=off')).toEqual({ ok: true, flags: { library: false } });
-    expect(resolveFeatureFlags(' library = on ,')).toEqual({ ok: true, flags: { library: true } });
+    expect(resolveFeatureFlags('library=off')).toEqual({
+      ok: true,
+      flags: { ...defaultFeatureFlags(), library: false },
+    });
+    expect(resolveFeatureFlags(' library = on ,')).toEqual({
+      ok: true,
+      flags: defaultFeatureFlags(),
+    });
     expect(resolveFeatureFlags('library=off,library=on')).toEqual({
       ok: true,
-      flags: { library: true },
+      flags: defaultFeatureFlags(),
+    });
+    expect(resolveFeatureFlags('selfServeProjects=on, library=off')).toEqual({
+      ok: true,
+      flags: { library: false, selfServeProjects: true },
     });
     // A fresh object each time: one result never changes the defaults.
     expect(defaultFeatureFlags().library).toBe(true);
@@ -46,7 +60,7 @@ describe('resolveFeatureFlags', () => {
   it('refuses an unknown feature and a setting that is not on or off', () => {
     expect(resolveFeatureFlags('libary=off')).toEqual({
       ok: false,
-      problem: '"libary" is not a feature (known: library)',
+      problem: '"libary" is not a feature (known: library, selfServeProjects)',
     });
     for (const entry of ['library', 'library=true', 'library=', 'library=on=off', '=on=']) {
       expect(resolveFeatureFlags(entry)).toEqual({

@@ -77,7 +77,7 @@ describe('yarn new:route mounting', () => {
     const app = read(appFile);
     assert.match(
       app,
-      /from '\.\/routes\/images\.ts';\nimport \{ ledgerRoute \} from '\.\/routes\/ledger\.ts';\nimport \{ meRoute \}/,
+      /from '\.\/routes\/installations\.ts';\nimport \{ ledgerRoute \} from '\.\/routes\/ledger\.ts';\nimport \{ meRoute \}/,
     );
     assert.ok(app.includes(`${lastMount ?? ''}\n  app.route('/api/ledger', ledgerRoute);\n`));
   });

@@ -16,6 +16,7 @@ import {
   sha,
   storyResult,
 } from '../../test/support/fixtures.ts';
+import { createRecordingGitHub } from '../../test/support/github-recorder.ts';
 import { createGitHubStub, generatePrivateKeyPem } from '../../test/support/github-stub.ts';
 import { markUploaded } from '../../test/support/in-memory-images.ts';
 import { asProject, createTestDeps, type TestDeps } from '../../test/support/in-memory.ts';
@@ -278,15 +279,15 @@ describe('submitResults check runs', () => {
   });
 });
 
+/** A GitHub client that does nothing, around the given `createCheckRun`. */
+function githubWith(createCheckRun: GitHubClient['createCheckRun']): GitHubClient {
+  return { ...createRecordingGitHub(), createCheckRun };
+}
+
 describe('submitResults without a check run', () => {
   it('skips the check run without an installation, and with the no-op client', async () => {
     const createCheckRun = vi.fn<GitHubClient['createCheckRun']>().mockResolvedValue({ id: 0 });
-    const github: GitHubClient = {
-      createCheckRun,
-      updateCheckRun: vi.fn(),
-      isOrgMember: vi.fn(),
-      installationAccountId: vi.fn(),
-    };
+    const github = githubWith(createCheckRun);
     const without = await setup(github, null);
     const withNoop = await setup(github, 7);
 
@@ -306,12 +307,7 @@ describe('submitResults without a check run', () => {
   });
 
   it('keeps the results when GitHub fails', async () => {
-    const github: GitHubClient = {
-      createCheckRun: vi.fn().mockRejectedValue(new Error('GitHub is down')),
-      updateCheckRun: vi.fn(),
-      isOrgMember: vi.fn(),
-      installationAccountId: vi.fn(),
-    };
+    const github = githubWith(vi.fn().mockRejectedValue(new Error('GitHub is down')));
     const { deps, project } = await setup(github, 7);
     const buildId = await openBuild(deps, project, sha('a'));
 

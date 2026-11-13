@@ -37,6 +37,14 @@ export {
   CreateBuildResponse,
 } from './create-build.ts';
 export { HealthResponse } from './health.ts';
+export {
+  CreateInstallationProjectRequest,
+  InstallationId,
+  InstallationRepo,
+  InstallationSummary,
+  ListInstallationReposResponse,
+  ListInstallationsResponse,
+} from './installation.ts';
 export { GetLibraryQuery, GetLibraryResponse, LibraryStory } from './library.ts';
 export {
   ApproveAllResponse,

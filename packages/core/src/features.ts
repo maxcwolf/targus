@@ -5,7 +5,7 @@ import { z } from 'zod';
  * listed here from the pull request that starts it until it is either part of every release or
  * removed; the code that serves it asks for it by name, so the compiler finds every use.
  */
-export const featureNames = ['library'] as const;
+export const featureNames = ['library', 'selfServeProjects'] as const;
 
 export type FeatureName = (typeof featureNames)[number];
 
@@ -24,6 +24,10 @@ export const featureCatalog: Readonly<Record<FeatureName, FeatureDefinition>> = 
   library: {
     summary: "Browse a project's accepted stories on the web, without opening a build",
     enabledByDefault: true,
+  },
+  selfServeProjects: {
+    summary: 'Org members create projects from the review UI, through the GitHub App (ADR 0049)',
+    enabledByDefault: false,
   },
 };
 

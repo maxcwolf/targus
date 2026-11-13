@@ -1,10 +1,13 @@
 import {
   type Build,
+  CreateInstallationProjectRequest,
   buildStatus,
   defaultFeatureFlags,
   type FeatureFlags,
   type BuildWithSummary,
   type GetLibraryResponse,
+  type InstallationRepo,
+  type ListInstallationsResponse,
   needsReview,
   ReviewRequest,
   type Snapshot,
@@ -32,11 +35,32 @@ interface ApiState {
   libraryByPlatform: Partial<Record<string, GetLibraryResponse>>;
   /** What `GET /api/me` says is on; the defaults unless a test changes it. */
   features: FeatureFlags;
+  /** `GET /api/installations`. */
+  installations: ListInstallationsResponse;
+  /** The repositories installation 7 sees; any other installation is a 404. */
+  installationRepos: InstallationRepo[];
   /** `METHOD /path` of every mutating request, for assertions. */
   calls: string[];
   /** Snapshots another reviewer denies while an approve-all runs, so it skips them. */
   deniedDuringApproveAll: string[];
 }
+
+function initialInstallations(): ListInstallationsResponse {
+  return {
+    installations: [{ installationId: 7, account: 'acme' }],
+    installUrl: 'https://github.com/apps/targus-review/installations/new',
+  };
+}
+
+function initialInstallationRepos(): InstallationRepo[] {
+  return [
+    { repo: 'acme/mobile', defaultBranch: 'main', projectId: project.id },
+    { repo: 'acme/web', defaultBranch: 'trunk', projectId: null },
+  ];
+}
+
+/** The token the stub API hands out for a new project. */
+export const newProjectToken = 'tgs_test_0123456789abcdef0123456789abcdef';
 
 export const apiState: ApiState = {
   signedIn: true,
@@ -45,6 +69,8 @@ export const apiState: ApiState = {
   snapshots: [],
   library: initialLibrary(),
   libraryByPlatform: {},
+  installations: initialInstallations(),
+  installationRepos: initialInstallationRepos(),
   calls: [],
   deniedDuringApproveAll: [],
 };
@@ -56,6 +82,8 @@ export function resetApiState(): void {
   apiState.snapshots = initialSnapshots();
   apiState.library = initialLibrary();
   apiState.libraryByPlatform = {};
+  apiState.installations = initialInstallations();
+  apiState.installationRepos = initialInstallationRepos();
   apiState.calls = [];
   apiState.deniedDuringApproveAll = [];
 }
@@ -112,6 +140,21 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
   http.get('*/api/projects', () => HttpResponse.json({ projects: [project] })),
+  http.get('*/api/installations', () => HttpResponse.json(apiState.installations)),
+  http.get('*/api/installations/:id/repos', ({ params }) => {
+    if (params.id !== '7') return apiError(404, 'not_found', 'Installation not found');
+    return HttpResponse.json({ account: 'acme', repos: apiState.installationRepos });
+  }),
+  http.post('*/api/installations/:id/projects', async ({ params, request }) => {
+    const { repo } = CreateInstallationProjectRequest.parse(await request.json());
+    apiState.calls.push(`POST /api/installations/${String(params.id)}/projects ${repo}`);
+    const id = `project-${repo.replace('/', '-')}`;
+    apiState.installationRepos = apiState.installationRepos.map((entry) =>
+      entry.repo === repo ? { ...entry, projectId: id } : entry,
+    );
+    const created = { id, orgId: 'org-1', repo, name: repo.split('/')[1], defaultBranch: 'trunk' };
+    return HttpResponse.json({ project: created, token: newProjectToken }, { status: 201 });
+  }),
   http.get('*/api/projects/:projectId/builds', ({ params }) => {
     if (params.projectId !== project.id) return apiError(404, 'not_found', 'No project');
     return HttpResponse.json({ builds: apiState.builds.map(withSummary) });

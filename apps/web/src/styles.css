@@ -1468,3 +1468,76 @@ p {
     animation: none;
   }
 }
+
+/* New project (features/onboarding) */
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.onboarding {
+  max-width: 720px;
+}
+.onboarding > .muted {
+  margin: 8px 0 16px;
+}
+.onboarding-step {
+  margin-bottom: 16px;
+  padding: 16px 20px;
+}
+.onboarding-step h2 {
+  margin-bottom: 10px;
+  font-size: 15px;
+}
+.onboarding-step .muted {
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.onboarding-step .muted:last-child {
+  margin-bottom: 0;
+}
+.account-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.account-list .button[aria-current='true'] {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+}
+.repo-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.repo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.repo-row .mono {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.token,
+.snippet {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--fill);
+  font-family: var(--mono);
+  font-size: 12px;
+  overflow-x: auto;
+}
+.token {
+  user-select: all;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
