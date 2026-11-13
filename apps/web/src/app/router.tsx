@@ -2,6 +2,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  redirect,
   type RouterHistory,
 } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
@@ -10,6 +11,11 @@ import { useFeature } from '../features/auth/index.ts';
 import { BuildPage, validateFilterSearch } from '../features/build/index.ts';
 import { NotFound, RouteCrash } from '../features/errors/index.ts';
 import { LibraryPage, validateLibrarySearch } from '../features/library/index.ts';
+import {
+  NewProjectPage,
+  validateNewProjectSearch,
+  validateSetupSearch,
+} from '../features/onboarding/index.ts';
 import { BuildsPage, ProjectsPage } from '../features/projects/index.ts';
 import { SnapshotPage } from '../features/snapshot/index.ts';
 import { RootLayout } from './RootLayout.tsx';
@@ -24,6 +30,28 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: ProjectsPage,
+});
+
+const newProjectRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/new',
+  validateSearch: validateNewProjectSearch,
+  component: function NewProjectRoute(): ReactElement {
+    const { installation } = newProjectRoute.useSearch();
+    return <NewProjectPage installation={installation} />;
+  },
+});
+
+// Where GitHub sends someone who has just installed the App (its "Setup URL").
+const setupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/setup',
+  validateSearch: validateSetupSearch,
+  beforeLoad: ({ search }) => {
+    // TanStack Router redirects by throwing.
+    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    throw redirect({ to: '/new', search: validateNewProjectSearch(search), replace: true });
+  },
 });
 
 const projectRoute = createRoute({
@@ -72,6 +100,8 @@ const snapshotRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  newProjectRoute,
+  setupRoute,
   projectRoute,
   libraryRoute,
   buildRoute,

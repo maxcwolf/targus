@@ -36,6 +36,9 @@ src/cloudflare/    the Worker edge: bindings, env -> deps (D1, R2 or S3), and th
 | `POST /api/auth/logout`                   | session                  | Delete the session and clear the cookie (204)                           |
 | `GET /api/me`                             | session                  | The signed-in GitHub user                                               |
 | `GET /api/projects`                       | session                  | Projects of the orgs the user belongs to                                |
+| `GET /api/installations`                  | session                  | Accounts the user can add projects to, and the App's install link       |
+| `GET /api/installations/:id/repos`        | session                  | Repositories the installation sees, each with its project if it has one |
+| `POST /api/installations/:id/projects`    | session                  | Create a project for one of them; returns the token once (ADR 0049)     |
 | `GET /api/projects/:id/builds?limit=`     | session                  | Builds, newest first, with summary and counts (limit 1..100)            |
 | `GET /api/projects/:id/library?platform=` | session                  | Every story of the newest signed-off default-branch build of a platform |
 | `GET /api/projects/current`               | project token            | The token's project; the CLI checks its token with it                   |
@@ -189,6 +192,7 @@ Vars live in `wrangler.jsonc` and are validated by `src/config.ts`:
 | `GITHUB_OAUTH_ORIGIN`    | var    | `https://github.com`     | Where login happens (`/login/oauth/*`)                                                          |
 | `GITHUB_API_ORIGIN`      | var    | `https://api.github.com` | GitHub REST API, for the user lookup and every App call                                         |
 | `FEATURES`               | var    | unset                    | Features to turn on or off, e.g. `library=off`; see [Feature flags](#feature-flags) (ADR 0048)  |
+| `GITHUB_APP_SLUG`        | var    | unset                    | The App's URL name (`targus-review`); "New project" links to its install page when set          |
 | `S3_ENDPOINT`            | var    | unset                    | Origin of an S3-compatible service; images go to S3 instead of R2 when all five S3 vars are set |
 | `S3_REGION`              | var    | unset                    | The bucket's region (`auto` for R2's S3 API)                                                    |
 | `S3_BUCKET`              | var    | unset                    | The bucket that holds the images (`images/<hash>.png`)                                          |
@@ -257,7 +261,12 @@ One GitHub App provides login, org membership and the build's check, a commit st
 - The **client id** is on the App's settings page; generate a **client secret** there too. They
   are `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`. The App id and private key are
   `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY`.
-- Install the App on the org and set the org's `installationId` (the admin route takes it).
+- **Setup URL**: `${PUBLIC_URL}/setup`, with "Redirect on update" ticked. After someone installs
+  the App or changes its repositories, GitHub sends them there with `?installation_id=`, and the
+  review UI opens "New project" on that installation (ADR 0049).
+- Set `GITHUB_APP_SLUG` to the App's URL name so "New project" can link to its install page.
+- A member of the account then creates projects from the review UI. The admin route still works:
+  install the App on the org and pass the org's `installationId` to it.
 
 ## Running locally
 

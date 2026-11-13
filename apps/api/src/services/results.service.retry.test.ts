@@ -113,6 +113,8 @@ describe('submitResults after a failure', () => {
       updateCheckRun: vi.fn(),
       isOrgMember: vi.fn(),
       installationAccountId: vi.fn(),
+      installationAccount: vi.fn(),
+      listInstallationRepos: vi.fn(),
     };
     const setCheckRunId = vi.fn().mockRejectedValue(new Error('D1 is unavailable'));
     const { deps, project, buildId } = await setup(

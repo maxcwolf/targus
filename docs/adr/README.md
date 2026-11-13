@@ -63,3 +63,4 @@ the same change.
 | [0046](0046-the-newest-build-sets-the-check.md) | Only the newest build of a commit sets its check | accepted |
 | [0047](0047-play-functions-on-a-device.md) | Play functions on a device go through the story's own handlers | accepted |
 | [0048](0048-feature-flags.md) | Unfinished features ship behind a flag | accepted |
+| [0049](0049-members-create-projects-through-the-installation.md) | Members create projects through the App installation | accepted |

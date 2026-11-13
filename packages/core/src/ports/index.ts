@@ -7,7 +7,13 @@ export {
   type DeviceDriverCall,
   type FakeDeviceDriver,
 } from './device-driver.fake.ts';
-export type { CheckRunState, CheckRunTarget, GitHubClient } from './github-client.ts';
+export type {
+  AccessibleRepo,
+  CheckRunState,
+  CheckRunTarget,
+  GitHubClient,
+  InstallationAccount,
+} from './github-client.ts';
 export type { IdGenerator } from './id-generator.ts';
 export { createFakeIdGenerator } from './id-generator.fake.ts';
 export type { ImageStore } from './image-store.ts';

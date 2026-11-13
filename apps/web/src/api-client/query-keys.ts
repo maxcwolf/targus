@@ -12,6 +12,8 @@ export const queryKeys = {
     'library',
     platform,
   ],
+  installations: ['installations'],
+  installationRepos: (installationId: number) => ['installations', installationId, 'repos'],
   build: (buildId: string) => ['builds', buildId],
   snapshots: (buildId: string) => ['builds', buildId, 'snapshots'],
 } as const;

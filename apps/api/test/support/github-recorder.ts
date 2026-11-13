@@ -1,4 +1,4 @@
-import type { CheckRunState, CheckRunTarget, GitHubClient } from '@targus/core';
+import type { AccessibleRepo, CheckRunState, CheckRunTarget, GitHubClient } from '@targus/core';
 
 import { defaultAccountId } from './github-stub.ts';
 import { isMemberOf, type OrgMembers } from './org-members.ts';
@@ -26,23 +26,32 @@ export interface RecordingGitHub extends GitHubClient {
   }[];
 }
 
+interface RecordingGitHubOptions {
+  readonly failUpdates?: boolean;
+  /** How many of the first check run creations fail, as when GitHub has a hiccup. */
+  readonly failCreates?: number;
+  /**
+   * Each org's App installation. When an org is listed here, a membership check through any
+   * other installation answers false, as GitHub only lets an installation see its own org.
+   */
+  readonly installations?: Readonly<Record<string, number>>;
+  /**
+   * The account id of each installation, by installation id: a personal account's installation
+   * gets its owner's GitHub id. Others get `defaultAccountId`, an org no reviewer is.
+   */
+  readonly accounts?: Readonly<Record<number, number>>;
+  /**
+   * The login of each installation's account, by installation id; `example-org` otherwise.
+   * An id mapped to null is an installation the App does not have.
+   */
+  readonly logins?: Readonly<Record<number, string | null>>;
+  /** The repositories each installation can see, by installation id; none otherwise. */
+  readonly repos?: Readonly<Record<number, readonly AccessibleRepo[]>>;
+}
+
 export function createRecordingGitHub(
   members: OrgMembers = ['octocat'],
-  options: {
-    readonly failUpdates?: boolean;
-    /** How many of the first check run creations fail, as when GitHub has a hiccup. */
-    readonly failCreates?: number;
-    /**
-     * Each org's App installation. When an org is listed here, a membership check through any
-     * other installation answers false, as GitHub only lets an installation see its own org.
-     */
-    readonly installations?: Readonly<Record<string, number>>;
-    /**
-     * The account id of each installation, by installation id: a personal account's installation
-     * gets its owner's GitHub id. Others get `defaultAccountId`, an org no reviewer is.
-     */
-    readonly accounts?: Readonly<Record<number, number>>;
-  } = {},
+  options: RecordingGitHubOptions = {},
 ): RecordingGitHub {
   const membershipChecks: RecordingGitHub['membershipChecks'] = [];
   const accountLookups: number[] = [];
@@ -59,6 +68,15 @@ export function createRecordingGitHub(
       return Promise.resolve(
         options.accounts?.[installationId] ?? defaultAccountId(installationId),
       );
+    },
+    installationAccount(installationId) {
+      const login = options.logins?.[installationId];
+      if (login === null) return Promise.resolve(null);
+      const id = options.accounts?.[installationId] ?? defaultAccountId(installationId);
+      return Promise.resolve({ id, login: login ?? 'example-org' });
+    },
+    listInstallationRepos(installationId) {
+      return Promise.resolve([...(options.repos?.[installationId] ?? [])]);
     },
     createCheckRun(target, name, state, detailsUrl) {
       createCalls += 1;

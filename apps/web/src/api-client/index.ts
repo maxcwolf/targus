@@ -4,6 +4,11 @@ export { getMe, logout, signInUrl } from './auth.ts';
 export { approveAll, getBuild, listSnapshots } from './builds.ts';
 export { ApiRequestError, isSignedOut } from './http.ts';
 export { imageUrl } from './images.ts';
+export {
+  createInstallationProject,
+  listInstallationRepos,
+  listInstallations,
+} from './installations.ts';
 export { getLibrary, listBuilds, listProjects } from './projects.ts';
 export { queryKeys } from './query-keys.ts';
 export { reviewSnapshot } from './snapshots.ts';

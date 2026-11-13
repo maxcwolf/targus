@@ -50,6 +50,12 @@ const VarsSchema = z
     SESSION_SECRET: optionalSecret,
     GITHUB_CLIENT_ID: optionalSecret,
     GITHUB_CLIENT_SECRET: optionalSecret,
+    GITHUB_APP_SLUG: optionalSecret.pipe(
+      z
+        .string()
+        .regex(/^[A-Za-z0-9-]+$/)
+        .nullable(),
+    ),
     GITHUB_OAUTH_ORIGIN: origin('https://github.com'),
     GITHUB_API_ORIGIN: origin('https://api.github.com'),
     FEATURES: z
@@ -111,6 +117,11 @@ export interface ApiConfig {
   readonly sessionSecret: string | null;
   /** The GitHub App's OAuth client. Null disables GitHub login. */
   readonly githubOAuth: { readonly clientId: string; readonly clientSecret: string } | null;
+  /**
+   * GitHub's page for installing the App on an account, which self-serve project creation links
+   * to. Null when `GITHUB_APP_SLUG` is unset.
+   */
+  readonly githubAppInstallUrl: string | null;
   /** Origin of GitHub's OAuth pages (`https://github.com`; a stub in the e2e suite). */
   readonly githubOAuthOrigin: string;
   /** Origin of the GitHub REST API (`https://api.github.com`; a stub in the e2e suite). */
@@ -143,6 +154,8 @@ export interface ConfigVars {
   readonly GITHUB_CLIENT_ID?: string;
   /** Secret: the GitHub App's OAuth client secret. */
   readonly GITHUB_CLIENT_SECRET?: string;
+  /** The App's name in its GitHub URL (`github.com/apps/<slug>`), for the install link. */
+  readonly GITHUB_APP_SLUG?: string;
   /** Origin of GitHub's OAuth pages; defaults to https://github.com. */
   readonly GITHUB_OAUTH_ORIGIN?: string;
   /** Origin of the GitHub REST API; defaults to https://api.github.com. */
@@ -189,6 +202,10 @@ export function loadConfig(raw: ConfigVars): ApiConfig {
     githubApp: appId === null || privateKey === null ? null : { appId, privateKey },
     sessionSecret: vars.SESSION_SECRET,
     githubOAuth: clientId === null || clientSecret === null ? null : { clientId, clientSecret },
+    githubAppInstallUrl:
+      vars.GITHUB_APP_SLUG === null
+        ? null
+        : `${vars.GITHUB_OAUTH_ORIGIN}/apps/${vars.GITHUB_APP_SLUG}/installations/new`,
     githubOAuthOrigin: vars.GITHUB_OAUTH_ORIGIN,
     githubApiOrigin: vars.GITHUB_API_ORIGIN,
     s3: s3From(vars),

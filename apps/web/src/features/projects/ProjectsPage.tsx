@@ -16,9 +16,16 @@ export function ProjectsPage(): ReactElement | null {
   return (
     <section>
       <RefetchNotice error={projects.error} />
-      <h1 className="page-title">Projects</h1>
+      <div className="page-head">
+        <h1 className="page-title">Projects</h1>
+        <Link to="/new" className="button primary">
+          New project
+        </Link>
+      </div>
       {list.length === 0 ? (
-        <p className="muted">No projects yet. A maintainer creates them with the admin API.</p>
+        <p className="muted">
+          No projects yet. Choose <strong>New project</strong> to add a repository.
+        </p>
       ) : (
         <ul className="project-grid">
           {list.map((project) => (

@@ -18,6 +18,7 @@ describe('loadConfig', () => {
       githubApp: null,
       sessionSecret: null,
       githubOAuth: null,
+      githubAppInstallUrl: null,
       githubOAuthOrigin: 'https://github.com',
       githubApiOrigin: 'https://api.github.com',
       s3: null,
@@ -32,6 +33,18 @@ describe('loadConfig', () => {
       /FEATURES: \\"libary\\" is not a feature/,
     );
     expect(() => loadConfig({ ...vars, FEATURES: 'library' })).toThrow(/FEATURES: /);
+  });
+
+  it('builds the App install link from its slug, on the OAuth origin', () => {
+    expect(loadConfig({ ...vars, GITHUB_APP_SLUG: 'targus-review' }).githubAppInstallUrl).toBe(
+      'https://github.com/apps/targus-review/installations/new',
+    );
+    const stubbed = { ...vars, GITHUB_APP_SLUG: 'x', GITHUB_OAUTH_ORIGIN: 'http://localhost:9/' };
+    expect(loadConfig(stubbed).githubAppInstallUrl).toBe(
+      'http://localhost:9/apps/x/installations/new',
+    );
+    expect(loadConfig({ ...vars, GITHUB_APP_SLUG: '' }).githubAppInstallUrl).toBeNull();
+    expect(() => loadConfig({ ...vars, GITHUB_APP_SLUG: 'not/a slug' })).toThrow();
   });
 
   it('reads the session secret, the OAuth client and GitHub origins without trailing slashes', () => {

@@ -79,6 +79,9 @@ function checkRun({ match, body, state }: Call): Reply {
   return { status: 201, body: { id: state.nextCheckRunId++ } };
 }
 
+/** The account every stub installation is on; `yarn dev:local` seeds its project there. */
+const stubAccount = 'targus-local';
+
 const routes: readonly Route[] = [
   { method: 'GET', path: /^\/login\/oauth\/authorize$/, reply: authorize },
   { method: 'POST', path: /^\/login\/oauth\/access_token$/, reply: accessToken },
@@ -97,8 +100,23 @@ const routes: readonly Route[] = [
     path: /^\/app\/installations\/(\d+)$/,
     reply: ({ match }) => {
       const id = Number(match[1]);
-      return { status: 200, body: { id, account: { id: 7_000_000 + id, type: 'Organization' } } };
+      const account = { id: 7_000_000 + id, login: stubAccount, type: 'Organization' };
+      return { status: 200, body: { id, account } };
     },
+  },
+  {
+    // What "New project" lists: the seeded repository and two that have no project yet.
+    method: 'GET',
+    path: /^\/installation\/repositories$/,
+    reply: () => ({
+      status: 200,
+      body: {
+        repositories: ['demo', 'mobile-app', 'design-system'].map((name) => ({
+          full_name: `${stubAccount}/${name}`,
+          default_branch: 'main',
+        })),
+      },
+    }),
   },
   {
     method: 'GET',

@@ -17,6 +17,20 @@ export type CheckRunState =
       readonly summary: string;
     };
 
+/** The account, an org or a user, that an App installation is on. */
+export interface InstallationAccount {
+  /** GitHub's numeric id, which never changes hands (ADR 0024). */
+  readonly id: number;
+  readonly login: string;
+}
+
+/** A repository an App installation was given access to. */
+export interface AccessibleRepo {
+  /** `owner/name`. */
+  readonly repo: string;
+  readonly defaultBranch: string;
+}
+
 /**
  * The GitHub App operations targus needs. The adapter, `OctokitGitHubClient`, mints an
  * installation token per request from the App's private key.
@@ -51,4 +65,11 @@ export interface GitHubClient {
    * account (ADR 0024). Rejects when GitHub cannot say (installation gone, GitHub failing).
    */
   installationAccountId(installationId: number): Promise<number>;
+  /**
+   * The account the App installation is on, or null when the App has no such installation.
+   * Rejects when GitHub cannot say.
+   */
+  installationAccount(installationId: number): Promise<InstallationAccount | null>;
+  /** Every repository the installation was given access to. */
+  listInstallationRepos(installationId: number): Promise<AccessibleRepo[]>;
 }

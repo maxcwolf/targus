@@ -1,6 +1,7 @@
 import type {
   ApproveAllResponse,
   CreateBuildRequest,
+  CreateInstallationProjectRequest,
   CreateBuildResponse,
   CreateProjectRequest,
   CreateProjectResponse,
@@ -11,6 +12,8 @@ import type {
   HealthResponse,
   ListBuildsQuery,
   ListBuildsResponse,
+  ListInstallationReposResponse,
+  ListInstallationsResponse,
   ListProjectsResponse,
   ListSnapshotsResponse,
   ReviewDecision,
@@ -32,6 +35,11 @@ import { createBuild, getBuild, listBuilds, listSnapshots } from './build.servic
 import type { ServiceDeps } from './deps.ts';
 import { getHealth } from './health.service.ts';
 import { getImage, uploadImage } from './image.service.ts';
+import {
+  createInstallationProject,
+  listInstallationRepos,
+  listInstallations,
+} from './installation.service.ts';
 import { getLibrary } from './library.service.ts';
 import {
   beginLogin,
@@ -69,6 +77,16 @@ export interface Services {
   logout(sessionId: string): Promise<void>;
   createProject(request: CreateProjectRequest): Promise<CreateProjectResponse>;
   listProjects(reviewer: Reviewer): Promise<ListProjectsResponse>;
+  listInstallations(reviewer: Reviewer): Promise<ListInstallationsResponse>;
+  listInstallationRepos(
+    reviewer: Reviewer,
+    installationId: number,
+  ): Promise<ListInstallationReposResponse>;
+  createInstallationProject(
+    reviewer: Reviewer,
+    installationId: number,
+    request: CreateInstallationProjectRequest,
+  ): Promise<CreateProjectResponse>;
   /** The project a token authenticated, as the CLI checks it before capturing. */
   currentProject(project: Project): CurrentProjectResponse;
   listBuilds(
@@ -118,6 +136,11 @@ export function bindServices(deps: ServiceDeps): Services {
     logout: (sessionId) => logout(deps, sessionId),
     createProject: (request) => createProject(deps, request),
     listProjects: (reviewer) => listProjects(deps, reviewer),
+    listInstallations: (reviewer) => listInstallations(deps, reviewer),
+    listInstallationRepos: (reviewer, installationId) =>
+      listInstallationRepos(deps, reviewer, installationId),
+    createInstallationProject: (reviewer, installationId, request) =>
+      createInstallationProject(deps, reviewer, installationId, request),
     currentProject: (project) => currentProject(project),
     listBuilds: (reviewer, projectId, query) => listBuilds(deps, reviewer, projectId, query),
     getLibrary: (reviewer, projectId, query) => getLibrary(deps, reviewer, projectId, query),
