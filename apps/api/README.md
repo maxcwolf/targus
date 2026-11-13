@@ -188,6 +188,7 @@ Vars live in `wrangler.jsonc` and are validated by `src/config.ts`:
 | `GITHUB_CLIENT_SECRET`   | secret | unset                    | The GitHub App's OAuth client secret                                                            |
 | `GITHUB_OAUTH_ORIGIN`    | var    | `https://github.com`     | Where login happens (`/login/oauth/*`)                                                          |
 | `GITHUB_API_ORIGIN`      | var    | `https://api.github.com` | GitHub REST API, for the user lookup and every App call                                         |
+| `FEATURES`               | var    | unset                    | Features to turn on or off, e.g. `library=off`; see [Feature flags](#feature-flags) (ADR 0048)  |
 | `S3_ENDPOINT`            | var    | unset                    | Origin of an S3-compatible service; images go to S3 instead of R2 when all five S3 vars are set |
 | `S3_REGION`              | var    | unset                    | The bucket's region (`auto` for R2's S3 API)                                                    |
 | `S3_BUCKET`              | var    | unset                    | The bucket that holds the images (`images/<hash>.png`)                                          |
@@ -220,6 +221,25 @@ builds the web app and deploys to <https://targus.targus-api.workers.dev>, passi
 new migrations with `wrangler d1 migrations apply targus --remote` before deploying). Migration
 `0005_hashed_session_ids` drops and recreates `sessions`, so applying it signs every reviewer out
 once.
+
+### Feature flags
+
+A feature that can be turned on or off is listed in `packages/core/src/features.ts` with a
+default. `FEATURES` changes the defaults for one server, as a comma-separated list:
+
+```sh
+FEATURES="library=off"
+```
+
+A feature that is off has no routes (they answer 404) and no pages or links in the review UI,
+which reads the flags from `GET /api/me`. A name the server does not know, or a setting other
+than `on` or `off`, stops the server at start with a message, so a typo never leaves a feature in
+a state nobody chose. Take a name out of `FEATURES` before deploying a version that no longer has
+that flag.
+
+| Feature   | Default | What it is                                                        |
+| --------- | ------- | ----------------------------------------------------------------- |
+| `library` | on      | Browse a project's accepted stories on the web, outside any build |
 
 ### GitHub App setup
 

@@ -1,6 +1,7 @@
 import {
   createFakeClock,
   createFakeIdGenerator,
+  defaultFeatureFlags,
   emptyTally,
   type BuildStatus,
   type FakeClock,
@@ -147,6 +148,7 @@ export const testConfig: ApiConfig = {
   githubOAuthOrigin: 'https://github.test',
   githubApiOrigin: 'https://api.github.test',
   s3: null,
+  features: defaultFeatureFlags(),
 };
 
 export interface TestDeps extends ServiceDeps {

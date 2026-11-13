@@ -1,6 +1,8 @@
 import {
   type Build,
   buildStatus,
+  defaultFeatureFlags,
+  type FeatureFlags,
   type BuildWithSummary,
   type GetLibraryResponse,
   needsReview,
@@ -28,6 +30,8 @@ interface ApiState {
   library: GetLibraryResponse;
   /** What `?platform=` answers, by platform; a platform not listed gets `library`. */
   libraryByPlatform: Partial<Record<string, GetLibraryResponse>>;
+  /** What `GET /api/me` says is on; the defaults unless a test changes it. */
+  features: FeatureFlags;
   /** `METHOD /path` of every mutating request, for assertions. */
   calls: string[];
   /** Snapshots another reviewer denies while an approve-all runs, so it skips them. */
@@ -36,6 +40,7 @@ interface ApiState {
 
 export const apiState: ApiState = {
   signedIn: true,
+  features: defaultFeatureFlags(),
   builds: [],
   snapshots: [],
   library: initialLibrary(),
@@ -46,6 +51,7 @@ export const apiState: ApiState = {
 
 export function resetApiState(): void {
   apiState.signedIn = true;
+  apiState.features = defaultFeatureFlags();
   apiState.builds = [prBuild, mainBuild];
   apiState.snapshots = initialSnapshots();
   apiState.library = initialLibrary();
@@ -97,7 +103,7 @@ const notFound = (): HttpResponse<ErrorBody> => apiError(404, 'not_found', 'Buil
 export const handlers = [
   http.get('*/api/me', () =>
     apiState.signedIn
-      ? HttpResponse.json({ user: reviewer })
+      ? HttpResponse.json({ user: reviewer, features: apiState.features })
       : apiError(401, 'unauthorized', 'Sign in first'),
   ),
   http.post('*/api/auth/logout', () => {

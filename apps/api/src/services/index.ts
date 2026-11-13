@@ -18,6 +18,8 @@ import type {
   SubmitResultsRequest,
   SubmitResultsResponse,
   UploadImageResponse,
+  FeatureFlags,
+  FeatureName,
 } from '@targus/core';
 
 import type { Project } from '../ports/project-repository.ts';
@@ -41,6 +43,7 @@ import {
   type LoginRedirect,
   type NewLogin,
 } from './login.service.ts';
+import { featureFlags, requireFeature } from './feature.service.ts';
 import { assertSameOrigin, type RequestOrigin } from './origin.service.ts';
 import type { Principal, Reviewer } from './principal.ts';
 import { createProject, currentProject, listProjects } from './project.service.ts';
@@ -50,6 +53,10 @@ import { approveAll, reviewSnapshot } from './review.service.ts';
 /** The use-cases with their dependencies bound: what routes and middleware call. */
 export interface Services {
   getHealth(): HealthResponse;
+  /** Which features are on (ADR 0048). */
+  featureFlags(): FeatureFlags;
+  /** Throws `not_found` when the feature is off. */
+  requireFeature(feature: FeatureName): void;
   authenticateAdmin(token: string | null): Promise<void>;
   authenticateProjectToken(token: string | null): Promise<Project>;
   authenticateSession(sessionId: string | null): Promise<Reviewer>;
@@ -95,6 +102,10 @@ export interface Services {
 export function bindServices(deps: ServiceDeps): Services {
   return {
     getHealth: () => getHealth(deps.config),
+    featureFlags: () => featureFlags(deps),
+    requireFeature: (feature) => {
+      requireFeature(deps, feature);
+    },
     authenticateAdmin: (token) => authenticateAdmin(deps, token),
     authenticateProjectToken: (token) => authenticateProjectToken(deps, token),
     authenticateSession: (sessionId) => authenticateSession(deps, sessionId),

@@ -1,4 +1,4 @@
-import { MeResponse } from '@targus/core';
+import { defaultFeatureFlags, MeResponse } from '@targus/core';
 import { describe, expect, it } from 'vitest';
 
 import { call } from '../../test/support/api.ts';
@@ -11,7 +11,10 @@ describe('GET /api/me', () => {
     const response = await call('/api/me', { headers: withCookie(cookie) });
 
     expect(response.status).toBe(200);
-    expect(MeResponse.parse(await response.json())).toEqual({ user });
+    expect(MeResponse.parse(await response.json())).toEqual({
+      user,
+      features: defaultFeatureFlags(),
+    });
   });
 
   it('answers 401 without a cookie, with a forged one and with an unknown session', async () => {

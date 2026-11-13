@@ -21,7 +21,17 @@ describe('loadConfig', () => {
       githubOAuthOrigin: 'https://github.com',
       githubApiOrigin: 'https://api.github.com',
       s3: null,
+      features: { library: true },
     });
+  });
+
+  it('turns features on and off from FEATURES, and refuses a name it does not know', () => {
+    expect(loadConfig({ ...vars, FEATURES: 'library=off' }).features).toEqual({ library: false });
+    expect(loadConfig({ ...vars, FEATURES: '' }).features).toEqual({ library: true });
+    expect(() => loadConfig({ ...vars, FEATURES: 'libary=off' })).toThrow(
+      /FEATURES: \\"libary\\" is not a feature/,
+    );
+    expect(() => loadConfig({ ...vars, FEATURES: 'library' })).toThrow(/FEATURES: /);
   });
 
   it('reads the session secret, the OAuth client and GitHub origins without trailing slashes', () => {

@@ -23,6 +23,16 @@ export {
   type SnapshotTally,
 } from './build-status.ts';
 export * from './contracts/index.ts';
+export {
+  defaultFeatureFlags,
+  featureCatalog,
+  FeatureFlags,
+  featureNames,
+  resolveFeatureFlags,
+  type FeatureDefinition,
+  type FeatureFlagsResult,
+  type FeatureName,
+} from './features.ts';
 export { isTargusError, TargusError, targusErrorCodes, type TargusErrorCode } from './errors.ts';
 export { checkRunName, displayPixelRatio } from './platform.ts';
 export * from './ports/index.ts';

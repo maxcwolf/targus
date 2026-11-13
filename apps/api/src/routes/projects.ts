@@ -9,6 +9,7 @@ import { Hono } from 'hono';
 
 import type { AppEnv } from '../app-env.ts';
 import { projectAuth, sessionAuth } from '../middleware/auth.ts';
+import { feature } from '../middleware/feature.ts';
 
 /**
  * `/api/projects/*`: what the review UI lists, behind the session, and `current`, the project a
@@ -26,7 +27,7 @@ export const projectsRoute = new Hono<AppEnv>()
     const { services, reviewer } = c.var;
     return c.json(await services.listBuilds(reviewer, c.req.param('id'), query.data));
   })
-  .get('/:id/library', sessionAuth, async (c) => {
+  .get('/:id/library', feature('library'), sessionAuth, async (c) => {
     const query = GetLibraryQuery.safeParse(c.req.query());
     if (!query.success) {
       const message = `platform must be one of ${Platform.options.join(', ')}`;
